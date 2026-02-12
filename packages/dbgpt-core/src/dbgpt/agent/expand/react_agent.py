@@ -42,13 +42,13 @@ Do not output an empty string!
 # ACTION SPACE #
 {{ action_space }}
 
-# RESPONSE FROMAT # 
+# RESPONSE FORMAT # 
 For each task input, your response should contain:
 1. One analysis of the task and the current environment, reasoning to determine the \
 next action (prefix "Thought: ").
 2. One action string in the ACTION SPACE (prefix "Action: "), should be one of \
 [{{ action_space_names }}].
-3. One action input (prefix "Action Input: "), empty if no input is required.
+3. One action input (prefix "Action Input: "), empty if no inpuentert is required.
 
 # EXAMPLE INTERACTION #
 Observation: ...(This is output provided by the external environment or Action output, \

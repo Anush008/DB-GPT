@@ -435,4 +435,11 @@ export const CommonEn = {
   please_input_api_timeout: 'Please input API timeout',
   timeout_range_validation: 'Timeout must be between 1-2000 seconds',
   api_timeout_placeholder: 'Please enter timeout, e.g.: 300',
+  select_skill: 'Select Skill',
+  search_skill: 'Search skills',
+  skills_available: 'skills available',
+  manage_skills: 'Manage Skills',
+  select_knowledge_base: 'Select Knowledge Base',
+  knowledge: 'Knowledge',
+  no_knowledge_spaces: 'No knowledge spaces available',
 } as const;

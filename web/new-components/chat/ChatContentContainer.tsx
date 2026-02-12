@@ -2,6 +2,7 @@ import ChatHeader from '@/new-components/chat/header/ChatHeader';
 import { ChatContentContext } from '@/pages/chat';
 import { VerticalAlignBottomOutlined, VerticalAlignTopOutlined } from '@ant-design/icons';
 import dynamic from 'next/dynamic';
+import { useSearchParams } from 'next/navigation';
 import React, {
   forwardRef,
   useCallback,
@@ -14,6 +15,9 @@ import React, {
 } from 'react';
 
 const ChatCompletion = dynamic(() => import('@/new-components/chat/content/ChatCompletion'), { ssr: false });
+const OpenCodeChatCompletion = dynamic(() => import('@/new-components/chat/content/OpenCodeChatCompletion'), {
+  ssr: false,
+});
 
 // eslint-disable-next-line no-empty-pattern
 const ChatContentContainer = ({ className }: { className?: string }, ref: React.ForwardedRef<any>) => {
@@ -25,6 +29,13 @@ const ChatContentContainer = ({ className }: { className?: string }, ref: React.
   const { history } = useContext(ChatContentContext);
   const allowAutoScroll = useRef<boolean>(true);
   const animationFrameRef = useRef<number | null>(null);
+
+  // Get scene from URL params to determine which completion component to render
+  const searchParams = useSearchParams();
+  const scene = searchParams?.get('scene') ?? '';
+  // Use OpenCode style for all scenes (chat_normal, chat_agent, chat_knowledge, etc.)
+  // This provides a consistent modern UI experience
+  const useOpenCodeStyle = true;
 
   useImperativeHandle(ref, () => {
     return scrollRef.current;
@@ -173,7 +184,7 @@ const ChatContentContainer = ({ className }: { className?: string }, ref: React.
     <div className={`flex flex-1 overflow-hidden relative ${className || ''}`}>
       <div ref={scrollRef} className='h-full w-full mx-auto overflow-y-auto'>
         <ChatHeader isScrollToTop={isScrollToTop} />
-        <ChatCompletion />
+        {useOpenCodeStyle ? <OpenCodeChatCompletion /> : <ChatCompletion />}
       </div>
 
       {showScrollButtons && (

@@ -1,5 +1,6 @@
 """AIWrapper for LLM."""
 
+import asyncio
 import json
 import logging
 import traceback
@@ -29,6 +30,7 @@ class AIWrapper:
         "conv_id",
         "sender",
         "stream_out",
+        "stream_callback",
     }
 
     def __init__(
@@ -136,10 +138,18 @@ class AIWrapper:
         conv_id = extra_kwargs.get("conv_id", None)
         sender = extra_kwargs.get("sender", None)
         stream_out = extra_kwargs.get("stream_out", True)
+        stream_callback = extra_kwargs.get("stream_callback")
 
         try:
             response = await self._completions_create(
-                llm_model, params, conv_id, sender, memory, stream_out, verbose
+                llm_model,
+                params,
+                conv_id,
+                sender,
+                memory,
+                stream_out,
+                verbose,
+                stream_callback,
             )
         except LLMChatError as e:
             logger.debug(f"{llm_model} generate failed!{str(e)}")
@@ -177,6 +187,7 @@ class AIWrapper:
         memory: Optional[Any] = None,
         stream_out: bool = True,
         verbose: bool = False,
+        stream_callback: Optional[Callable[[Dict[str, Any]], Any]] = None,
     ):
         payload = {
             "model": llm_model,
@@ -199,21 +210,63 @@ class AIWrapper:
             model_request = _build_model_request(payload)
             str_prompt = model_request.messages_to_string()
             model_output: Optional[ModelOutput] = None
-            async for output in self._llm_client.generate_stream(model_request.copy()):  # type: ignore # noqa
+            previous_text = ""
+            previous_thinking_text = ""
+
+            async def _emit_stream_callback(payload: Dict[str, Any]) -> None:
+                if not stream_callback:
+                    return
+                try:
+                    if asyncio.iscoroutinefunction(stream_callback):
+                        await stream_callback(payload)
+                        return
+                    result = stream_callback(payload)
+                    if asyncio.iscoroutine(result):
+                        await result
+                except Exception:
+                    logger.exception("stream_callback error")
+
+            async for output in self._llm_client.generate_stream(model_request.copy()):
                 model_output = output
+                delta_text = ""
+                delta_thinking = ""
+                if output.has_text:
+                    current_text = output.text or ""
+                    if current_text.startswith(previous_text):
+                        delta_text = current_text[len(previous_text) :]
+                        previous_text = current_text
+                    else:
+                        delta_text = current_text
+                        previous_text = current_text
+                if output.has_thinking:
+                    current_thinking = output.thinking_text or ""
+                    if current_thinking.startswith(previous_thinking_text):
+                        delta_thinking = current_thinking[len(previous_thinking_text) :]
+                        previous_thinking_text = current_thinking
+                    else:
+                        delta_thinking = current_thinking
+                        previous_thinking_text = current_thinking
+                if delta_text or delta_thinking:
+                    await _emit_stream_callback(
+                        {
+                            "delta_text": delta_text,
+                            "delta_thinking": delta_thinking,
+                        }
+                    )
                 if memory and stream_out:
                     from ... import GptsMemory  # noqa: F401
 
-                    temp_message = {
-                        "sender": sender,
-                        "receiver": "?",
-                        "model": llm_model,
-                        "markdown": model_output.gen_text_with_thinking(),
-                    }
-                    await memory.push_message(
-                        conv_id,
-                        temp_message,
-                    )
+                    if model_output:
+                        temp_message = {
+                            "sender": sender,
+                            "receiver": "?",
+                            "model": llm_model,
+                            "markdown": model_output.gen_text_with_thinking(),
+                        }
+                        await memory.push_message(
+                            conv_id,
+                            temp_message,
+                        )
             if not model_output:
                 raise ValueError("LLM generate stream is null!")
             parsed_output = model_output.gen_text_with_thinking()

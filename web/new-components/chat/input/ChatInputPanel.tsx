@@ -8,7 +8,17 @@ import { useTranslation } from 'react-i18next';
 
 import { UserChatContent } from '@/types/chat';
 import { parseResourceValue } from '@/utils';
+import { SlashCommand } from './CommandPopover';
+import EnhancedChatInput, { ContentPart, EnhancedChatInputRef } from './EnhancedChatInput';
 import ToolsBar from './ToolsBar';
+
+const USE_ENHANCED_INPUT = true;
+
+const defaultCommands: SlashCommand[] = [
+  { id: 'clear', trigger: 'clear', title: 'Clear chat history', type: 'builtin' },
+  { id: 'help', trigger: 'help', title: 'Show available commands', type: 'builtin' },
+  { id: 'model', trigger: 'model', title: 'Switch AI model', type: 'builtin' },
+];
 
 const ChatInputPanel: React.ForwardRefRenderFunction<any, { ctrl: AbortController }> = ({ ctrl }, ref) => {
   const { t } = useTranslation();
@@ -20,6 +30,7 @@ const ChatInputPanel: React.ForwardRefRenderFunction<any, { ctrl: AbortControlle
     temperatureValue,
     maxNewTokensValue,
     resourceValue,
+    knowledgeValue,
     setResourceValue,
     refreshDialogList,
   } = useContext(ChatContentContext);
@@ -32,24 +43,87 @@ const ChatInputPanel: React.ForwardRefRenderFunction<any, { ctrl: AbortControlle
   const [isFocus, setIsFocus] = useState<boolean>(false);
   const [isZhInput, setIsZhInput] = useState<boolean>(false);
 
+  const enhancedInputRef = useRef<EnhancedChatInputRef>(null);
   const submitCountRef = useRef(0);
 
   const paramKey: string[] = useMemo(() => {
     return appInfo.param_need?.map(i => i.type) || [];
   }, [appInfo.param_need]);
 
-  const onSubmit = async () => {
+  const buildChatParams = () => ({
+    app_code: appInfo.app_code || '',
+    ...(paramKey.includes('temperature') && { temperature: temperatureValue }),
+    ...(paramKey.includes('max_new_tokens') && { max_new_tokens: maxNewTokensValue }),
+    select_param,
+    ...(paramKey.includes('resource') && {
+      select_param:
+        typeof resourceValue === 'string'
+          ? resourceValue
+          : JSON.stringify(resourceValue) || currentDialogue.select_param,
+    }),
+    // Include knowledge space in ext_info for RAG
+    ...(knowledgeValue && {
+      ext_info: { knowledge_space: knowledgeValue },
+    }),
+  });
+
+  const handleEnhancedSubmit = async (text: string, parts: ContentPart[]) => {
     submitCountRef.current++;
-    // Remove immediate scroll to avoid conflict with ChatContentContainer's auto-scroll
-    // ChatContentContainer will handle scrolling when new content is added
+
+    const resources = parseResourceValue(resourceValue);
+    let newUserInput: UserChatContent;
+
+    const imageParts = parts.filter(p => p.type === 'image');
+    const hasImages = imageParts.length > 0;
+    const hasResources = resources.length > 0;
+
+    if (hasResources || hasImages) {
+      if (scene !== 'chat_excel') {
+        setResourceValue(null);
+      }
+
+      const messages = [...resources];
+
+      imageParts.forEach(img => {
+        if (img.dataUrl) {
+          messages.push({
+            type: 'image_url',
+            image_url: {
+              url: img.dataUrl,
+              fileName: img.filename || 'image',
+            },
+          });
+        }
+      });
+
+      messages.push({
+        type: 'text',
+        text: text,
+      });
+
+      newUserInput = {
+        role: 'user',
+        content: messages,
+      };
+    } else {
+      newUserInput = text;
+    }
+
+    const params = buildChatParams();
+    await handleChat(newUserInput, params);
+
+    if (submitCountRef.current === 1) {
+      await refreshDialogList();
+    }
+  };
+
+  const onLegacySubmit = async () => {
+    submitCountRef.current++;
     setUserInput('');
     const resources = parseResourceValue(resourceValue);
-    // Clear the resourceValue if it not empty
     let newUserInput: UserChatContent;
     if (resources.length > 0) {
       if (scene !== 'chat_excel') {
-        // Chat Excel scene does not need to clear the resourceValue
-        // We need to find a better way to handle this
         setResourceValue(null);
       }
       const messages = [...resources];
@@ -65,31 +139,48 @@ const ChatInputPanel: React.ForwardRefRenderFunction<any, { ctrl: AbortControlle
       newUserInput = userInput;
     }
 
-    const params = {
-      app_code: appInfo.app_code || '',
-      ...(paramKey.includes('temperature') && { temperature: temperatureValue }),
-      ...(paramKey.includes('max_new_tokens') && { max_new_tokens: maxNewTokensValue }),
-      select_param,
-      ...(paramKey.includes('resource') && {
-        select_param:
-          typeof resourceValue === 'string'
-            ? resourceValue
-            : JSON.stringify(resourceValue) || currentDialogue.select_param,
-      }),
-    };
-
+    const params = buildChatParams();
     await handleChat(newUserInput, params);
 
-    // 如果应用进来第一次对话，刷新对话列表
     if (submitCountRef.current === 1) {
       await refreshDialogList();
     }
   };
 
-  // expose setUserInput to parent via ref
+  const handleCommandSelect = (command: SlashCommand) => {
+    console.log('Command selected:', command);
+  };
+
   useImperativeHandle(ref, () => ({
-    setUserInput,
+    setUserInput: (value: string) => {
+      if (USE_ENHANCED_INPUT) {
+        enhancedInputRef.current?.setValue(value);
+      } else {
+        setUserInput(value);
+      }
+    },
   }));
+
+  if (USE_ENHANCED_INPUT) {
+    return (
+      <div className='flex flex-col w-5/6 mx-auto pt-4 pb-6 bg-transparent'>
+        <div className='flex flex-col bg-white dark:bg-[rgba(255,255,255,0.16)] px-5 py-4 pt-2 rounded-xl relative'>
+          <ToolsBar ctrl={ctrl} />
+          <EnhancedChatInput
+            ref={enhancedInputRef}
+            onSubmit={handleEnhancedSubmit}
+            disabled={replyLoading}
+            loading={replyLoading}
+            placeholder={t('input_tips')}
+            commands={defaultCommands}
+            onCommandSelect={handleCommandSelect}
+            className='border-0 bg-transparent'
+            maxHeight={150}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className='flex flex-col w-5/6 mx-auto pt-4 pb-6 bg-transparent'>
@@ -116,7 +207,7 @@ const ChatInputPanel: React.ForwardRefRenderFunction<any, { ctrl: AbortControlle
               if (!userInput.trim() || replyLoading) {
                 return;
               }
-              onSubmit();
+              onLegacySubmit();
             }
           }}
           onChange={e => {
@@ -141,7 +232,7 @@ const ChatInputPanel: React.ForwardRefRenderFunction<any, { ctrl: AbortControlle
             if (replyLoading || !userInput.trim()) {
               return;
             }
-            onSubmit();
+            onLegacySubmit();
           }}
         >
           {replyLoading ? (
