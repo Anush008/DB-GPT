@@ -514,6 +514,109 @@ const HtmlTabbedRenderer: React.FC<{ code?: ExecutionOutput; html: ExecutionOutp
 
 HtmlTabbedRenderer.displayName = 'HtmlTabbedRenderer';
 
+/** Tabbed code-execution renderer: shows images vs code+results as switchable tabs when images exist */
+const CodeExecutionRenderer: React.FC<{
+  group: { codes: ExecutionOutput[]; results: ExecutionOutput[]; images: ExecutionOutput[] };
+}> = memo(({ group }) => {
+  const hasImages = group.images.length > 0;
+  const [activeTab, setActiveTab] = useState<'chart' | 'code'>(hasImages ? 'chart' : 'code');
+
+  const codeContent = (
+    <>
+      <div className='relative overflow-auto flex-1 min-h-[100px]'>
+        <span className='sticky top-0 right-0 float-right z-10 text-[10px] text-gray-400 bg-gray-800/80 px-2 py-0.5 rounded mr-2 mt-2'>
+          代码
+        </span>
+        <CodePreview
+          code={group.codes.map(c => String(c.content)).join('\n')}
+          language='python'
+          customStyle={{ background: '#0f172a', margin: 0, borderRadius: 0 }}
+        />
+      </div>
+      {group.results.length > 0 && (
+        <>
+          <div className='border-t border-gray-700/50 shrink-0' />
+          <div className='relative overflow-auto bg-gray-900 flex-1 min-h-[60px]'>
+            <span className='sticky top-0 right-0 float-right z-10 text-[10px] text-gray-400 bg-gray-800/80 px-2 py-0.5 rounded mr-2 mt-2'>
+              执行结果
+            </span>
+            <div className='px-4 py-3 text-sm text-green-400 font-mono whitespace-pre-wrap leading-relaxed'>
+              {group.results.map(r => String(r.content)).join('\n')}
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  );
+
+  const imageContent = (
+    <div className='p-3 space-y-2 bg-gray-50 dark:bg-gray-900/50 flex-1 min-h-0 overflow-auto'>
+      {group.images.map((img, imgIdx) => (
+        <div key={`img-${imgIdx}`} className='rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700'>
+          <img
+            src={resolveImageUrl(
+              typeof img.content === 'string' ? img.content : img.content?.url || img.content?.src || String(img.content),
+            )}
+            alt='Generated chart'
+            className='w-full h-auto object-contain'
+            style={{ maxHeight: 600 }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+
+  // No images — just code + results, no tabs
+  if (!hasImages) {
+    return (
+      <div className='rounded-xl overflow-hidden border border-gray-700/50 flex flex-col flex-1 min-h-0'>
+        {codeContent}
+      </div>
+    );
+  }
+
+  // Images exist — tabbed view
+  return (
+    <div className='rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col flex-1 min-h-0'>
+      <div className='flex items-center gap-0 bg-white dark:bg-[#111217] border-b border-gray-200 dark:border-gray-700 shrink-0'>
+        <button
+          onClick={() => setActiveTab('chart')}
+          className={classNames(
+            'px-4 py-2 text-xs font-medium transition-colors relative',
+            activeTab === 'chart'
+              ? 'text-gray-900 dark:text-gray-100'
+              : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300',
+          )}
+        >
+          <FileImageOutlined className='mr-1.5' />
+          图表
+          {activeTab === 'chart' && (
+            <div className='absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900 dark:bg-gray-100 rounded-full' />
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('code')}
+          className={classNames(
+            'px-4 py-2 text-xs font-medium transition-colors relative',
+            activeTab === 'code'
+              ? 'text-gray-900 dark:text-gray-100'
+              : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300',
+          )}
+        >
+          <CodeOutlined className='mr-1.5' />
+          代码
+          {activeTab === 'code' && (
+            <div className='absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900 dark:bg-gray-100 rounded-full' />
+          )}
+        </button>
+      </div>
+      {activeTab === 'chart' ? imageContent : codeContent}
+    </div>
+  );
+});
+
+CodeExecutionRenderer.displayName = 'CodeExecutionRenderer';
+
 // Main Component
 const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
   activeStep,
@@ -896,50 +999,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
                 <div className='flex-1 min-h-0 p-4 flex flex-col space-y-3 overflow-y-auto'>
                   {outputGroups.map((group, gIdx) =>
                     group.type === 'code-execution' ? (
-                      <div key={`group-${gIdx}`} className='rounded-xl overflow-hidden border border-gray-700/50 flex flex-col flex-1 min-h-0'>
-                        <div className='relative overflow-auto flex-1 min-h-[100px]'>
-                          <span className='sticky top-0 right-0 float-right z-10 text-[10px] text-gray-400 bg-gray-800/80 px-2 py-0.5 rounded mr-2 mt-2'>
-                            代码
-                          </span>
-                          <CodePreview
-                            code={group.codes.map(c => String(c.content)).join('\n')}
-                            language='python'
-                            customStyle={{ background: '#0f172a', margin: 0, borderRadius: 0 }}
-                          />
-                        </div>
-                        {group.results.length > 0 && (
-                          <>
-                            <div className='border-t border-gray-700/50 shrink-0' />
-                            <div className='relative overflow-auto bg-gray-900 flex-1 min-h-[60px]'>
-                              <span className='sticky top-0 right-0 float-right z-10 text-[10px] text-gray-400 bg-gray-800/80 px-2 py-0.5 rounded mr-2 mt-2'>
-                                执行结果
-                              </span>
-                              <div className='px-4 py-3 text-sm text-green-400 font-mono whitespace-pre-wrap leading-relaxed'>
-                                {group.results.map(r => String(r.content)).join('\n')}
-                              </div>
-                            </div>
-                          </>
-                        )}
-                        {group.images.length > 0 && (
-                          <>
-                            <div className='border-t border-gray-700/50 shrink-0' />
-                            <div className='p-3 space-y-2 bg-gray-50 dark:bg-gray-900/50'>
-                              {group.images.map((img, imgIdx) => (
-                                <div key={`img-${imgIdx}`} className='rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700'>
-                                  <img
-                                    src={resolveImageUrl(
-                                      typeof img.content === 'string' ? img.content : img.content?.url || img.content?.src || String(img.content),
-                                    )}
-                                    alt='Generated chart'
-                                    className='w-full h-auto object-contain'
-                                    style={{ maxHeight: 600 }}
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          </>
-                        )}
-                      </div>
+                      <CodeExecutionRenderer key={`group-${gIdx}`} group={group} />
                     ) : group.type === 'html-tabbed' ? (
                       <HtmlTabbedRenderer key={`html-tabbed-${gIdx}`} code={group.code} html={group.html} />
                     ) : (

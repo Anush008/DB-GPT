@@ -1781,7 +1781,7 @@ const Playground: NextPage = () => {
           {/* Top Header */}
           <div className='h-16 flex items-center justify-between px-8 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-[#111217]/80 backdrop-blur sticky top-0 z-20'>
             <div className='flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 px-2 py-1 rounded-md'>
-              <span>DB-GPT 0.6.0 Data Edition</span>
+              <span>DB-GPT</span>
             </div>
             <div className='flex items-center gap-4'>
               {messages.length > 0 && (
