@@ -950,12 +950,55 @@ const Playground: NextPage = () => {
     return refs;
   };
 
-  const _downloadArtifact = (artifact: Artifact) => {
-    let content: string;
-    let filename: string;
-    let mimeType: string;
+  const downloadArtifact = async (artifact: Artifact) => {
+    const triggerBlobDownload = (blob: Blob, filename: string) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    };
 
     switch (artifact.type) {
+      case 'image': {
+        const imgUrl =
+          typeof artifact.content === 'string'
+            ? artifact.content
+            : artifact.content?.url || artifact.content?.src || String(artifact.content);
+        const resolvedUrl = imgUrl.startsWith('/images/') ? `${process.env.API_BASE_URL || ''}${imgUrl}` : imgUrl;
+        try {
+          const resp = await fetch(resolvedUrl);
+          const blob = await resp.blob();
+          const filename = artifact.name || imgUrl.split('/').pop() || 'image.png';
+          triggerBlobDownload(blob, filename);
+        } catch {
+          const a = document.createElement('a');
+          a.href = resolvedUrl;
+          a.download = artifact.name || 'image.png';
+          a.target = '_blank';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
+        break;
+      }
+      case 'html': {
+        const htmlContent =
+          typeof artifact.content === 'string'
+            ? artifact.content
+            : artifact.content?.content || artifact.content?.html || String(artifact.content);
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        triggerBlobDownload(blob, artifact.name || 'report.html');
+        break;
+      }
+      case 'code': {
+        const blob = new Blob([String(artifact.content)], { type: 'text/plain' });
+        triggerBlobDownload(blob, artifact.name || 'code.py');
+        break;
+      }
       case 'table': {
         const rows = artifact.content?.rows || [];
         const columns = artifact.content?.columns?.map((c: any) => c.dataIndex || c.key || c) || [];
@@ -963,37 +1006,38 @@ const Playground: NextPage = () => {
           columns.join(','),
           ...rows.map((row: any) => columns.map((col: string) => JSON.stringify(row[col] ?? '')).join(',')),
         ].join('\n');
-        content = csvContent;
-        filename = `table-${Date.now()}.csv`;
-        mimeType = 'text/csv';
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        triggerBlobDownload(blob, artifact.name?.replace(/\.\w+$/, '.csv') || 'table.csv');
         break;
       }
-      case 'code':
-        content = String(artifact.content);
-        filename = `code-${Date.now()}.py`;
-        mimeType = 'text/plain';
-        break;
       case 'markdown':
-      case 'summary':
-        content = String(artifact.content);
-        filename = `${artifact.type}-${Date.now()}.md`;
-        mimeType = 'text/markdown';
+      case 'summary': {
+        const blob = new Blob([String(artifact.content)], { type: 'text/markdown' });
+        triggerBlobDownload(blob, artifact.name || `${artifact.type}.md`);
         break;
-      default:
-        content = JSON.stringify(artifact.content, null, 2);
-        filename = `artifact-${Date.now()}.json`;
-        mimeType = 'application/json';
+      }
+      case 'file': {
+        const filePath = artifact.content?.file_path || artifact.content?.path;
+        if (filePath && filePath.includes('/images/')) {
+          const imgName = filePath.split('/').pop();
+          const resolvedUrl = `${process.env.API_BASE_URL || ''}/images/${imgName}`;
+          try {
+            const resp = await fetch(resolvedUrl);
+            const blob = await resp.blob();
+            triggerBlobDownload(blob, artifact.name || imgName || 'file');
+          } catch {
+            message.warning('文件暂不可下载');
+          }
+        } else {
+          message.warning('文件暂不可下载');
+        }
+        break;
+      }
+      default: {
+        const blob = new Blob([JSON.stringify(artifact.content, null, 2)], { type: 'application/json' });
+        triggerBlobDownload(blob, artifact.name || 'artifact.json');
+      }
     }
-
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   const _copyToClipboard = (text: string) => {
@@ -1871,6 +1915,7 @@ const Playground: NextPage = () => {
                             }
                           }
                         }}
+                        onArtifactDownload={artifact => downloadArtifact(artifact as Artifact)}
                         onViewAllFiles={() => {
                           if (round.viewMsg?.id) setActiveViewMsgId(round.viewMsg.id);
                           setRightPanelCollapsed(false);

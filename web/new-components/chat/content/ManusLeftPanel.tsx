@@ -77,6 +77,7 @@ export interface ManusLeftPanelProps {
   stepThoughts?: Record<string, string>;
   artifacts?: ArtifactItem[];
   onArtifactClick?: (artifact: ArtifactItem) => void;
+  onArtifactDownload?: (artifact: ArtifactItem) => void;
   onViewAllFiles?: () => void;
   isCollapsed?: boolean;
   onExpand?: () => void;
@@ -250,7 +251,8 @@ const getArtifactIconBg = (type: string): string => {
 const ArtifactCard: React.FC<{
   artifact: ArtifactItem;
   onClick?: () => void;
-}> = memo(({ artifact, onClick }) => {
+  onDownload?: () => void;
+}> = memo(({ artifact, onClick, onDownload }) => {
   return (
     <div
       onClick={onClick}
@@ -280,7 +282,7 @@ const ArtifactCard: React.FC<{
             className='text-gray-400 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0'
             onClick={e => {
               e.stopPropagation();
-              onClick?.();
+              onDownload?.();
             }}
           />
         </Tooltip>
@@ -543,6 +545,7 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
   stepThoughts,
   artifacts,
   onArtifactClick,
+  onArtifactDownload,
   onViewAllFiles,
   isCollapsed,
   onExpand,
@@ -681,6 +684,7 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
                     key={artifact.id}
                     artifact={artifact}
                     onClick={() => onArtifactClick?.(artifact)}
+                    onDownload={() => onArtifactDownload?.(artifact)}
                   />
                 ))}
 
