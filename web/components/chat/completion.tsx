@@ -16,11 +16,11 @@ import { useTranslation } from 'react-i18next';
 
 import MyEmpty from '../common/MyEmpty';
 import CompletionInput from '../common/completion-input';
-import AgentContent from './agent-content';
 import ChatContent from './chat-content';
 import ChatFeedback from './chat-feedback';
 import { renderModelIcon } from './header/model-selector';
 import MonacoEditor from './monaco-editor';
+import OpenCodeAgentContent, { useGroupedMessages } from './opencode-agent-content';
 
 type Props = {
   messages: IChatDialogueMessageSchema[];
@@ -46,6 +46,9 @@ const Completion = ({ messages, onSubmit, onFormatContent }: Props) => {
 
   // const incremental = useMemo(() => scene === 'chat_flow', [scene]);
   const isChartChat = useMemo(() => scene === 'chat_dashboard', [scene]);
+  const isAgentChat = useMemo(() => scene === 'chat_agent', [scene]);
+
+  const groupedMessages = useGroupedMessages(showMessages);
 
   const summary = useSummary();
 
@@ -333,57 +336,79 @@ const Completion = ({ messages, onSubmit, onFormatContent }: Props) => {
       >
         <div className='flex items-center flex-col text-sm leading-6 text-slate-900 dark:text-slate-300 sm:text-base sm:leading-7'>
           {showMessages.length ? (
-            showMessages.map((content, index) => {
-              if (scene === 'chat_agent') {
-                return <AgentContent key={index} content={content} />;
-              }
-              return (
-                <ChatContent
-                  key={index}
-                  content={content}
-                  isChartChat={isChartChat}
-                  onLinkClick={() => {
-                    setJsonModalOpen(true);
-                    setJsonValue(JSON.stringify(content?.context, null, 2));
-                  }}
-                >
-                  {content.role === 'view' && (
-                    <div className='flex w-full border-t border-gray-200 dark:border-theme-dark'>
-                      {scene === 'chat_knowledge' && content.retry ? (
-                        <Button
-                          onClick={handleRetry}
-                          slots={{ root: IconButton }}
-                          slotProps={{ root: { variant: 'plain', color: 'primary' } }}
-                        >
-                          <RedoOutlined />
-                          &nbsp;<span className='text-sm'>{t('Retry')}</span>
-                        </Button>
-                      ) : null}
-                      <div className='flex w-full flex-row-reverse'>
-                        <ChatFeedback
-                          select_param={select_param}
-                          conv_index={Math.ceil((index + 1) / 2)}
-                          question={
-                            showMessages?.filter(e => e?.role === 'human' && e?.order === content.order)[0]?.context
-                          }
-                          knowledge_space={spaceNameOriginal || dbParam || ''}
-                        />
-                        <Tooltip title={t('Copy_Btn')}>
+            isAgentChat ? (
+              groupedMessages.map((group, index) => {
+                if (group.view) {
+                  return (
+                    <OpenCodeAgentContent
+                      key={`agent-turn-${index}`}
+                      content={group.view}
+                      className='w-full max-w-4xl mx-auto px-4'
+                    />
+                  );
+                } else if (group.human) {
+                  return (
+                    <OpenCodeAgentContent
+                      key={`agent-turn-${index}`}
+                      content={group.human}
+                      isWorking={isLoading && index === groupedMessages.length - 1}
+                      startTime={Date.now()}
+                      className='w-full max-w-4xl mx-auto px-4'
+                    />
+                  );
+                }
+                return null;
+              })
+            ) : (
+              showMessages.map((content, index) => {
+                return (
+                  <ChatContent
+                    key={index}
+                    content={content}
+                    isChartChat={isChartChat}
+                    onLinkClick={() => {
+                      setJsonModalOpen(true);
+                      setJsonValue(JSON.stringify(content?.context, null, 2));
+                    }}
+                  >
+                    {content.role === 'view' && (
+                      <div className='flex w-full border-t border-gray-200 dark:border-theme-dark'>
+                        {scene === 'chat_knowledge' && content.retry ? (
                           <Button
-                            onClick={() => onCopyContext(content?.context)}
+                            onClick={handleRetry}
                             slots={{ root: IconButton }}
                             slotProps={{ root: { variant: 'plain', color: 'primary' } }}
-                            sx={{ borderRadius: 40 }}
                           >
-                            <CopyOutlined />
+                            <RedoOutlined />
+                            &nbsp;<span className='text-sm'>{t('Retry')}</span>
                           </Button>
-                        </Tooltip>
+                        ) : null}
+                        <div className='flex w-full flex-row-reverse'>
+                          <ChatFeedback
+                            select_param={select_param}
+                            conv_index={Math.ceil((index + 1) / 2)}
+                            question={
+                              showMessages?.filter(e => e?.role === 'human' && e?.order === content.order)[0]?.context
+                            }
+                            knowledge_space={spaceNameOriginal || dbParam || ''}
+                          />
+                          <Tooltip title={t('Copy_Btn')}>
+                            <Button
+                              onClick={() => onCopyContext(content?.context)}
+                              slots={{ root: IconButton }}
+                              slotProps={{ root: { variant: 'plain', color: 'primary' } }}
+                              sx={{ borderRadius: 40 }}
+                            >
+                              <CopyOutlined />
+                            </Button>
+                          </Tooltip>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </ChatContent>
-              );
-            })
+                    )}
+                  </ChatContent>
+                );
+              })
+            )
           ) : (
             <MyEmpty description='Start a conversation' />
           )}

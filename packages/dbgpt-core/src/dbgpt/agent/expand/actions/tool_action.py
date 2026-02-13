@@ -93,19 +93,67 @@ class ToolAction(Action[ToolInput]):
         """
         try:
             param: ToolInput = self._input_convert(ai_message, ToolInput)
+            return await run_tool(
+                param.tool_name,
+                param.args,
+                self.resource,
+                self.render_protocol,
+                need_vis_render=need_vis_render,
+            )
         except Exception as e:
+            # If the LLM didn't produce the strict JSON schema, try some
+            # pragmatic fallbacks so agents can still execute the intended tool:
+            # 1) If the AI output is a plain numeric string, accept it as result.
+            # 2) Try to extract a tool name and an `expression` enclosed in backticks
+            #    (common pattern: "Use `calculate` with expression `10 * 99`").
+            # 3) Otherwise return a helpful failure ActionOutput.
+            logger.debug(
+                "ToolAction JSON parse failed, attempting fallbacks: %s", str(e)
+            )
+
+            text = ai_message or ""
+            text = text.strip().strip('"')
+
+            # Fallback 1: pure numeric result
+            import re
+
+            if re.fullmatch(r"[-+]?\d+(?:\.\d+)?", text):
+                return ActionOutput(
+                    is_exe_success=True,
+                    content=text,
+                    observations=text,
+                )
+
+            # Fallback 2: extract tool name and expression in backticks
+            tool_name = None
+            expr = None
+            m_tool = re.search(r"`([A-Za-z0-9_-]+)`", text)
+            if m_tool:
+                tool_name = m_tool.group(1)
+            m_expr = re.search(r"expression\s+`([^`]+)`", text, re.IGNORECASE)
+            if m_expr:
+                expr = m_expr.group(1)
+
+            # If we found an expression, call the tool with that expression
+            if expr:
+                try:
+                    chosen_tool = tool_name or "calculate"
+                    return await run_tool(
+                        chosen_tool,
+                        {"expression": expr},
+                        self.resource,
+                        self.render_protocol,
+                        need_vis_render=need_vis_render,
+                        raw_tool_input=None,
+                    )
+                except Exception:
+                    logger.exception("Fallback tool execution failed")
+
             logger.exception((str(e)))
             return ActionOutput(
                 is_exe_success=False,
                 content="The requested correctly structured answer could not be found.",
             )
-        return await run_tool(
-            param.tool_name,
-            param.args,
-            self.resource,
-            self.render_protocol,
-            need_vis_render=need_vis_render,
-        )
 
 
 async def run_tool(
@@ -127,20 +175,17 @@ async def run_tool(
         status = Status.RUNNING.value
         err_msg = None
 
-        if raw_tool_input and tool_pack.parse_execute_args(
-            resource_name=name, input_str=raw_tool_input
-        ):
-            # Use real tool to parse the input, it will raise raw error when failed
-            # it will make agent to modify the input and retry
-            parsed_args = tool_pack.parse_execute_args(
-                resource_name=name, input_str=raw_tool_input
-            )
-            if parsed_args and isinstance(parsed_args, tuple):
-                args = parsed_args[1]
-
-            if args is not None and isinstance(args, list) and len(args) == 0:
-                # Input args is empty list, just use default args
-                args = {}
+        if raw_tool_input and args is not None:
+            try:
+                parsed = tool_pack.parse_execute_args(
+                    resource_name=name, input_str=raw_tool_input
+                )
+                if parsed and isinstance(parsed, tuple):
+                    args = parsed[1]
+                if args is not None and isinstance(args, list) and len(args) == 0:
+                    args = {}
+            except Exception:
+                pass
 
         try:
             tool_result = await tool_pack.async_execute(resource_name=name, **args)

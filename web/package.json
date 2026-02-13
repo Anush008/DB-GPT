@@ -12,7 +12,7 @@
   "repository": "https://github.com/eosphoros-ai/DB-GPT-Web.git",
   "scripts": {
     "start": "NODE_OPTIONS=--max_old_space_size=8192 next start",
-    "dev": "NODE_OPTIONS=--max_old_space_size=8192 next dev",
+    "dev": "NODE_OPTIONS=--max_old_space_size=16384 next dev",
     "build": "NODE_OPTIONS=--max_old_space_size=8192 next build",
     "build:prod": "APP_ENV=prod  NODE_OPTIONS=--max_old_space_size=8192 next build",
     "lint": "eslint '**/*.{ts,tsx}' --fix",
@@ -23,6 +23,7 @@
   "dependencies": {
     "@ant-design/cssinjs": "^1.18.4",
     "@ant-design/icons": "^5.2.5",
+    "@ant-design/plots": "^2.2.5",
     "@antv/algorithm": "^0.1.26",
     "@antv/ava": "3.5.0-alpha.4",
     "@antv/g2": "^5.1.8",
@@ -54,8 +55,10 @@
     "framer-motion": "^10.16.4",
     "google-auth-library": "^9.2.0",
     "google-one-tap": "^1.0.6",
+    "html2canvas": "^1.4.1",
     "i18next": "^23.4.5",
     "iron-session": "^6.3.1",
+    "jspdf": "^4.1.0",
     "katex": "^0.16.21",
     "lodash": "^4.17.21",
     "markdown-it": "^14.1.0",

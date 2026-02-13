@@ -44,6 +44,7 @@ class ResourceType(str, Enum):
     Knowledge = "knowledge"
     Internet = "internet"
     Tool = "tool"
+    Skill = "skill"
     Plugin = "plugin"
     TextFile = "text_file"
     ExcelFile = "excel_file"

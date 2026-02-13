@@ -1,390 +1,2760 @@
-import { apiInterceptors, collectApp, getAppList, newDialogue, recommendApps, unCollectApp } from '@/client/api';
-import { PlusOutlined, SearchOutlined, StarFilled, StarOutlined } from '@ant-design/icons';
-import { useRequest } from 'ahooks';
-import type { SegmentedProps } from 'antd';
-import { Avatar, Button, ConfigProvider, Input, Segmented, Spin, message } from 'antd';
-import cls from 'classnames';
-import { NextPage } from 'next';
-import { useRouter } from 'next/router';
-import { useContext, useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import type { GridCellRenderer, Index, IndexRange } from 'react-virtualized';
-import { AutoSizer, Grid, InfiniteLoader } from 'react-virtualized';
-
 import { ChatContext } from '@/app/chat-context';
-import IconFont from '@/new-components/common/Icon';
-import BlurredCard from '@/new-components/common/blurredCard';
-import { AppListResponse } from '@/types/app';
-import moment from 'moment';
+import ModelSelector from '@/components/chat/header/model-selector';
+import { ColumnAnalysis, PreprocessingResult, analyzeDataset } from '@/new-components/analysis';
+import { ChartConfig, ChartType } from '@/new-components/charts';
+import ManusLeftPanel, {
+  ExecutionStep as ManusExecutionStep,
+  StepType,
+  ThinkingSection,
+} from '@/new-components/chat/content/ManusLeftPanel';
+import ManusRightPanel, {
+  ActiveStepInfo,
+  ExecutionOutput as ManusExecutionOutput,
+  PanelView,
+} from '@/new-components/chat/content/ManusRightPanel';
+import { MessagePart, ToolPart, ToolStatus } from '@/new-components/chat/content/OpenCodeSessionTurn';
+import axios from '@/utils/ctx-axios';
+import { sendSpacePostRequest } from '@/utils/request';
+import {
+  ArrowUpOutlined,
+  AudioOutlined,
+  BarChartOutlined,
+  BellOutlined,
+  BookOutlined,
+  CheckCircleFilled,
+  CloudServerOutlined,
+  CodeOutlined,
+  ConsoleSqlOutlined,
+  DatabaseOutlined,
+  FileExcelOutlined,
+  FileImageOutlined,
+  FileOutlined,
+  FilePptOutlined,
+  FileTextOutlined,
+  PieChartOutlined,
+  PlusOutlined,
+  ReadOutlined,
+  RightOutlined,
+  SearchOutlined,
+  TableOutlined,
+  ThunderboltOutlined,
+  UploadOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
+import { useRequest } from 'ahooks';
+import {
+  Avatar,
+  Button,
+  ConfigProvider,
+  Dropdown,
+  Input,
+  List,
+  Modal,
+  Popover,
+  Tag,
+  Tooltip,
+  Upload,
+  message,
+} from 'antd';
+import { NextPage } from 'next';
+import Image from 'next/image';
+import { useRouter } from 'next/router';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+
+const generateUUID = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
+const cleanFinalContent = (text: string): string => {
+  let cleaned = text.replace(/\\n/g, '\n').trim();
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+  cleaned = cleaned.replace(/"\s*\}\s*$/, '').trim();
+  return cleaned;
+};
+
+const _formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+};
+
+const _getFileTypeLabel = (fileName: string, mimeType?: string): string => {
+  const ext = fileName.toLowerCase().split('.').pop() || '';
+  if (['xlsx', 'xls'].includes(ext) || mimeType?.includes('spreadsheet') || mimeType?.includes('excel')) {
+    return '电子表格';
+  }
+  if (ext === 'csv' || mimeType?.includes('csv')) {
+    return '电子表格';
+  }
+  if (ext === 'pdf' || mimeType?.includes('pdf')) return 'PDF';
+  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext) || mimeType?.includes('image')) return '图片';
+  if (['doc', 'docx'].includes(ext) || mimeType?.includes('word')) return 'Word 文档';
+  if (['txt', 'md'].includes(ext) || mimeType?.includes('text')) return '文本文件';
+  if (['json'].includes(ext)) return 'JSON';
+  return '文件';
+};
+
+const _getFileIcon = (fileName: string, mimeType?: string) => {
+  const ext = fileName.toLowerCase().split('.').pop() || '';
+  if (
+    ['xlsx', 'xls', 'csv'].includes(ext) ||
+    mimeType?.includes('spreadsheet') ||
+    mimeType?.includes('excel') ||
+    mimeType?.includes('csv')
+  ) {
+    return <FileExcelOutlined className='text-green-600 text-lg' />;
+  }
+  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext) || mimeType?.includes('image')) {
+    return <FileImageOutlined className='text-pink-500 text-lg' />;
+  }
+  if (['ppt', 'pptx'].includes(ext)) {
+    return <FilePptOutlined className='text-orange-500 text-lg' />;
+  }
+  return <FileTextOutlined className='text-blue-500 text-lg' />;
+};
+
+interface DataSource {
+  id: string;
+  name: string;
+  type: string;
+  host?: string;
+  port?: number;
+  user?: string;
+  db_name: string;
+  comment?: string;
+}
+
+// Define Knowledge Base Interface (Partial)
+interface KnowledgeSpace {
+  id: number;
+  name: string;
+  vector_type: string;
+  desc?: string;
+  owner?: string;
+}
+
+// Define file attachment type for user messages
+interface FileAttachment {
+  name: string;
+  size: number;
+  type: string;
+}
+
+// Define message type for chat
+interface ChatMessage {
+  id?: string;
+  role: 'human' | 'view';
+  context: string;
+  model_name?: string;
+  order?: number;
+  thinking?: boolean;
+  attachedFile?: FileAttachment;
+  attachedKnowledge?: KnowledgeSpace;
+}
+
+interface ExecutionStep {
+  id: string;
+  step: number;
+  title?: string;
+  detail: string;
+  status: 'running' | 'done' | 'failed';
+}
+
+interface ExecutionOutput {
+  output_type: string;
+  content: any;
+}
+
+interface FilePreview {
+  kind: 'table' | 'text';
+  file_name?: string;
+  file_path?: string;
+  columns?: string[];
+  rows?: Record<string, any>[];
+  text?: string;
+  shape?: [number, number];
+}
+
+interface ChartPreview {
+  chartType?: ChartType;
+  data: Array<{ x: string | number; y: number; [key: string]: any }>;
+  xField: string;
+  yField: string;
+  seriesField?: string;
+  colorField?: string;
+  angleField?: string;
+  title?: string;
+  description?: string;
+  smooth?: boolean;
+}
+
+interface Skill {
+  id: string;
+  name: string;
+  description: string;
+  type: 'official' | 'personal';
+  icon?: string;
+}
+
+type ArtifactType = 'file' | 'table' | 'chart' | 'image' | 'code' | 'markdown' | 'summary' | 'html';
+
+interface Artifact {
+  id: string;
+  type: ArtifactType;
+  name: string;
+  content: any;
+  createdAt: number;
+  messageId?: string;
+  stepId?: string;
+  downloadable?: boolean;
+  mimeType?: string;
+  size?: number;
+  // Chart-specific metadata
+  chartType?: ChartType;
+  chartConfig?: Partial<ChartConfig>;
+}
+
+type RightPanelTab = 'preview' | 'files' | 'charts' | 'tables' | 'analysis' | 'preprocess' | 'summary';
+
+const _convertExecutionToMessageParts = (
+  execution:
+    | {
+        steps: ExecutionStep[];
+        outputs: Record<string, ExecutionOutput[]>;
+        activeStepId: string | null;
+        collapsed: boolean;
+      }
+    | undefined,
+): MessagePart[] => {
+  if (!execution || !execution.steps.length) return [];
+
+  return execution.steps.map((step): ToolPart => {
+    const outputs = execution.outputs[step.id] || [];
+    const outputText = outputs
+      .map(o => {
+        if (o.output_type === 'text' || o.output_type === 'markdown') {
+          return String(o.content);
+        }
+        if (o.output_type === 'code') {
+          return `\`\`\`\n${String(o.content)}\n\`\`\``;
+        }
+        if (o.output_type === 'table' || o.output_type === 'json') {
+          return JSON.stringify(o.content, null, 2);
+        }
+        if (o.output_type === 'html') {
+          return '[HTML Report]';
+        }
+        return String(o.content);
+      })
+      .filter(Boolean)
+      .join('\n');
+
+    const statusMap: Record<string, ToolStatus> = {
+      running: 'running',
+      done: 'completed',
+      failed: 'error',
+    };
+
+    const toolName = step.title?.toLowerCase().includes('skill')
+      ? 'skill'
+      : step.title?.toLowerCase().includes('read')
+        ? 'read'
+        : step.title?.toLowerCase().includes('write')
+          ? 'write'
+          : step.title?.toLowerCase().includes('code') || step.title?.toLowerCase().includes('execute')
+            ? 'bash'
+            : 'task';
+
+    return {
+      id: step.id,
+      type: 'tool',
+      tool: toolName,
+      state: {
+        status: statusMap[step.status] || 'completed',
+        input: { description: step.title || 'Step', detail: step.detail },
+        output: outputText || step.detail,
+      },
+    };
+  });
+};
+
+// Convert execution data to Manus panel format
+const convertToManusFormat = (
+  execution:
+    | {
+        steps: ExecutionStep[];
+        outputs: Record<string, ExecutionOutput[]>;
+        activeStepId: string | null;
+        collapsed: boolean;
+        stepThoughts?: Record<string, string>;
+      }
+    | undefined,
+  _userQuery?: string,
+): {
+  sections: ThinkingSection[];
+  activeStep: ActiveStepInfo | null;
+  outputs: ManusExecutionOutput[];
+  stepThoughts: Record<string, string>;
+} => {
+  if (!execution || !execution.steps.length) {
+    return { sections: [], activeStep: null, outputs: [], stepThoughts: execution?.stepThoughts || {} };
+  }
+
+  // Determine step type from title
+  const getStepType = (title?: string): StepType => {
+    const lower = (title || '').toLowerCase();
+    if (lower.includes('read') || lower.includes('load')) return 'read';
+    if (lower.includes('edit')) return 'edit';
+    if (lower.includes('write') || lower.includes('save')) return 'write';
+    if (lower.includes('bash') || lower.includes('execute') || lower.includes('command') || lower.includes('shell'))
+      return 'bash';
+    if (lower.includes('grep') || lower.includes('search')) return 'grep';
+    if (lower.includes('glob') || lower.includes('find')) return 'glob';
+    if (lower.includes('html')) return 'html';
+    if (lower.includes('python') || lower.includes('code')) return 'python';
+    if (lower.includes('skill')) return 'skill';
+    if (lower.includes('task')) return 'task';
+    return 'other';
+  };
+
+  // Get step status mapping
+  const getStepStatus = (status: string): 'pending' | 'running' | 'completed' | 'error' => {
+    if (status === 'running') return 'running';
+    if (status === 'done') return 'completed';
+    if (status === 'failed') return 'error';
+    return 'pending';
+  };
+
+  // Group steps into sections (for now, create one section with all steps)
+  // In a more advanced version, you could group by phase/category
+  const steps: ManusExecutionStep[] = execution.steps
+    .filter(step => {
+      const detail = (step.detail || '').toLowerCase();
+      return !detail.includes('action: terminate');
+    })
+    .map(step => {
+      const cleanDetail = step.detail?.replace(/^Thought:.*\n?/gm, '').trim();
+      return {
+        id: step.id,
+        type: getStepType(step.title),
+        title: step.title || `Step ${step.step}`,
+        subtitle: cleanDetail?.split('\n')[0]?.slice(0, 80),
+        description: cleanDetail || undefined,
+        status: getStepStatus(step.status),
+      };
+    });
+
+  // Create section(s)
+  const sections: ThinkingSection[] = [];
+
+  // Group steps by phase (think, skill, etc.)
+  const thinkSteps = steps.filter(
+    s => s.title?.toLowerCase().includes('think') || s.title?.toLowerCase().includes('plan'),
+  );
+  const skillSteps = steps.filter(s => s.title?.toLowerCase().includes('skill'));
+  const otherSteps = steps.filter(
+    s =>
+      !s.title?.toLowerCase().includes('think') &&
+      !s.title?.toLowerCase().includes('plan') &&
+      !s.title?.toLowerCase().includes('skill'),
+  );
+
+  if (thinkSteps.length > 0) {
+    sections.push({
+      id: 'section-think',
+      title: '分析与规划',
+      isCompleted: thinkSteps.every(s => s.status === 'completed'),
+      steps: thinkSteps,
+    });
+  }
+
+  if (skillSteps.length > 0) {
+    sections.push({
+      id: 'section-skill',
+      title: '技能加载',
+      isCompleted: skillSteps.every(s => s.status === 'completed'),
+      steps: skillSteps,
+    });
+  }
+
+  if (otherSteps.length > 0) {
+    sections.push({
+      id: 'section-execution',
+      title: '数据处理与执行',
+      isCompleted: otherSteps.every(s => s.status === 'completed'),
+      steps: otherSteps,
+    });
+  }
+
+  // If no categorization happened, create a default section
+  if (sections.length === 0 && steps.length > 0) {
+    sections.push({
+      id: 'section-default',
+      title: '执行步骤',
+      isCompleted: steps.every(s => s.status === 'completed'),
+      steps: steps,
+    });
+  }
+
+  // Get active step info
+  let activeStep: ActiveStepInfo | null = null;
+  if (execution.activeStepId) {
+    const step = execution.steps.find(s => s.id === execution.activeStepId);
+    if (step) {
+      const cleanDetail = step.detail?.replace(/^Thought:.*\n?/gm, '').trim();
+      activeStep = {
+        id: step.id,
+        type: getStepType(step.title),
+        title: step.title || `Step ${step.step}`,
+        subtitle: cleanDetail?.split('\n')[0]?.slice(0, 80),
+        status: getStepStatus(step.status),
+        detail: cleanDetail,
+      };
+    }
+  }
+
+  // Get outputs for active step
+  const outputs: ManusExecutionOutput[] = execution.activeStepId
+    ? (execution.outputs[execution.activeStepId] || []).map(o => ({
+        output_type: o.output_type as any,
+        content: o.content,
+        timestamp: Date.now(),
+      }))
+    : [];
+
+  return { sections, activeStep, outputs, stepThoughts: execution?.stepThoughts || {} };
+};
+
+const EXAMPLE_CARDS = [
+  {
+    id: 'walmart_sales',
+    icon: '📊',
+    title: '沃尔玛销售数据分析',
+    description: '分析沃尔玛销售CSV数据，生成可视化网页报告',
+    query:
+      '请全面分析这份沃尔玛销售数据，包括各门店销售趋势、假日影响、温度与油价对销售的影响等维度，生成一份精美的交互式网页分析报告。',
+    fileName: 'Walmart_Sales.csv',
+    fileType: 'text/csv',
+    fileSize: 98304, // ~96 KB
+    color: 'from-blue-500/10 to-cyan-500/10',
+    borderColor: 'border-blue-200/60 dark:border-blue-800/40',
+    iconBg: 'bg-blue-100 dark:bg-blue-900/40',
+  },
+  {
+    id: 'fin_report',
+    icon: '📈',
+    title: '金融财报深度分析',
+    description: '分析浙江海翔药业年度报告，生成数据可视化报告',
+    query:
+      '请深度分析这份浙江海翔药业2019年年度报告，包括营收利润趋势、资产负债结构、现金流分析、关键财务指标等，生成一份专业的交互式网页分析报告。',
+    fileName: '2020-01-23__浙江海翔药业股份有限公司__002099__海翔药业__2019年__年度报告.pdf',
+    fileType: 'application/pdf',
+    fileSize: 2621440, // ~2.5 MB
+    color: 'from-violet-500/10 to-purple-500/10',
+    borderColor: 'border-violet-200/60 dark:border-violet-800/40',
+    iconBg: 'bg-violet-100 dark:bg-violet-900/40',
+  },
+];
 
 const Playground: NextPage = () => {
   const router = useRouter();
   const { t } = useTranslation();
-  const { setAgent, setCurrentDialogInfo, model } = useContext(ChatContext);
+  const { model, setModel } = useContext(ChatContext);
+  const [query, setQuery] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const [activeKey, setActiveKey] = useState<string>('all');
-  const [apps, setApps] = useState<any>({
-    app_list: [],
-    total_count: 0,
+  // Selection State
+  const [isDbModalOpen, setIsDbModalOpen] = useState(false);
+  const [isKnowledgeModalOpen, setIsKnowledgeModalOpen] = useState(false);
+
+  // Contexts
+  const [selectedDb, setSelectedDb] = useState<DataSource | null>(null);
+  const [selectedKnowledge, setSelectedKnowledge] = useState<KnowledgeSpace | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<any | null>(null);
+
+  // Chat messages state
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const [executionMap, setExecutionMap] = useState<
+    Record<
+      string,
+      {
+        steps: ExecutionStep[];
+        outputs: Record<string, ExecutionOutput[]>;
+        activeStepId: string | null;
+        collapsed: boolean;
+        stepThoughts: Record<string, string>;
+      }
+    >
+  >({});
+  const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
+  const [uploadedFilePath, setUploadedFilePath] = useState<string | null>(null);
+  const [filePreview, setFilePreview] = useState<FilePreview | null>(null);
+  const [_filePreviewLoading, setFilePreviewLoading] = useState(false);
+  const [_filePreviewError, setFilePreviewError] = useState<string | null>(null);
+  const [chartPreview, setChartPreview] = useState<ChartPreview | null>(null);
+  const lastArtifactKeyRef = useRef<string>('');
+
+  const [artifacts, setArtifacts] = useState<Artifact[]>([]);
+  const [_rightPanelTab, setRightPanelTab] = useState<RightPanelTab>('preview');
+  const [streamingSummary, setStreamingSummary] = useState<string>('');
+  const [_summaryComplete, setSummaryComplete] = useState(false);
+  const [_dataAnalysis, setDataAnalysis] = useState<ColumnAnalysis[] | null>(null);
+  const [_analysisLoading, setAnalysisLoading] = useState(false);
+  const [_showProfessionalReport, _setShowProfessionalReport] = useState(false);
+  const [_preprocessedData, _setPreprocessedData] = useState<PreprocessingResult | null>(null);
+
+  const [isSkillPanelOpen, setIsSkillPanelOpen] = useState(false);
+  const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
+  const [skillSearchQuery, setSkillSearchQuery] = useState('');
+
+  const [isKnowledgePanelOpen, setIsKnowledgePanelOpen] = useState(false);
+  const [knowledgeSearchQuery, setKnowledgeSearchQuery] = useState('');
+
+  const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
+  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
+  const [rightPanelView, setRightPanelView] = useState<PanelView>('execution');
+  const [previewArtifact, setPreviewArtifact] = useState<Artifact | null>(null);
+
+  // Active round tracking: which view message is currently selected for the right panel
+  const [activeViewMsgId, setActiveViewMsgId] = useState<string | null>(null);
+
+  // Track step IDs that belong to a terminate action so we can suppress them
+  const terminatedStepIdsRef = useRef<Set<string>>(new Set());
+  const preloadedFilePathRef = useRef<string | null>(null);
+
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  // Fetch Data Sources
+  const { data: dataSources, loading: _loadingSources } = useRequest(async () => {
+    try {
+      const response = await axios.get('/api/v2/serve/datasources');
+      if (response.data.success) {
+        return response.data.data as DataSource[];
+      }
+      return [];
+    } catch (e) {
+      console.error('Failed to fetch datasources', e);
+      return [];
+    }
   });
 
-  const items: SegmentedProps['options'] = [
-    {
-      value: 'recommend',
-      label: t('recommend_apps'),
-    },
-    {
-      value: 'all',
-      label: t('all_apps'),
-    },
-    {
-      value: 'collected',
-      label: t('my_collected_apps'),
-    },
-  ];
-
-  const getAppListWithParams = (params: Record<string, string>) =>
-    apiInterceptors(
-      getAppList({
-        page_no: '1',
-        page_size: '12',
-        ...params,
-      }),
-    );
-  const getHotAppList = (params: Record<string, string>) =>
-    apiInterceptors(
-      recommendApps({
-        page_no: '1',
-        page_size: '12',
-        ...params,
-      }),
-    );
-  // 获取应用列表
-  const { run: getAppListFn, loading } = useRequest(
-    async (app_name = '', page_no = '1', page_size = '12') => {
-      switch (activeKey) {
-        case 'recommend':
-          return await getHotAppList({
-            ...{ page_no, page_size },
-          });
-        case 'collected':
-          return await getAppListWithParams({
-            is_collected: 'true',
-            ignore_user: 'true',
-            published: 'true',
-            need_owner_info: 'true',
-            ...{ app_name, page_no, page_size },
-          });
-        case 'all':
-          return await getAppListWithParams({
-            ignore_user: 'true',
-            published: 'true',
-            need_owner_info: 'true',
-
-            ...{ app_name, page_no, page_size },
-          });
-        default:
-          return [];
+  // Fetch Knowledge Bases
+  const { data: knowledgeSpaces, loading: _loadingKnowledge } = useRequest(async () => {
+    try {
+      const response = await sendSpacePostRequest('/knowledge/space/list', {});
+      // ctx-axios interceptor returns response.data directly, so response is {success, data, ...}
+      if (response?.success) {
+        return response.data || [];
       }
-    },
-    {
-      manual: true,
-      onSuccess: (res: [any, [] | AppListResponse]) => {
-        const [_error, data] = res;
-        if (activeKey === 'recommend') {
-          if (Array.isArray(data)) {
-            return setApps({
-              app_list: data,
-              total_count: data.length,
+      return [];
+    } catch (e) {
+      console.error('Failed to fetch knowledge spaces', e);
+      return [];
+    }
+  });
+
+  // Fetch Skills/DBGPTs list
+  const { data: skillsList, loading: _loadingSkills } = useRequest(async () => {
+    try {
+      const response = await axios.get(`${process.env.API_BASE_URL ?? ''}/api/v1/skills/list`);
+      // ctx-axios interceptor returns response.data directly
+      if (response?.success && Array.isArray(response.data)) {
+        return response.data.map((item: any) => ({
+          id: String(item.id || item.name),
+          name: item.name,
+          description: item.description || '',
+          type: item.type === 'official' ? 'official' : 'personal',
+          icon:
+            item.skill_type === 'data_analysis'
+              ? '📊'
+              : item.skill_type === 'coding'
+                ? '💻'
+                : item.skill_type === 'web_search'
+                  ? '🔍'
+                  : item.skill_type === 'knowledge_qa'
+                    ? '📚'
+                    : item.skill_type === 'chat'
+                      ? '💬'
+                      : '⚡',
+        })) as Skill[];
+      }
+      return [];
+    } catch (e) {
+      console.error('Failed to fetch skills', e);
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  useEffect(() => {
+    const convId = router.query.id as string | undefined;
+    if (convId && convId !== conversationId) {
+      loadConversation(convId);
+    }
+  }, [router.query.id]);
+
+  useEffect(() => {
+    const lastView = [...messages].reverse().find(msg => msg.role === 'view');
+    if (lastView?.id) {
+      setActiveMessageId(lastView.id);
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    const loadPreview = async () => {
+      if (!uploadedFilePath) return;
+      setFilePreviewLoading(true);
+      setFilePreviewError(null);
+      try {
+        const res = await axios.post(`${process.env.API_BASE_URL ?? ''}/api/v1/resource/file/read`, null, {
+          params: {
+            conv_uid: conversationId || 'preview',
+            file_key: uploadedFilePath,
+          },
+        });
+        if (res.data?.success && res.data?.data) {
+          let parsed: any;
+          try {
+            parsed = JSON.parse(res.data.data);
+          } catch {
+            parsed = res.data.data;
+          }
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const columns = Object.keys(parsed[0] || {});
+            setFilePreview({
+              kind: 'table',
+              file_name: uploadedFile?.name,
+              file_path: uploadedFilePath,
+              columns,
+              rows: parsed.slice(0, 50),
+              shape: [parsed.length, columns.length],
+            });
+          } else if (typeof parsed === 'string') {
+            setFilePreview({
+              kind: 'text',
+              file_name: uploadedFile?.name,
+              file_path: uploadedFilePath,
+              text: parsed,
+            });
+          } else {
+            setFilePreview({
+              kind: 'text',
+              file_name: uploadedFile?.name,
+              file_path: uploadedFilePath,
+              text: JSON.stringify(parsed, null, 2),
             });
           }
         } else {
-          if ('app_list' in data) {
-            const code = data?.app_list?.[0]?.app_code;
-            const index = code ? apps.app_list.findIndex((item: any) => item.app_code === code) : -1;
-            if (index !== -1) {
-              const finallyIndex = Math.floor(index / 12) * 12;
-              setApps(
-                {
-                  app_list: apps.app_list.toSpliced(finallyIndex, 12, ...data.app_list) || [],
-                  total_count: data?.total_count || 0,
-                } || {},
-              );
-            } else {
-              console.log('concat');
-              setApps(
-                {
-                  app_list: apps.app_list.concat(data?.app_list) || [],
-                  total_count: data?.total_count || 0,
-                } || {},
-              );
-            }
-          }
+          setFilePreviewError(res.data?.err_msg || '文件预览失败');
         }
-      },
-      debounceWait: 500,
+      } catch (err: any) {
+        setFilePreviewError(err?.message || '文件预览失败');
+      } finally {
+        setFilePreviewLoading(false);
+      }
+    };
+    loadPreview();
+  }, [uploadedFilePath, conversationId, uploadedFile]);
+
+  useEffect(() => {
+    if (!filePreview || filePreview.kind !== 'table') {
+      setChartPreview(null);
+      return;
+    }
+    const rows = filePreview.rows || [];
+    const columns = filePreview.columns || [];
+    if (!rows.length || !columns.length) {
+      setChartPreview(null);
+      return;
+    }
+    const numericColumns = columns.filter(col => {
+      const sample = rows.slice(0, 20).map(row => Number(row[col]));
+      const numericCount = sample.filter(val => Number.isFinite(val)).length;
+      return numericCount >= Math.max(3, Math.floor(sample.length * 0.6));
+    });
+    if (!numericColumns.length) {
+      setChartPreview(null);
+      return;
+    }
+    const yCol = numericColumns[0];
+    const xCol = columns.find(col => col !== yCol) || '__index__';
+    const data = rows.slice(0, 60).map((row, idx) => {
+      const xVal = xCol === '__index__' ? idx + 1 : row[xCol];
+      const yVal = Number(row[yCol]);
+      return {
+        x: typeof xVal === 'string' || typeof xVal === 'number' ? xVal : String(xVal ?? idx + 1),
+        y: Number.isFinite(yVal) ? yVal : 0,
+      };
+    });
+    setChartPreview({
+      data,
+      xField: 'x',
+      yField: 'y',
+      title: `${yCol} trend`,
+    });
+  }, [filePreview]);
+
+  // Auto-analyze data when filePreview updates
+  useEffect(() => {
+    if (!filePreview || filePreview.kind !== 'table' || !filePreview.rows?.length) {
+      setDataAnalysis(null);
+      return;
+    }
+
+    setAnalysisLoading(true);
+    try {
+      const analysis = analyzeDataset(filePreview.rows, filePreview.columns);
+      setDataAnalysis(analysis);
+      // Auto-switch to analysis tab when data is ready
+      if (analysis.length > 0) {
+        setRightPanelTab('analysis');
+      }
+    } catch (err) {
+      console.error('Data analysis failed:', err);
+      setDataAnalysis(null);
+    } finally {
+      setAnalysisLoading(false);
+    }
+  }, [filePreview]);
+
+  useEffect(() => {
+    if (!activeMessageId || !filePreview) return;
+    const artifactKey = `${activeMessageId}:${filePreview.file_path || filePreview.file_name || ''}`;
+    if (artifactKey === lastArtifactKeyRef.current) return;
+    lastArtifactKeyRef.current = artifactKey;
+    const previewStepId = 'client-preview';
+    setExecutionMap(prev => {
+      const current = prev[activeMessageId] || { steps: [], outputs: {}, activeStepId: null, collapsed: false };
+      const hasStep = current.steps.some(step => step.id === previewStepId);
+      const nextSteps = hasStep
+        ? current.steps.map(step => (step.id === previewStepId ? { ...step, status: 'done' as const } : step))
+        : [
+            ...current.steps,
+            {
+              id: previewStepId,
+              step: current.steps.length + 1,
+              title: 'Preview & Visualize',
+              detail: 'Parsed file preview and prepared visual insights.',
+              status: 'done' as const,
+            },
+          ];
+      const outputs = { ...current.outputs };
+      const previewOutputs: ExecutionOutput[] = [];
+      if (filePreview.kind === 'table') {
+        previewOutputs.push({
+          output_type: 'table',
+          content: {
+            columns: (filePreview.columns || []).map(col => ({ title: col, dataIndex: col, key: col })),
+            rows: filePreview.rows || [],
+          },
+        });
+      } else if (filePreview.kind === 'text') {
+        previewOutputs.push({ output_type: 'text', content: filePreview.text || '' });
+      }
+      if (chartPreview) {
+        previewOutputs.push({
+          output_type: 'chart',
+          content: {
+            data: chartPreview.data,
+            xField: chartPreview.xField,
+            yField: chartPreview.yField,
+          },
+        });
+      }
+      outputs[previewStepId] = previewOutputs;
+      return {
+        ...prev,
+        [activeMessageId]: {
+          ...current,
+          steps: nextSteps,
+          outputs,
+          activeStepId: previewStepId,
+        },
+      };
+    });
+  }, [activeMessageId, filePreview, chartPreview]);
+
+  interface Round {
+    humanMsg: ChatMessage | null;
+    viewMsg: ChatMessage | null;
+  }
+
+  const rounds = useMemo<Round[]>(() => {
+    const result: Round[] = [];
+    let i = 0;
+    while (i < messages.length) {
+      const msg = messages[i];
+      if (msg.role === 'human') {
+        const next = messages[i + 1];
+        if (next && next.role === 'view') {
+          result.push({ humanMsg: msg, viewMsg: next });
+          i += 2;
+        } else {
+          result.push({ humanMsg: msg, viewMsg: null });
+          i += 1;
+        }
+      } else if (msg.role === 'view') {
+        result.push({ humanMsg: null, viewMsg: msg });
+        i += 1;
+      } else {
+        i += 1;
+      }
+    }
+    return result;
+  }, [messages]);
+
+  const selectedViewMsgId = useMemo(() => {
+    if (activeViewMsgId) {
+      const exists = rounds.some(r => r.viewMsg?.id === activeViewMsgId);
+      if (exists) return activeViewMsgId;
+    }
+    const lastRound = rounds[rounds.length - 1];
+    return lastRound?.viewMsg?.id || null;
+  }, [activeViewMsgId, rounds]);
+
+  const parseCsvLine = (line: string) => {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      const nextChar = line[i + 1];
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        result.push(current);
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current);
+    return result.map(val => val.trim());
+  };
+
+  const _parseCsvText = (text: string, fileName?: string) => {
+    const lines = text.split(/\r?\n/).filter(line => line.trim());
+    if (!lines.length) return null;
+    const header = parseCsvLine(lines[0]);
+    const rows = lines.slice(1, 51).map((line, idx) => {
+      const values = parseCsvLine(line);
+      const row: Record<string, any> = { id: idx + 1 };
+      header.forEach((col, i) => {
+        row[col || `col_${i + 1}`] = values[i] ?? '';
+      });
+      return row;
+    });
+    return {
+      kind: 'table' as const,
+      file_name: fileName,
+      columns: header.map(col => col || 'Column'),
+      rows,
+      shape: [lines.length - 1, header.length],
+    };
+  };
+
+  const _getArtifactName = (outputType: string, content: any): string => {
+    if (outputType === 'table') {
+      const rowCount = content?.rows?.length || 0;
+      const colCount = content?.columns?.length || 0;
+      return `Data Table (${rowCount} rows × ${colCount} cols)`;
+    }
+    if (outputType === 'chart') {
+      const chartType = content?.chartType || 'line';
+      const chartTypeNames: Record<string, string> = {
+        line: 'Line Chart',
+        column: 'Column Chart',
+        bar: 'Bar Chart',
+        pie: 'Pie Chart',
+        donut: 'Donut Chart',
+        area: 'Area Chart',
+        scatter: 'Scatter Plot',
+        'dual-axes': 'Dual Axes Chart',
+      };
+      return content?.title || chartTypeNames[chartType] || 'Chart Visualization';
+    }
+    if (outputType === 'code') {
+      return `Code Snippet`;
+    }
+    if (outputType === 'image') {
+      return content?.name || 'Image';
+    }
+    if (outputType === 'markdown') {
+      const preview = String(content).slice(0, 30);
+      return `Document: ${preview}${String(content).length > 30 ? '...' : ''}`;
+    }
+    if (outputType === 'file') {
+      return content?.name || content?.file_name || 'File';
+    }
+    return `${outputType} output`;
+  };
+
+  const extractCodeFileName = (code: string, stepLabel: string, index: number): string => {
+    const saveMatch = code.match(/\.to_(?:excel|csv)\s*\(\s*['"]([^'"]+)['"]/);
+    if (saveMatch) return saveMatch[1].split('/').pop() || saveMatch[1];
+    const openMatch = code.match(/open\s*\(\s*['"]([^'"]+\.(?:py|txt|json|csv|xlsx?))['"]/);
+    if (openMatch) return openMatch[1].split('/').pop() || openMatch[1];
+
+    const savefigMatch = code.match(/savefig\s*\(\s*['"]([^'"]+)['"]/);
+    if (savefigMatch) return savefigMatch[1].split('/').pop() || savefigMatch[1];
+
+    const readMatch = code.match(/pd\.read_(?:csv|excel)\s*\(\s*['"]([^'"]+)['"]/);
+    if (readMatch) {
+      const srcName = (readMatch[1].split('/').pop() || readMatch[1]).replace(/\.[^.]+$/, '');
+      return `analyze_${srcName}.py`;
+    }
+
+    const defMatch = code.match(/def\s+(\w+)\s*\(/);
+    if (defMatch) return `${defMatch[1]}.py`;
+
+    const classMatch = code.match(/class\s+(\w+)/);
+    if (classMatch) return `${classMatch[1]}.py`;
+
+    if (/import\s+matplotlib|plt\./.test(code)) return `visualization_${index + 1}.py`;
+    if (/sns\.|import\s+seaborn/.test(code)) return `chart_${index + 1}.py`;
+    if (/pd\.|import\s+pandas/.test(code)) return `data_processing_${index + 1}.py`;
+
+    const label = stepLabel.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 30);
+    return `${label}_${index}.py`;
+  };
+
+  const extractFileReferences = (text: string): Array<{ name: string; downloadable: boolean; size?: number }> => {
+    const refs: Array<{ name: string; downloadable: boolean; size?: number }> = [];
+    const filePattern = /[\w\-./]+\.(?:xlsx|xls|csv|py|json|txt|pdf|png|jpg|jpeg|html|md)/gi;
+    const matches = text.match(filePattern) || [];
+    const seen = new Set<string>();
+    matches.forEach(m => {
+      const name = m.split('/').pop() || m;
+      const lower = name.toLowerCase();
+      if (!seen.has(lower)) {
+        seen.add(lower);
+        refs.push({ name, downloadable: true });
+      }
+    });
+    return refs;
+  };
+
+  const _downloadArtifact = (artifact: Artifact) => {
+    let content: string;
+    let filename: string;
+    let mimeType: string;
+
+    switch (artifact.type) {
+      case 'table': {
+        const rows = artifact.content?.rows || [];
+        const columns = artifact.content?.columns?.map((c: any) => c.dataIndex || c.key || c) || [];
+        const csvContent = [
+          columns.join(','),
+          ...rows.map((row: any) => columns.map((col: string) => JSON.stringify(row[col] ?? '')).join(',')),
+        ].join('\n');
+        content = csvContent;
+        filename = `table-${Date.now()}.csv`;
+        mimeType = 'text/csv';
+        break;
+      }
+      case 'code':
+        content = String(artifact.content);
+        filename = `code-${Date.now()}.py`;
+        mimeType = 'text/plain';
+        break;
+      case 'markdown':
+      case 'summary':
+        content = String(artifact.content);
+        filename = `${artifact.type}-${Date.now()}.md`;
+        mimeType = 'text/markdown';
+        break;
+      default:
+        content = JSON.stringify(artifact.content, null, 2);
+        filename = `artifact-${Date.now()}.json`;
+        mimeType = 'application/json';
+    }
+
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const _copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      message.success('Copied to clipboard');
+    });
+  };
+
+  const _getArtifactIcon = (type: ArtifactType, chartType?: ChartType) => {
+    switch (type) {
+      case 'table':
+        return <TableOutlined className='text-blue-500' />;
+      case 'chart':
+        if (chartType === 'pie' || chartType === 'donut') {
+          return <PieChartOutlined className='text-green-500' />;
+        }
+        return <BarChartOutlined className='text-green-500' />;
+      case 'code':
+        return <CodeOutlined className='text-purple-500' />;
+      case 'image':
+        return <FileImageOutlined className='text-pink-500' />;
+      case 'markdown':
+        return <FileTextOutlined className='text-orange-500' />;
+      case 'summary':
+        return <FileTextOutlined className='text-emerald-500' />;
+      case 'file':
+        return <FileOutlined className='text-gray-500' />;
+      default:
+        return <FileOutlined className='text-gray-500' />;
+    }
+  };
+
+  // Build artifacts from execution data — shared between live streaming and history restore
+  const buildArtifactsFromExecution = (
+    messageId: string,
+    execution: {
+      steps: ExecutionStep[];
+      outputs: Record<string, ExecutionOutput[]>;
     },
+    summaryText?: string,
+    filePath?: string | null,
+  ): Artifact[] => {
+    const finalArtifacts: Artifact[] = [];
+    const now = Date.now();
+    const seenCodeHashes = new Set<string>();
+
+    if (execution) {
+      const allSteps = execution.steps || [];
+      allSteps.forEach(step => {
+        const stepOutputs = execution.outputs[step.id] || [];
+        stepOutputs.forEach((output, oIdx) => {
+          if (output.output_type === 'code') {
+            const codeStr = String(output.content || '').trim();
+            const hash = codeStr.slice(0, 200);
+            if (codeStr && !seenCodeHashes.has(hash)) {
+              seenCodeHashes.add(hash);
+              const fileName = extractCodeFileName(codeStr, (step as any).action || step.id, oIdx);
+              finalArtifacts.push({
+                id: `${messageId}-code-${step.id}-${oIdx}`,
+                type: 'code',
+                name: fileName,
+                content: codeStr,
+                createdAt: now,
+                messageId,
+                stepId: step.id,
+                downloadable: true,
+              });
+            }
+          } else if (output.output_type === 'file') {
+            finalArtifacts.push({
+              id: `${messageId}-file-${step.id}-${oIdx}`,
+              type: 'file',
+              name: output.content?.name || output.content?.file_name || 'File',
+              content: output.content,
+              createdAt: now,
+              messageId,
+              stepId: step.id,
+              downloadable: true,
+              size: output.content?.size,
+            });
+          } else if (output.output_type === 'html') {
+            const htmlContent =
+              typeof output.content === 'string'
+                ? output.content
+                : output.content?.content || output.content?.html || String(output.content);
+            const htmlTitle = output.content?.title || 'Report';
+            finalArtifacts.push({
+              id: `${messageId}-html-${step.id}-${oIdx}`,
+              type: 'html',
+              name: `${htmlTitle}.html`,
+              content: htmlContent,
+              createdAt: now,
+              messageId,
+              stepId: step.id,
+              downloadable: true,
+            });
+          } else if (output.output_type === 'image') {
+            const imgUrl =
+              typeof output.content === 'string'
+                ? output.content
+                : output.content?.url || output.content?.src || String(output.content);
+            const imgName = imgUrl.split('/').pop() || `image_${oIdx}.png`;
+            const displayName = imgName.replace(/^[a-f0-9]{8}_/, '');
+            finalArtifacts.push({
+              id: `${messageId}-img-${step.id}-${oIdx}`,
+              type: 'image',
+              name: displayName,
+              content: imgUrl,
+              createdAt: now,
+              messageId,
+              stepId: step.id,
+              downloadable: true,
+            });
+          }
+        });
+      });
+    }
+
+    if (summaryText) {
+      const fileRefs = extractFileReferences(summaryText);
+      fileRefs.forEach((ref, idx) => {
+        const alreadyExists = finalArtifacts.some(a => a.name.toLowerCase() === ref.name.toLowerCase());
+        if (!alreadyExists) {
+          finalArtifacts.push({
+            id: `${messageId}-fileref-${idx}`,
+            type: 'file',
+            name: ref.name,
+            content: { name: ref.name },
+            createdAt: now,
+            messageId,
+            downloadable: ref.downloadable,
+            size: ref.size,
+          });
+        }
+      });
+    }
+
+    if (filePath) {
+      const uploadName = filePath.split('/').pop() || 'uploaded_file';
+      const alreadyExists = finalArtifacts.some(a => a.name.toLowerCase() === uploadName.toLowerCase());
+      if (!alreadyExists) {
+        finalArtifacts.push({
+          id: `${messageId}-upload`,
+          type: 'file',
+          name: uploadName,
+          content: { name: uploadName, file_path: filePath },
+          createdAt: now,
+          messageId,
+          downloadable: true,
+        });
+      }
+    }
+
+    // Deduplicate: for artifacts with the same name+type, keep only the last one
+    const deduped: Artifact[] = [];
+    const seen = new Map<string, number>();
+    for (let i = finalArtifacts.length - 1; i >= 0; i--) {
+      const key = `${finalArtifacts[i].type}:${finalArtifacts[i].name}`;
+      if (!seen.has(key)) {
+        seen.set(key, i);
+        deduped.unshift(finalArtifacts[i]);
+      }
+    }
+
+    return deduped;
+  };
+
+  const handleStart = async (inputQuery = query, overrideFile?: File | null) => {
+    const effectiveFile = overrideFile !== undefined ? overrideFile : uploadedFile;
+    if ((!inputQuery.trim() && !effectiveFile) || loading) return;
+
+    let finalQuery = inputQuery;
+    const appCode = 'chat_normal';
+    const chatMode = 'chat_normal';
+    let currentUploadedFilePath = null;
+
+    // Handle File Upload if present
+    if (preloadedFilePathRef.current) {
+      // Example file already copied to server - skip upload
+      currentUploadedFilePath = preloadedFilePathRef.current;
+      setUploadedFilePath(currentUploadedFilePath);
+      preloadedFilePathRef.current = null;
+      finalQuery = inputQuery || 'Analyze the uploaded file.';
+    } else if (effectiveFile) {
+      const formData = new FormData();
+      formData.append('file', effectiveFile);
+
+      try {
+        const uploadRes = await axios.post(`${process.env.API_BASE_URL ?? ''}/api/v1/python/file/upload`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+
+        const resData = uploadRes.data;
+        // Handle both wrapped Result {success, data} and raw string path
+        if (resData?.success && resData?.data) {
+          currentUploadedFilePath = resData.data;
+          setUploadedFilePath(currentUploadedFilePath);
+          finalQuery = inputQuery || 'Analyze the uploaded Excel file.';
+        } else if (typeof resData === 'string' && resData.length > 0) {
+          // Backend returned the file path directly as a string
+          currentUploadedFilePath = resData;
+          setUploadedFilePath(currentUploadedFilePath);
+          finalQuery = inputQuery || 'Analyze the uploaded Excel file.';
+        } else {
+          const errMsg = resData?.err_msg || resData?.message || 'Unknown error';
+          message.error('File upload failed: ' + errMsg);
+          return;
+        }
+      } catch (uploadErr: any) {
+        console.error('[Upload] error:', uploadErr);
+        const errDetail =
+          uploadErr?.response?.data?.err_msg ||
+          uploadErr?.response?.data?.message ||
+          uploadErr?.message ||
+          'Network error';
+        message.error('File upload failed: ' + errDetail);
+        return;
+      }
+    } else {
+      if (uploadedFilePath) {
+        setUploadedFilePath(null);
+        setFilePreview(null);
+      }
+      // Construct context prefix for non-file queries
+      const contextParts = [];
+      if (selectedDb) contextParts.push(`[Database: ${selectedDb.db_name}]`);
+      if (selectedKnowledge) contextParts.push(`[Knowledge: ${selectedKnowledge.name}]`);
+      if (contextParts.length > 0) {
+        finalQuery = `${contextParts.join(' ')} ${inputQuery}`;
+      }
+    }
+
+    // Prepare conversation ID
+    const currentConvId = conversationId || generateUUID();
+    if (!conversationId) {
+      setConversationId(currentConvId);
+    }
+
+    // Calculate current order
+    const currentOrder = Math.floor(messages.length / 2) + 1;
+
+    const responseId = generateUUID();
+
+    const humanId = generateUUID();
+
+    // Add user message and AI placeholder message
+    setMessages(prev => [
+      ...prev,
+      {
+        id: humanId,
+        role: 'human',
+        context: inputQuery,
+        order: currentOrder,
+        attachedFile: effectiveFile
+          ? {
+              name: effectiveFile.name,
+              size: effectiveFile.size,
+              type: effectiveFile.type,
+            }
+          : undefined,
+        attachedKnowledge: selectedKnowledge ?? undefined,
+      },
+      {
+        id: responseId,
+        role: 'view',
+        context: '',
+        order: currentOrder,
+        thinking: true,
+      },
+    ]);
+
+    setLoading(true);
+    setQuery(''); // Clear input
+    setStreamingSummary('');
+    setActiveViewMsgId(responseId); // Auto-switch right panel to new round
+
+    const controller = new AbortController();
+    terminatedStepIdsRef.current.clear();
+    setExecutionMap(prev => ({
+      ...prev,
+      [responseId]: {
+        steps: [],
+        outputs: {},
+        activeStepId: null,
+        collapsed: false,
+        stepThoughts: {},
+      },
+    }));
+    setActiveMessageId(responseId);
+
+    try {
+      const response = await fetch(`${process.env.API_BASE_URL ?? ''}/api/v1/chat/react-agent`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          conv_uid: currentConvId,
+          chat_mode: chatMode,
+          model_name: model,
+          user_input: finalQuery,
+          temperature: 0.6,
+          max_new_tokens: 4000,
+          select_param: appCode === 'chat_normal' ? '' : appCode,
+          ext_info: {
+            ...(currentUploadedFilePath ? { file_path: currentUploadedFilePath } : {}),
+            ...(selectedSkill ? { skill_id: selectedSkill.id, skill_name: selectedSkill.name } : {}),
+            ...(selectedDb ? { database_name: selectedDb.db_name, database_type: selectedDb.db_type } : {}),
+            ...(selectedKnowledge
+              ? { knowledge_space_name: selectedKnowledge.name, knowledge_space_id: selectedKnowledge.id }
+              : {}),
+          },
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.body) {
+        throw new Error('No response body');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+
+      const processEvent = (raw: string) => {
+        if (!raw.startsWith('data:')) return;
+        const data = raw.slice(5).trim();
+        if (!data) return;
+        let payload: any;
+        try {
+          payload = JSON.parse(data);
+        } catch (_err) {
+          return;
+        }
+        if (payload.type === 'step.start') {
+          const id = payload.id || `${payload.step}`;
+          if (terminatedStepIdsRef.current.has(id)) return;
+          setExecutionMap(prev => {
+            const current = prev[responseId] || { steps: [], outputs: {}, activeStepId: null, collapsed: false };
+            const nextSteps = [
+              ...current.steps.map(item => (item.status === 'running' ? { ...item, status: 'done' } : item)),
+              { id, step: payload.step, title: payload.title, detail: payload.detail, status: 'running' as const },
+            ];
+            return {
+              ...prev,
+              [responseId]: {
+                ...current,
+                steps: nextSteps,
+                outputs: { ...current.outputs, [id]: current.outputs[id] || [] },
+                activeStepId: id,
+              },
+            };
+          });
+          setActiveMessageId(responseId);
+          setRightPanelCollapsed(false);
+        } else if (payload.type === 'step.meta') {
+          if (payload.action && payload.action.toLowerCase() === 'terminate') {
+            terminatedStepIdsRef.current.add(payload.id);
+            setExecutionMap(prev => {
+              const current = prev[responseId];
+              if (!current) return prev;
+              const nextSteps = current.steps.filter(item => item.id !== payload.id);
+              const nextActiveStepId = current.activeStepId === payload.id ? null : current.activeStepId;
+              return {
+                ...prev,
+                [responseId]: { ...current, steps: nextSteps, activeStepId: nextActiveStepId },
+              };
+            });
+            return;
+          }
+          setExecutionMap(prev => {
+            const current = prev[responseId];
+            if (!current) return prev;
+            // Build detail from action only (thought goes to stepThoughts)
+            const nextSteps = current.steps.map(item => {
+              if (item.id !== payload.id) return item;
+              const parts = [] as string[];
+              if (payload.action) {
+                const actionText = payload.action_input
+                  ? `${payload.action} | ${payload.action_input}`
+                  : payload.action;
+                parts.push(`Action: ${actionText}`);
+              }
+              return { ...item, detail: parts.join('\n') || item.detail };
+            });
+            // Route thought to stepThoughts map for subtle display
+            const nextThoughts = payload.thought
+              ? {
+                  ...current.stepThoughts,
+                  [payload.id]: payload.thought,
+                }
+              : current.stepThoughts;
+            return {
+              ...prev,
+              [responseId]: { ...current, steps: nextSteps, stepThoughts: nextThoughts },
+            };
+          });
+        } else if (payload.type === 'step.output') {
+          if (terminatedStepIdsRef.current.has(payload.id || '')) return;
+          setExecutionMap(prev => {
+            const current = prev[responseId];
+            if (!current) return prev;
+            const targetId = current.activeStepId;
+            if (!targetId) return prev;
+            const nextSteps = current.steps.map(item => {
+              if (item.id !== targetId) return item;
+              const detail = `${item.detail}\n${payload.detail}`.trim();
+              return { ...item, detail };
+            });
+            return { ...prev, [responseId]: { ...current, steps: nextSteps } };
+          });
+        } else if (payload.type === 'step.chunk') {
+          const id = payload.id;
+          if (terminatedStepIdsRef.current.has(id || '')) return;
+          setExecutionMap(prev => {
+            const current = prev[responseId];
+            if (!current) return prev;
+            const targetId = id || current.activeStepId;
+            if (!targetId) return prev;
+            const list = current.outputs[targetId] ? [...current.outputs[targetId]] : [];
+            list.push({ output_type: payload.output_type, content: payload.content });
+            return {
+              ...prev,
+              [responseId]: {
+                ...current,
+                outputs: { ...current.outputs, [targetId]: list },
+              },
+            };
+          });
+
+          // Artifacts are now generated at task completion (final event),
+          // not during streaming — to avoid showing intermediate outputs as artifacts
+        } else if (payload.type === 'step.done') {
+          const id = payload.id;
+          if (terminatedStepIdsRef.current.has(id || '')) return;
+          setExecutionMap(prev => {
+            const current = prev[responseId];
+            if (!current) return prev;
+            const targetId = id || current.activeStepId;
+            if (!targetId) return prev;
+            const nextSteps = current.steps.map(item =>
+              item.id === targetId ? { ...item, status: payload.status || 'done' } : item,
+            );
+            return { ...prev, [responseId]: { ...current, steps: nextSteps } };
+          });
+        } else if (payload.type === 'step.thought') {
+          // Associate thinking content with a specific step (or "initial")
+          const targetId = payload.id || 'initial';
+          const content = payload.content || '';
+          if (content) {
+            setExecutionMap(prev => {
+              const current = prev[responseId];
+              if (!current) return prev;
+              return {
+                ...prev,
+                [responseId]: {
+                  ...current,
+                  stepThoughts: {
+                    ...current.stepThoughts,
+                    [targetId]: (current.stepThoughts?.[targetId] || '') + content,
+                  },
+                },
+              };
+            });
+          }
+        } else if (payload.type === 'final') {
+          setExecutionMap(prev => {
+            const current = prev[responseId];
+            if (!current) return prev;
+            const nextSteps = current.steps.map(item =>
+              item.status === 'running' ? { ...item, status: 'done' } : item,
+            );
+            return { ...prev, [responseId]: { ...current, steps: nextSteps } };
+          });
+          setMessages(prev =>
+            prev.map(msg => {
+              if (msg.id !== responseId || msg.role !== 'view') return msg;
+              return { ...msg, context: cleanFinalContent(payload.content || ''), thinking: false };
+            }),
+          );
+          setActiveMessageId(responseId);
+
+          if (payload.content) {
+            setStreamingSummary('');
+            setSummaryComplete(false);
+            setRightPanelTab('summary');
+
+            const summaryText = cleanFinalContent(payload.content);
+            let index = 0;
+            const streamInterval = setInterval(() => {
+              if (index < summaryText.length) {
+                const chunkSize = Math.min(3, summaryText.length - index);
+                setStreamingSummary(prev => prev + summaryText.slice(index, index + chunkSize));
+                index += chunkSize;
+              } else {
+                clearInterval(streamInterval);
+                setSummaryComplete(true);
+
+                setExecutionMap(currentExecMap => {
+                  const execution = currentExecMap[responseId];
+                  const deduped = buildArtifactsFromExecution(
+                    responseId,
+                    execution || { steps: [], outputs: {} },
+                    summaryText,
+                    uploadedFilePath,
+                  );
+
+                  setArtifacts(prev => {
+                    const filtered = prev.filter(a => a.messageId !== responseId);
+                    return [...filtered, ...deduped];
+                  });
+
+                  return currentExecMap;
+                });
+              }
+            }, 15);
+          }
+        } else if (payload.type === 'done') {
+          setLoading(false);
+        }
+      };
+
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() || '';
+        parts.forEach(processEvent);
+      }
+      setLoading(false);
+    } catch (err: any) {
+      setLoading(false);
+      message.error(err?.message || 'Failed to get response');
+      setMessages(prev => {
+        const newMessages = [...prev];
+        const lastMsg = newMessages[newMessages.length - 1];
+        if (lastMsg && lastMsg.role === 'view') {
+          lastMsg.context = err?.message || 'Error occurred';
+          lastMsg.thinking = false;
+        }
+        return newMessages;
+      });
+    }
+  };
+
+  const handleExampleClick = async (example: (typeof EXAMPLE_CARDS)[0]) => {
+    if (loading) return;
+
+    try {
+      message.loading({ content: '正在加载示例...', key: 'example-loading', duration: 0 });
+
+      const res = await axios.post(`${process.env.API_BASE_URL ?? ''}/api/v1/examples/use`, {
+        example_id: example.id,
+      });
+
+      message.destroy('example-loading');
+
+      if (res?.success && res?.data) {
+        const filePath = res.data;
+        preloadedFilePathRef.current = filePath;
+
+        const fakeFile = new File([new ArrayBuffer(example.fileSize || 0)], example.fileName, {
+          type: example.fileType,
+        });
+        setUploadedFile(fakeFile);
+
+        handleStart(example.query, fakeFile);
+      } else {
+        const errMsg = res?.err_msg || 'Unknown error';
+        message.error('加载示例失败: ' + errMsg);
+      }
+    } catch (err: unknown) {
+      message.destroy('example-loading');
+      console.error('Example click error:', err);
+      const errMessage = err instanceof Error ? err.message : 'Unknown error';
+      message.error('加载示例失败: ' + errMessage);
+    }
+  };
+
+  // Clear chat history
+  const handleClearChat = () => {
+    setMessages([]);
+    setConversationId(null);
+    setQuery('');
+    setExecutionMap({});
+    setActiveMessageId(null);
+    setActiveViewMsgId(null);
+    setUploadedFilePath(null);
+    setFilePreview(null);
+    setFilePreviewError(null);
+    setArtifacts([]);
+    setRightPanelTab('preview');
+    setStreamingSummary('');
+    setSummaryComplete(false);
+    router.push('/', undefined, { shallow: true });
+  };
+
+  const restoreFromHistory = (
+    historyMessages: Array<{ role: string; context: string; order?: number; model_name?: string }>,
+  ) => {
+    setExecutionMap({});
+    setActiveMessageId(null);
+    setActiveViewMsgId(null);
+    setArtifacts([]);
+    setStreamingSummary('');
+    setSummaryComplete(false);
+
+    const newMessages: ChatMessage[] = [];
+    const newExecutionMap: typeof executionMap = {};
+    const allArtifacts: Artifact[] = [];
+
+    historyMessages.forEach(msg => {
+      if (msg.role === 'human') {
+        newMessages.push({ id: generateUUID(), role: 'human', context: msg.context, order: msg.order });
+      } else if (msg.role === 'view') {
+        const viewId = generateUUID();
+        let payload: any = null;
+        try {
+          payload = JSON.parse(msg.context);
+        } catch {
+          /* ignore parse failure */
+        }
+
+        if (payload && payload.version === 1 && payload.type === 'react-agent') {
+          const steps: ExecutionStep[] = (payload.steps || []).map((s: any, idx: number) => ({
+            id: s.id || `history-step-${idx}`,
+            step: idx + 1,
+            title: s.title || s.action || `Step ${idx + 1}`,
+            detail: s.detail || '',
+            status: (s.status === 'failed' ? 'failed' : 'done') as 'done' | 'failed',
+          }));
+
+          const outputs: Record<string, ExecutionOutput[]> = {};
+          const stepThoughts: Record<string, string> = {};
+
+          (payload.steps || []).forEach((s: any, idx: number) => {
+            const stepId = s.id || `history-step-${idx}`;
+            if (Array.isArray(s.outputs)) {
+              outputs[stepId] = s.outputs.map((o: any) => ({
+                output_type: o.output_type || 'text',
+                content: o.content,
+              }));
+            }
+            if (s.action === 'code_interpreter' && s.action_input) {
+              const existingOutputs = outputs[stepId] || [];
+              const hasCode = existingOutputs.some((o: ExecutionOutput) => o.output_type === 'code');
+              if (!hasCode) {
+                try {
+                  const input = typeof s.action_input === 'string' ? JSON.parse(s.action_input) : s.action_input;
+                  if (input && input.code) {
+                    outputs[stepId] = [{ output_type: 'code', content: input.code }, ...existingOutputs];
+                  }
+                } catch {
+                  /* ignore */
+                }
+              }
+            }
+            if (s.thought) {
+              stepThoughts[stepId] = s.thought;
+            }
+          });
+
+          newExecutionMap[viewId] = {
+            steps,
+            outputs,
+            activeStepId: steps.length > 0 ? steps[steps.length - 1].id : null,
+            collapsed: false,
+            stepThoughts,
+          };
+
+          const finalContent = cleanFinalContent(payload.final_content || '');
+
+          const restoredArtifacts = buildArtifactsFromExecution(viewId, { steps, outputs }, finalContent, null);
+          allArtifacts.push(...restoredArtifacts);
+
+          newMessages.push({
+            id: viewId,
+            role: 'view',
+            context: finalContent,
+            order: msg.order,
+            thinking: false,
+          });
+        } else {
+          newMessages.push({
+            id: viewId,
+            role: 'view',
+            context: msg.context || '',
+            order: msg.order,
+            thinking: false,
+          });
+        }
+      }
+    });
+
+    setMessages(newMessages);
+    setExecutionMap(newExecutionMap);
+    setArtifacts(allArtifacts);
+
+    const lastView = [...newMessages].reverse().find(m => m.role === 'view');
+    if (lastView?.id) {
+      setActiveMessageId(lastView.id);
+      setStreamingSummary(lastView.context || '');
+      setSummaryComplete(true);
+    }
+  };
+
+  const loadConversation = async (convUid: string) => {
+    if (historyLoading) return;
+    setHistoryLoading(true);
+    try {
+      const res: any = await axios.get(`/api/v1/chat/dialogue/messages/history?con_uid=${convUid}`);
+      let msgList: any[] | null = null;
+      if (res?.success && Array.isArray(res.data)) {
+        msgList = res.data;
+      } else if (Array.isArray(res?.data?.data)) {
+        msgList = res.data.data;
+      } else if (Array.isArray(res?.data)) {
+        msgList = res.data;
+      } else if (Array.isArray(res)) {
+        msgList = res;
+      }
+      if (msgList && msgList.length > 0) {
+        setConversationId(convUid);
+        restoreFromHistory(
+          msgList.map((m: any) => ({
+            role: m.role,
+            context: m.context,
+            order: m.order,
+            model_name: m.model_name,
+          })),
+        );
+      }
+    } catch (e) {
+      console.error('Failed to load conversation', e);
+      message.error('加载历史对话失败');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const _QuickAction = ({ icon, text, onClick }: { icon: any; text: string; onClick?: () => void }) => (
+    <div
+      onClick={onClick}
+      className='flex items-center gap-2 px-4 py-2 bg-white dark:bg-[#2c2d31] border border-gray-200 dark:border-gray-700 rounded-full cursor-pointer hover:bg-gray-50 dark:hover:bg-[#35363a] transition-colors text-sm text-gray-600 dark:text-gray-300 shadow-sm'
+    >
+      {icon}
+      <span>{text}</span>
+    </div>
   );
 
-  const onSearch = async (e: any) => {
-    setApps({
-      app_list: [],
-      total_count: 0,
-    });
-    getAppListFn(e.target.value);
+  const getDbIcon = (type: string) => {
+    const lowerType = type.toLowerCase();
+    if (lowerType.includes('mysql')) return <ConsoleSqlOutlined className='text-blue-500' />;
+    if (lowerType.includes('postgre')) return <DatabaseOutlined className='text-blue-400' />;
+    if (lowerType.includes('mongo')) return <CloudServerOutlined className='text-green-500' />;
+    return <DatabaseOutlined className='text-gray-500' />;
   };
 
-  const collect = async (data: Record<string, any>) => {
-    const [error] = await apiInterceptors(
-      data.is_collected === 'true'
-        ? unCollectApp({ app_code: data.app_code })
-        : collectApp({ app_code: data.app_code }),
-    );
-    const index = apps.app_list.findIndex((item: any) => item.app_code === data.app_code);
-    if (error) return;
-    if (data.is_collected === 'true') {
-      message.success(t('cancel_success'));
-    } else {
-      message.success(t('collect_success'));
-    }
-    getAppListFn('', (Math.floor(index / 12) + 1).toString());
+  // Upload Props
+  const uploadProps: any = {
+    name: 'file',
+    multiple: false,
+    showUploadList: false,
+    beforeUpload: (file: any) => {
+      setUploadedFile(file);
+      parseLocalFilePreview(file as File);
+      message.success(`${file.name} attached successfully`);
+      return false; // Prevent auto upload, we just want to select it
+    },
   };
-  const columnCount = 3;
-
-  function isRowLoaded({ index }: Index) {
-    return !!apps.app_list[index]; // 检查给定的索引是否已经加载
-  }
-
-  function loadMoreRows({ startIndex, stopIndex }: IndexRange) {
-    const pageSize = 12;
-    const currentPage = Math.ceil(startIndex / pageSize) + 1; // 计算当前页数
-    console.log(startIndex, stopIndex, currentPage);
-    // 这里应该是一个从服务器获取更多数据的异步操作
-    // 例如，你可能会调用 API 并返回一个 Promise
-    return getAppListFn('', currentPage.toString());
-  }
-  const cellRenderer: GridCellRenderer = ({ columnIndex, key, rowIndex, style }) => {
-    // 计算数组中的索引
-    const index = rowIndex * columnCount + columnIndex;
-    if (!isRowLoaded({ index })) return null;
-    const item = apps.app_list[index];
-    return (
-      <div key={key} style={style}>
-        <BlurredCard
-          key={item.app_code}
-          name={item.app_name}
-          description={item.app_describe}
-          className='w-11/12'
-          RightTop={
-            item.is_collected === 'true' ? (
-              <StarFilled
-                onClick={() => collect(item)}
-                style={{
-                  height: '21px',
-                  cursor: 'pointer',
-                  color: '#f9c533',
-                }}
-              />
-            ) : (
-              <StarOutlined
-                onClick={() => collect(item)}
-                style={{
-                  height: '21px',
-                  cursor: 'pointer',
-                }}
-              />
-            )
-          }
-          onClick={async () => {
-            // 原生应用跳转
-
-            if (item.team_mode === 'native_app') {
-              const { chat_scene = '' } = item.team_context;
-              const [, res] = await apiInterceptors(newDialogue({ chat_mode: chat_scene }));
-              if (res) {
-                setCurrentDialogInfo?.({
-                  chat_scene: res.chat_mode,
-                  app_code: item.app_code,
-                });
-                localStorage.setItem(
-                  'cur_dialog_info',
-                  JSON.stringify({
-                    chat_scene: res.chat_mode,
-                    app_code: item.app_code,
-                  }),
-                );
-                router.push(`/chat?scene=${chat_scene}&id=${res.conv_uid}${model ? `&model=${model}` : ''}`);
-              }
-            } else {
-              // 自定义应用
-              const [, res] = await apiInterceptors(newDialogue({ chat_mode: 'chat_agent' }));
-              if (res) {
-                setCurrentDialogInfo?.({
-                  chat_scene: res.chat_mode,
-                  app_code: item.app_code,
-                });
-                localStorage.setItem(
-                  'cur_dialog_info',
-                  JSON.stringify({
-                    chat_scene: res.chat_mode,
-                    app_code: item.app_code,
-                  }),
-                );
-                setAgent?.(item.app_code);
-                router.push(`/chat/?scene=chat_agent&id=${res.conv_uid}${model ? `&model=${model}` : ''}`);
-              }
-            }
-          }}
-          LeftBottom={
-            <div className='flex gap-8 items-center text-[#878c93] text-sm dark:text-stone-200'>
-              {item.owner_name && (
-                <div className='flex gap-1 items-center'>
-                  <Avatar
-                    src={item?.owner_avatar_url}
-                    className='bg-gradient-to-tr from-[#31afff] to-[#1677ff] cursor-pointer'
-                  >
-                    {item.owner_name}
-                  </Avatar>
-                  <span>{item.owner_name}</span>
-                </div>
-              )}
-              {activeKey === 'recommend' ? (
-                <div className='flex items-start gap-1'>
-                  <IconFont type='icon-hot' className='text-lg' />
-                  <span className='text-[#878c93]'>{item.hot_value}</span>
-                </div>
-              ) : (
-                <div>{moment(item?.updated_at).fromNow() + ' ' + t('update')}</div>
-              )}
-            </div>
-          }
-          scene={item?.team_context?.chat_scene || 'chat_agent'}
-        />
-      </div>
-    );
-  };
-  useEffect(() => {
-    // setPageNo('1');
-    setApps({
-      app_list: [],
-      total_count: 0,
-    });
-  }, [activeKey]);
-
-  useEffect(() => {
-    getAppListFn();
-  }, [activeKey, getAppListFn]);
-
-  // useEffect(() => {
-  //   getAppListFn();
-  // }, [getAppListFn, pageNo]);
 
   return (
-    <div
-      className='flex flex-col h-full w-full backdrop-filter backdrop-blur dark:bg-gradient-dark bg-gradient-light  p-10 pt-12 '
-      id='home-container'
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary: '#000000',
+        },
+      }}
     >
-      <ConfigProvider
-        theme={{
-          components: {
-            Button: {
-              defaultBorderColor: 'white',
-            },
-            Segmented: {
-              itemSelectedBg: '#2867f5',
-              itemSelectedColor: 'white',
-            },
-          },
-        }}
-      >
-        {/* Apps list */}
-        <div
-          className='flex flex-col h-full mt-4 overflow-hidden relative'
-          style={{
-            paddingBottom: apps.total_count > 12 ? 45 : 20,
-          }}
-        >
-          <div className='flex justify-between items-center'>
-            <div className='flex items-center gap-4'>
-              <Segmented
-                className='h-10 backdrop-filter backdrop-blur-lg bg-white bg-opacity-30 border border-white rounded-lg shadow p-1 dark:border-[#6f7f95] dark:bg-[#6f7f95] dark:bg-opacity-60'
-                options={items}
-                onChange={key => setActiveKey(key as any)}
-                value={activeKey}
-              />
-              <Input
-                variant='filled'
-                prefix={<SearchOutlined />}
-                placeholder={t('please_enter_the_keywords')}
-                onChange={onSearch}
-                onPressEnter={onSearch}
-                allowClear
-                className={cls(
-                  'w-[230px] h-[40px] border-1 border-white backdrop-filter backdrop-blur-lg bg-white bg-opacity-30 dark:border-[#6f7f95] dark:bg-[#6f7f95] dark:bg-opacity-60',
-                  {
-                    hidden: activeKey === 'recommend',
-                  },
-                )}
-              />
+      <div className='flex h-full w-full bg-[#f7f7f9] dark:bg-[#0f1012] text-[#1a1b1e] dark:text-gray-200 font-sans overflow-hidden'>
+        {/* Main Content */}
+        <div className='flex-1 flex flex-col relative bg-white dark:bg-[#111217]'>
+          {/* Top Header */}
+          <div className='h-16 flex items-center justify-between px-8 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-[#111217]/80 backdrop-blur sticky top-0 z-20'>
+            <div className='flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 px-2 py-1 rounded-md'>
+              <span>DB-GPT 0.6.0 Data Edition</span>
             </div>
-
             <div className='flex items-center gap-4'>
-              <Button
-                className='border-none text-white bg-button-gradient'
-                icon={<PlusOutlined />}
-                onClick={() => {
-                  localStorage.removeItem('new_app_info');
-                  router.push('/construct/app?openModal=true');
-                }}
-              >
-                {t('create_app')}
-              </Button>
+              {messages.length > 0 && (
+                <Button type='text' size='small' onClick={handleClearChat} className='text-gray-500'>
+                  Clear Chat
+                </Button>
+              )}
+              <BellOutlined className='text-lg text-gray-500 cursor-pointer' />
+              <div className='flex items-center gap-2 bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-full text-xs font-medium'>
+                <ThunderboltOutlined className='text-yellow-500' /> <span>300</span>
+              </div>
+              <Avatar size='small' icon={<UserOutlined />} className='bg-blue-500' />
             </div>
           </div>
-          {loading && !apps.app_list.length ? (
-            <Spin size='large' className='flex items-center justify-center h-full' spinning={loading} />
-          ) : (
-            <>
-              <InfiniteLoader
-                isRowLoaded={isRowLoaded}
-                loadMoreRows={loadMoreRows}
-                rowCount={apps.total_count} // 数据的总行数，如果未知则可以设置为一个较大的数字
+
+          {/* Chat Messages or Hero Section */}
+          {messages.length > 0 ? (
+            <div className='flex-1 flex overflow-hidden'>
+              <div
+                className={`${rightPanelCollapsed ? 'w-full' : 'w-[40%] min-w-[400px]'} flex flex-col overflow-hidden border-r border-gray-200/80 dark:border-gray-800 bg-white dark:bg-[#111217] transition-all duration-300 relative`}
               >
-                {({ onRowsRendered, registerChild }) => (
-                  <AutoSizer>
-                    {({ width, height }) => (
-                      <Grid
-                        ref={registerChild}
-                        onSectionRendered={({ rowStartIndex, rowStopIndex }) => {
-                          const startIndex = rowStartIndex * columnCount;
-                          const stopIndex = rowStopIndex * columnCount + (columnCount - 1);
-                          onRowsRendered({
-                            startIndex,
-                            stopIndex,
-                          });
+                <div className='flex-1 overflow-y-auto'>
+                  {rounds.map((round, roundIndex) => {
+                    const isLastRound = roundIndex === rounds.length - 1;
+                    const isSelected = round.viewMsg?.id === selectedViewMsgId;
+                    const isCurrentRoundCollapsed = !isLastRound && !isSelected;
+
+                    const execution = round.viewMsg?.id ? executionMap[round.viewMsg.id] : undefined;
+                    const {
+                      sections,
+                      activeStep: _activeStep,
+                      outputs: _outputs,
+                      stepThoughts,
+                    } = convertToManusFormat(execution, round.humanMsg?.context);
+                    const isWorking =
+                      (isLastRound &&
+                        (round.viewMsg?.thinking || execution?.steps.some(s => s.status === 'running'))) ||
+                      false;
+
+                    const roundAssistantText = isLastRound
+                      ? streamingSummary || round.viewMsg?.context || undefined
+                      : round.viewMsg?.context || undefined;
+
+                    return (
+                      <ManusLeftPanel
+                        key={round.viewMsg?.id || round.humanMsg?.id || `round-${roundIndex}`}
+                        sections={sections}
+                        activeStepId={isSelected ? selectedStepId || execution?.activeStepId : undefined}
+                        onStepClick={(stepId, _sectionId) => {
+                          if (round.viewMsg?.id) {
+                            setActiveViewMsgId(round.viewMsg.id);
+                            setSelectedStepId(stepId);
+                            setExecutionMap(prev => ({
+                              ...prev,
+                              [round.viewMsg!.id!]: {
+                                ...prev[round.viewMsg!.id!],
+                                activeStepId: stepId,
+                              },
+                            }));
+                          }
                         }}
-                        cellRenderer={cellRenderer}
-                        columnWidth={width / columnCount}
-                        columnCount={columnCount}
-                        height={height}
-                        rowHeight={200 /* 你的行高 */}
-                        rowCount={apps.total_count}
-                        width={width}
+                        isWorking={isWorking}
+                        userQuery={round.humanMsg?.context}
+                        attachedFile={round.humanMsg?.attachedFile}
+                        attachedKnowledge={round.humanMsg?.attachedKnowledge}
+                        assistantText={roundAssistantText}
+                        modelName={round.viewMsg?.model_name || model}
+                        stepThoughts={stepThoughts}
+                        artifacts={artifacts.filter(a => a.messageId === round.viewMsg?.id)}
+                        onArtifactClick={artifact => {
+                          if (round.viewMsg?.id) setActiveViewMsgId(round.viewMsg.id);
+                          setRightPanelCollapsed(false);
+                          if (artifact.type === 'html') {
+                            setPreviewArtifact(artifact as Artifact);
+                            setRightPanelView('html-preview');
+                          } else if (artifact.type === 'code' && artifact.stepId) {
+                            setSelectedStepId(artifact.stepId);
+                            setRightPanelView('execution');
+                            if (round.viewMsg?.id && execution) {
+                              setExecutionMap(prev => ({
+                                ...prev,
+                                [round.viewMsg!.id!]: {
+                                  ...prev[round.viewMsg!.id!],
+                                  activeStepId: artifact.stepId!,
+                                },
+                              }));
+                            }
+                          }
+                        }}
+                        onViewAllFiles={() => {
+                          if (round.viewMsg?.id) setActiveViewMsgId(round.viewMsg.id);
+                          setRightPanelCollapsed(false);
+                          setRightPanelView('files');
+                        }}
+                        isCollapsed={isCurrentRoundCollapsed}
+                        onExpand={() => {
+                          if (round.viewMsg?.id) setActiveViewMsgId(round.viewMsg.id);
+                        }}
                       />
-                    )}
-                  </AutoSizer>
+                    );
+                  })}
+                </div>
+
+                {/* Input Area at Bottom for Chat Mode */}
+                <div className='border-t border-gray-200/80 dark:border-gray-800 bg-white/90 dark:bg-[#1a1b1e] p-4 md:p-6'>
+                  <div className='max-w-[720px] mx-auto'>
+                    {/* Context Tags Area */}
+                    <div className='flex flex-wrap gap-2 mb-2'>
+                      {selectedDb && (
+                        <Tag
+                          closable
+                          onClose={() => setSelectedDb(null)}
+                          className='flex items-center gap-1 bg-blue-50 border-blue-200 text-blue-700 px-3 py-1 rounded-full'
+                        >
+                          {getDbIcon(selectedDb.type)} <span className='font-medium ml-1'>{selectedDb.db_name}</span>
+                        </Tag>
+                      )}
+                      {selectedKnowledge && (
+                        <Tag
+                          closable
+                          onClose={() => setSelectedKnowledge(null)}
+                          className='flex items-center gap-1 bg-orange-50 border-orange-200 text-orange-700 px-3 py-1 rounded-full'
+                        >
+                          <BookOutlined /> <span className='font-medium ml-1'>{selectedKnowledge.name}</span>
+                        </Tag>
+                      )}
+                      {uploadedFile && (
+                        <Tag
+                          closable
+                          onClose={() => setUploadedFile(null)}
+                          className='flex items-center gap-1 bg-green-50 border-green-200 text-green-700 px-3 py-1 rounded-full'
+                        >
+                          <FileExcelOutlined /> <span className='font-medium ml-1'>{uploadedFile.name}</span>
+                        </Tag>
+                      )}
+                    </div>
+
+                    <div className='flex gap-2'>
+                      <Dropdown
+                        menu={{
+                          items: [
+                            {
+                              key: 'upload',
+                              label: (
+                                <Upload {...uploadProps}>
+                                  <div className='w-full'>Upload File</div>
+                                </Upload>
+                              ),
+                              icon: <UploadOutlined />,
+                            },
+                            {
+                              key: 'database',
+                              label: 'Select Data Source',
+                              icon: <DatabaseOutlined />,
+                              onClick: () => setIsDbModalOpen(true),
+                            },
+                            {
+                              key: 'knowledge',
+                              label: 'Select Knowledge Base',
+                              icon: <BookOutlined />,
+                              onClick: () => setIsKnowledgeModalOpen(true),
+                            },
+                          ],
+                        }}
+                        trigger={['click']}
+                      >
+                        <Tooltip title='Add Context (File, DB, Knowledge)'>
+                          <Button
+                            type='text'
+                            shape='circle'
+                            icon={<PlusOutlined />}
+                            className='text-gray-500 hover:bg-gray-100 flex-shrink-0'
+                          />
+                        </Tooltip>
+                      </Dropdown>
+
+                      {/* Skill Selector Button with Badge */}
+                      <Popover
+                        trigger='click'
+                        placement='topLeft'
+                        open={isSkillPanelOpen}
+                        onOpenChange={setIsSkillPanelOpen}
+                        overlayClassName='manus-skill-menu'
+                        overlayInnerStyle={{ padding: 0, borderRadius: 12 }}
+                        content={
+                          <div className='w-[320px] bg-white dark:bg-[#2c2d31] rounded-xl shadow-xl overflow-hidden'>
+                            {/* Search Input */}
+                            <div className='p-3 border-b border-gray-100 dark:border-gray-700'>
+                              <Input
+                                placeholder={t('search_skill') || '搜索技能'}
+                                prefix={<SearchOutlined className='text-gray-400' />}
+                                value={skillSearchQuery}
+                                onChange={e => setSkillSearchQuery(e.target.value)}
+                                className='rounded-lg'
+                                allowClear
+                                size='small'
+                              />
+                            </div>
+
+                            {/* Skills List */}
+                            <div className='max-h-[300px] overflow-y-auto'>
+                              {(skillsList || [])
+                                .filter(
+                                  skill =>
+                                    !skillSearchQuery ||
+                                    skill.name.toLowerCase().includes(skillSearchQuery.toLowerCase()) ||
+                                    skill.description.toLowerCase().includes(skillSearchQuery.toLowerCase()),
+                                )
+                                .map(skill => (
+                                  <div
+                                    key={skill.id}
+                                    onClick={() => {
+                                      setSelectedSkill(skill);
+                                      setQuery(`/${skill.name} `);
+                                      setIsSkillPanelOpen(false);
+                                      setSkillSearchQuery('');
+                                    }}
+                                    className={`flex items-start gap-3 px-3 py-2.5 cursor-pointer transition-all hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                                      selectedSkill?.id === skill.id ? 'bg-purple-50 dark:bg-purple-900/20' : ''
+                                    }`}
+                                  >
+                                    <div className='flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-xs'>
+                                      {skill.icon || <ThunderboltOutlined />}
+                                    </div>
+                                    <div className='flex-1 min-w-0'>
+                                      <div className='flex items-center gap-2'>
+                                        <span className='font-medium text-sm text-gray-800 dark:text-gray-200'>
+                                          {skill.name}
+                                        </span>
+                                        <span
+                                          className={`text-[10px] px-1.5 py-0.5 rounded ${
+                                            skill.type === 'official'
+                                              ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                                              : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+                                          }`}
+                                        >
+                                          {skill.type === 'official' ? '官方' : '个人'}
+                                        </span>
+                                      </div>
+                                      <p className='text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2'>
+                                        {skill.description}
+                                      </p>
+                                    </div>
+                                    {selectedSkill?.id === skill.id && (
+                                      <CheckCircleFilled className='text-purple-500 flex-shrink-0 text-sm' />
+                                    )}
+                                  </div>
+                                ))}
+
+                              {/* Empty State */}
+                              {(skillsList || []).filter(
+                                skill =>
+                                  !skillSearchQuery ||
+                                  skill.name.toLowerCase().includes(skillSearchQuery.toLowerCase()) ||
+                                  skill.description.toLowerCase().includes(skillSearchQuery.toLowerCase()),
+                              ).length === 0 && (
+                                <div className='text-center py-8 text-gray-400'>
+                                  <ThunderboltOutlined className='text-2xl mb-2 opacity-50' />
+                                  <div className='text-xs'>
+                                    {skillSearchQuery ? '未找到匹配的技能' : '暂无可用技能'}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Footer */}
+                            <div className='border-t border-gray-100 dark:border-gray-700 px-3 py-2 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/50'>
+                              <span className='text-[10px] text-gray-400'>{(skillsList || []).length} 个技能可用</span>
+                              <Button
+                                type='link'
+                                size='small'
+                                onClick={() => {
+                                  router.push('/construct/skills');
+                                  setIsSkillPanelOpen(false);
+                                }}
+                                className='text-[10px] p-0 h-auto'
+                              >
+                                管理技能 →
+                              </Button>
+                            </div>
+                          </div>
+                        }
+                      >
+                        <Tooltip title={selectedSkill ? `技能: ${selectedSkill.name}` : '选择技能'}>
+                          <Button
+                            type='text'
+                            shape='circle'
+                            className={`relative text-gray-500 hover:bg-gray-100 flex-shrink-0 ${selectedSkill ? 'bg-purple-50 text-purple-500' : ''}`}
+                          >
+                            <div className='relative'>
+                              <ThunderboltOutlined className={selectedSkill ? 'text-purple-500' : ''} />
+                              {selectedSkill && (
+                                <span className='absolute -top-1 -right-1 bg-purple-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold'>
+                                  1
+                                </span>
+                              )}
+                            </div>
+                          </Button>
+                        </Tooltip>
+                      </Popover>
+
+                      <Input.TextArea
+                        value={query}
+                        onChange={e => {
+                          const newValue = e.target.value;
+                          setQuery(newValue);
+                          if (newValue.startsWith('/') && !isSkillPanelOpen) {
+                            setIsSkillPanelOpen(true);
+                          }
+                        }}
+                        onPressEnter={e => {
+                          if (!e.shiftKey) {
+                            e.preventDefault();
+                            handleStart();
+                          }
+                        }}
+                        placeholder={
+                          t('ask_data_question') ||
+                          'Ask a question about your database, upload a CSV, or generate a report...'
+                        }
+                        autoSize={{ minRows: 1, maxRows: 4 }}
+                        className='flex-1 resize-none rounded-2xl bg-gray-50/80 dark:bg-[#121317] border border-gray-200/80 dark:border-gray-700 px-4 py-3 focus:border-gray-400 focus:ring-1 focus:ring-gray-300/60'
+                      />
+
+                      <Button
+                        type='primary'
+                        shape='circle'
+                        icon={<ArrowUpOutlined />}
+                        onClick={() => handleStart()}
+                        disabled={!query.trim() && !uploadedFile}
+                        loading={loading}
+                        className={`${query.trim() || uploadedFile ? 'bg-black hover:bg-gray-800' : 'bg-gray-200 text-gray-400 hover:bg-gray-200'} border-none shadow-none flex-shrink-0 h-10 w-10`}
+                      />
+                    </div>
+
+                    <ModelSelector onChange={val => setModel(val)} />
+                  </div>
+                </div>
+
+                {rightPanelCollapsed && (
+                  <div className='absolute right-0 top-1/2 -translate-y-1/2 z-10'>
+                    <Tooltip title='展开面板'>
+                      <Button
+                        type='text'
+                        shape='circle'
+                        size='small'
+                        icon={<RightOutlined />}
+                        onClick={() => setRightPanelCollapsed(false)}
+                        className='text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1a1b1e]'
+                      />
+                    </Tooltip>
+                  </div>
                 )}
-              </InfiniteLoader>
-              {loading && apps.app_list.length && (
-                <Spin className='flex items-end justify-center h-full' spinning={loading} />
-              )}
-            </>
+              </div>
+              <div
+                className={`${rightPanelCollapsed ? 'w-0 min-w-0 overflow-hidden opacity-0' : 'w-[60%] min-w-[520px]'} bg-[#f8f8fb] dark:bg-[#0f1114] flex flex-col transition-all duration-300`}
+              >
+                {(() => {
+                  const activeViewMsg = messages.find(m => m.id === selectedViewMsgId && m.role === 'view');
+                  const execution = activeViewMsg?.id ? executionMap[activeViewMsg.id] : undefined;
+                  const { activeStep, outputs, stepThoughts: _stepThoughts } = convertToManusFormat(execution);
+                  const isRunning = execution?.steps.some(s => s.status === 'running') || false;
+
+                  return (
+                    <ManusRightPanel
+                      activeStep={activeStep}
+                      outputs={outputs}
+                      isRunning={isRunning}
+                      onCollapse={() => setRightPanelCollapsed(true)}
+                      onRerun={() => {}}
+                      terminalTitle='DB-GPT 的电脑'
+                      artifacts={artifacts.filter(a => a.messageId === activeViewMsg?.id)}
+                      onArtifactClick={artifact => {
+                        if (artifact.type === 'html') {
+                          setPreviewArtifact(artifact as Artifact);
+                          setRightPanelView('html-preview');
+                        } else if (artifact.type === 'code' && artifact.stepId) {
+                          setSelectedStepId(artifact.stepId);
+                          setRightPanelView('execution');
+                          if (activeViewMsg?.id && execution) {
+                            setExecutionMap(prev => ({
+                              ...prev,
+                              [activeViewMsg.id!]: {
+                                ...prev[activeViewMsg.id!],
+                                activeStepId: artifact.stepId!,
+                              },
+                            }));
+                          }
+                        }
+                      }}
+                      panelView={rightPanelView}
+                      onPanelViewChange={setRightPanelView}
+                      previewArtifact={previewArtifact}
+                    />
+                  );
+                })()}
+              </div>
+            </div>
+          ) : (
+            // Welcome Mode: Display Hero Section
+            <div className='flex-1 flex flex-col items-center justify-center p-4 pb-32 overflow-y-auto'>
+              <div className='w-full max-w-3xl flex flex-col items-center animate-fade-in-up'>
+                <div className='flex flex-col items-center mb-8'>
+                  <div className='px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 text-xs font-semibold rounded-full'>
+                    Intelligent Data Analysis Agent
+                  </div>
+                </div>
+
+                <h1 className='text-4xl md:text-5xl font-serif text-gray-900 dark:text-gray-100 mb-12 text-center flex items-center gap-4'>
+                  <div className='w-12 h-12 rounded-xl bg-white dark:bg-[#1a1b1e] shadow-md flex items-center justify-center flex-shrink-0'>
+                    <Image src='/LOGO_SMALL.png' alt='DB-GPT' width={32} height={32} className='object-contain' />
+                  </div>
+                  Agentic Data Driven Decisions
+                </h1>
+
+                {/* Input Box Container */}
+                <div className='w-full bg-white dark:bg-[#25262b] border border-gray-200 dark:border-gray-700 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 p-4 relative'>
+                  {/* Uploaded File, Database, Knowledge Tags */}
+                  {(uploadedFile || selectedDb || selectedKnowledge) && (
+                    <div className='flex flex-wrap gap-2 mb-2'>
+                      {uploadedFile && (
+                        <Tag
+                          closable
+                          onClose={() => setUploadedFile(null)}
+                          className='flex items-center gap-1 bg-green-50 border-green-200 text-green-700 px-3 py-1 rounded-full'
+                        >
+                          <FileExcelOutlined /> <span className='font-medium ml-1'>{uploadedFile.name}</span>
+                        </Tag>
+                      )}
+                      {selectedDb && (
+                        <Tag
+                          closable
+                          onClose={() => setSelectedDb(null)}
+                          className='flex items-center gap-1 bg-blue-50 border-blue-200 text-blue-700 px-3 py-1 rounded-full'
+                        >
+                          <DatabaseOutlined /> <span className='font-medium ml-1'>{selectedDb.db_name}</span>
+                        </Tag>
+                      )}
+                      {selectedKnowledge && (
+                        <Tag
+                          closable
+                          onClose={() => setSelectedKnowledge(null)}
+                          className='flex items-center gap-1 bg-orange-50 border-orange-200 text-orange-700 px-3 py-1 rounded-full'
+                        >
+                          <BookOutlined /> <span className='font-medium ml-1'>{selectedKnowledge.name}</span>
+                        </Tag>
+                      )}
+                    </div>
+                  )}
+
+                  <Input.TextArea
+                    value={query}
+                    onChange={e => {
+                      const newValue = e.target.value;
+                      setQuery(newValue);
+                      if (newValue.startsWith('/') && !isSkillPanelOpen) {
+                        setIsSkillPanelOpen(true);
+                      }
+                    }}
+                    onPressEnter={e => {
+                      if (!e.shiftKey) {
+                        e.preventDefault();
+                        handleStart();
+                      }
+                    }}
+                    placeholder={
+                      t('ask_data_question') ||
+                      'Ask a question about your database, upload a CSV, or generate a report...'
+                    }
+                    autoSize={{ minRows: 2, maxRows: 6 }}
+                    className='text-lg resize-none !border-none !shadow-none !bg-transparent px-2 mb-4'
+                    style={{ backgroundColor: 'transparent' }}
+                  />
+
+                  {/* Input Toolbar */}
+                  <div className='flex items-center justify-between px-2'>
+                    <div className='flex items-center gap-2'>
+                      {/* Add Button with Dropdown Menu */}
+                      <Dropdown
+                        menu={{
+                          items: [
+                            {
+                              key: 'upload',
+                              label: (
+                                <Upload {...uploadProps}>
+                                  <div className='w-full'>从本地文件添加</div>
+                                </Upload>
+                              ),
+                              icon: <FileOutlined />,
+                            },
+                            {
+                              key: 'skill',
+                              label: '使用技能',
+                              icon: <ThunderboltOutlined />,
+                              onClick: () => setIsSkillPanelOpen(true),
+                            },
+                            {
+                              key: 'knowledge',
+                              label: '使用知识库',
+                              icon: <BookOutlined />,
+                              onClick: () => setIsKnowledgePanelOpen(true),
+                            },
+                            {
+                              key: 'database',
+                              label: '使用数据库',
+                              icon: <DatabaseOutlined />,
+                              onClick: () => setIsDbModalOpen(true),
+                            },
+                          ],
+                        }}
+                        trigger={['click']}
+                      >
+                        <Tooltip title='添加'>
+                          <Button
+                            type='text'
+                            shape='circle'
+                            icon={<PlusOutlined />}
+                            className='text-gray-500 hover:bg-gray-100'
+                          />
+                        </Tooltip>
+                      </Dropdown>
+
+                      {/* Skill Selector Button with Badge */}
+                      <Popover
+                        trigger='click'
+                        placement='topLeft'
+                        open={isSkillPanelOpen}
+                        onOpenChange={setIsSkillPanelOpen}
+                        overlayClassName='manus-skill-menu'
+                        overlayInnerStyle={{ padding: 0, borderRadius: 12 }}
+                        content={
+                          <div className='w-[320px] bg-white dark:bg-[#2c2d31] rounded-xl shadow-xl overflow-hidden'>
+                            {/* Search Input */}
+                            <div className='p-3 border-b border-gray-100 dark:border-gray-700'>
+                              <Input
+                                placeholder={t('search_skill') || '搜索技能'}
+                                prefix={<SearchOutlined className='text-gray-400' />}
+                                value={skillSearchQuery}
+                                onChange={e => setSkillSearchQuery(e.target.value)}
+                                className='rounded-lg'
+                                allowClear
+                                size='small'
+                              />
+                            </div>
+
+                            {/* Skills List */}
+                            <div className='max-h-[300px] overflow-y-auto'>
+                              {(skillsList || [])
+                                .filter(
+                                  skill =>
+                                    !skillSearchQuery ||
+                                    skill.name.toLowerCase().includes(skillSearchQuery.toLowerCase()) ||
+                                    skill.description.toLowerCase().includes(skillSearchQuery.toLowerCase()),
+                                )
+                                .map(skill => (
+                                  <div
+                                    key={skill.id}
+                                    onClick={() => {
+                                      setSelectedSkill(skill);
+                                      setQuery(`/${skill.name} `);
+                                      setIsSkillPanelOpen(false);
+                                      setSkillSearchQuery('');
+                                    }}
+                                    className={`flex items-start gap-3 px-3 py-2.5 cursor-pointer transition-all hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                                      selectedSkill?.id === skill.id ? 'bg-purple-50 dark:bg-purple-900/20' : ''
+                                    }`}
+                                  >
+                                    <div className='flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-xs'>
+                                      {skill.icon || <ThunderboltOutlined />}
+                                    </div>
+                                    <div className='flex-1 min-w-0'>
+                                      <div className='flex items-center gap-2'>
+                                        <span className='font-medium text-sm text-gray-800 dark:text-gray-200'>
+                                          {skill.name}
+                                        </span>
+                                        <span
+                                          className={`text-[10px] px-1.5 py-0.5 rounded ${
+                                            skill.type === 'official'
+                                              ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                                              : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+                                          }`}
+                                        >
+                                          {skill.type === 'official' ? '官方' : '个人'}
+                                        </span>
+                                      </div>
+                                      <p className='text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2'>
+                                        {skill.description}
+                                      </p>
+                                    </div>
+                                    {selectedSkill?.id === skill.id && (
+                                      <CheckCircleFilled className='text-purple-500 flex-shrink-0 text-sm' />
+                                    )}
+                                  </div>
+                                ))}
+
+                              {/* Empty State */}
+                              {(skillsList || []).filter(
+                                skill =>
+                                  !skillSearchQuery ||
+                                  skill.name.toLowerCase().includes(skillSearchQuery.toLowerCase()) ||
+                                  skill.description.toLowerCase().includes(skillSearchQuery.toLowerCase()),
+                              ).length === 0 && (
+                                <div className='text-center py-8 text-gray-400'>
+                                  <ThunderboltOutlined className='text-2xl mb-2 opacity-50' />
+                                  <div className='text-xs'>
+                                    {skillSearchQuery ? '未找到匹配的技能' : '暂无可用技能'}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Footer */}
+                            <div className='border-t border-gray-100 dark:border-gray-700 px-3 py-2 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/50'>
+                              <span className='text-[10px] text-gray-400'>{(skillsList || []).length} 个技能可用</span>
+                              <Button
+                                type='link'
+                                size='small'
+                                onClick={() => {
+                                  router.push('/construct/skills');
+                                  setIsSkillPanelOpen(false);
+                                }}
+                                className='text-[10px] p-0 h-auto'
+                              >
+                                管理技能 →
+                              </Button>
+                            </div>
+                          </div>
+                        }
+                      >
+                        <Tooltip title={selectedSkill ? `技能: ${selectedSkill.name}` : '选择技能'}>
+                          <Button
+                            type='text'
+                            shape='circle'
+                            className={`relative text-gray-500 hover:bg-gray-100 ${selectedSkill ? 'bg-purple-50 text-purple-500' : ''}`}
+                          >
+                            <div className='relative'>
+                              <ThunderboltOutlined className={selectedSkill ? 'text-purple-500' : ''} />
+                              {selectedSkill && (
+                                <span className='absolute -top-1 -right-1 bg-purple-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold'>
+                                  1
+                                </span>
+                              )}
+                            </div>
+                          </Button>
+                        </Tooltip>
+                      </Popover>
+
+                      <Popover
+                        trigger='click'
+                        placement='topLeft'
+                        open={isKnowledgePanelOpen}
+                        onOpenChange={setIsKnowledgePanelOpen}
+                        overlayClassName='manus-knowledge-menu'
+                        overlayInnerStyle={{ padding: 0, borderRadius: 12 }}
+                        content={
+                          <div className='w-[320px] bg-white dark:bg-[#2c2d31] rounded-xl shadow-xl overflow-hidden'>
+                            <div className='p-3 border-b border-gray-100 dark:border-gray-700'>
+                              <Input
+                                placeholder='搜索知识库'
+                                prefix={<SearchOutlined className='text-gray-400' />}
+                                value={knowledgeSearchQuery}
+                                onChange={e => setKnowledgeSearchQuery(e.target.value)}
+                                className='rounded-lg'
+                                allowClear
+                                size='small'
+                              />
+                            </div>
+
+                            <div className='max-h-[300px] overflow-y-auto'>
+                              {(knowledgeSpaces || [])
+                                .filter(
+                                  space =>
+                                    !knowledgeSearchQuery ||
+                                    space.name.toLowerCase().includes(knowledgeSearchQuery.toLowerCase()) ||
+                                    (space.desc &&
+                                      space.desc.toLowerCase().includes(knowledgeSearchQuery.toLowerCase())),
+                                )
+                                .map(space => (
+                                  <div
+                                    key={space.id}
+                                    onClick={() => {
+                                      setSelectedKnowledge(space);
+                                      setIsKnowledgePanelOpen(false);
+                                      setKnowledgeSearchQuery('');
+                                    }}
+                                    className={`flex items-start gap-3 px-3 py-2.5 cursor-pointer transition-all hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                                      selectedKnowledge?.id === space.id ? 'bg-orange-50 dark:bg-orange-900/20' : ''
+                                    }`}
+                                  >
+                                    <div className='flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-white text-xs'>
+                                      <BookOutlined />
+                                    </div>
+                                    <div className='flex-1 min-w-0'>
+                                      <div className='flex items-center gap-2'>
+                                        <span className='font-medium text-sm text-gray-800 dark:text-gray-200'>
+                                          {space.name}
+                                        </span>
+                                      </div>
+                                      {space.desc && (
+                                        <p className='text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2'>
+                                          {space.desc}
+                                        </p>
+                                      )}
+                                    </div>
+                                    {selectedKnowledge?.id === space.id && (
+                                      <CheckCircleFilled className='text-orange-500 flex-shrink-0 text-sm' />
+                                    )}
+                                  </div>
+                                ))}
+
+                              {(knowledgeSpaces || []).filter(
+                                space =>
+                                  !knowledgeSearchQuery ||
+                                  space.name.toLowerCase().includes(knowledgeSearchQuery.toLowerCase()) ||
+                                  (space.desc && space.desc.toLowerCase().includes(knowledgeSearchQuery.toLowerCase())),
+                              ).length === 0 && (
+                                <div className='text-center py-8 text-gray-400'>
+                                  <BookOutlined className='text-2xl mb-2 opacity-50' />
+                                  <div className='text-xs'>
+                                    {knowledgeSearchQuery ? '未找到匹配的知识库' : '暂无可用知识库'}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className='border-t border-gray-100 dark:border-gray-700 px-3 py-2 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/50'>
+                              <span className='text-[10px] text-gray-400'>
+                                {(knowledgeSpaces || []).length} 个知识库可用
+                              </span>
+                              <Button
+                                type='link'
+                                size='small'
+                                onClick={() => {
+                                  router.push('/knowledge');
+                                  setIsKnowledgePanelOpen(false);
+                                }}
+                                className='text-[10px] p-0 h-auto'
+                              >
+                                管理知识库 →
+                              </Button>
+                            </div>
+                          </div>
+                        }
+                      >
+                        <Tooltip title={selectedKnowledge ? `知识库: ${selectedKnowledge.name}` : '选择知识库'}>
+                          <Button
+                            type='text'
+                            shape='circle'
+                            className={`relative text-gray-500 hover:bg-gray-100 ${selectedKnowledge ? 'bg-orange-50 text-orange-500' : ''}`}
+                          >
+                            <div className='relative'>
+                              <BookOutlined className={selectedKnowledge ? 'text-orange-500' : ''} />
+                              {selectedKnowledge && (
+                                <span className='absolute -top-1 -right-1 bg-orange-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold'>
+                                  1
+                                </span>
+                              )}
+                            </div>
+                          </Button>
+                        </Tooltip>
+                      </Popover>
+
+                      {/* Model Selector */}
+                      <ModelSelector onChange={val => setModel(val)} />
+                    </div>
+
+                    <div className='flex items-center gap-2'>
+                      <Tooltip title='Voice Input'>
+                        <Button type='text' shape='circle' icon={<AudioOutlined />} className='text-gray-500' />
+                      </Tooltip>
+                      <Button
+                        type='primary'
+                        shape='circle'
+                        size='large'
+                        icon={<ArrowUpOutlined />}
+                        onClick={() => handleStart()}
+                        disabled={!query.trim() && !uploadedFile}
+                        className={`${query.trim() || uploadedFile ? 'bg-black hover:bg-gray-800' : 'bg-gray-200 text-gray-400 hover:bg-gray-200'} border-none shadow-none`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Database & Knowledge Base Selectors - Manus Style */}
+                  <div className='mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center gap-3'>
+                    {/* Database Selector */}
+                    <Button
+                      type='text'
+                      size='small'
+                      onClick={() => setIsDbModalOpen(true)}
+                      className={`flex items-center gap-1.5 text-xs rounded-lg px-3 py-1.5 h-auto ${
+                        selectedDb
+                          ? 'bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400'
+                          : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'
+                      }`}
+                    >
+                      <DatabaseOutlined />
+                      <span>{selectedDb ? selectedDb.db_name : '数据库'}</span>
+                    </Button>
+
+                    {/* Knowledge Base Selector */}
+                    <Button
+                      type='text'
+                      size='small'
+                      onClick={() => setIsKnowledgeModalOpen(true)}
+                      className={`flex items-center gap-1.5 text-xs rounded-lg px-3 py-1.5 h-auto ${
+                        selectedKnowledge
+                          ? 'bg-orange-50 text-orange-600 hover:bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400'
+                          : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'
+                      }`}
+                    >
+                      <BookOutlined />
+                      <span>{selectedKnowledge ? selectedKnowledge.name : '知识库'}</span>
+                    </Button>
+
+                    {/* Selected Skill Badge (if any) */}
+                    {selectedSkill && (
+                      <Tag
+                        closable
+                        onClose={() => setSelectedSkill(null)}
+                        className='flex items-center gap-1 text-xs rounded-lg px-2 py-1 m-0 bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-700'
+                      >
+                        <ThunderboltOutlined />
+                        <span>{selectedSkill.name}</span>
+                      </Tag>
+                    )}
+                  </div>
+                </div>
+
+                {/* Recommended Examples */}
+                <div className='mt-10 w-full'>
+                  <div className='flex items-center justify-center gap-2 mb-4'>
+                    <div className='h-px flex-1 bg-gradient-to-r from-transparent to-gray-200 dark:to-gray-700' />
+                    <span className='text-xs font-medium text-gray-400 dark:text-gray-500 tracking-wider uppercase'>
+                      推荐示例
+                    </span>
+                    <div className='h-px flex-1 bg-gradient-to-l from-transparent to-gray-200 dark:to-gray-700' />
+                  </div>
+                  <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+                    {EXAMPLE_CARDS.map(example => (
+                      <div
+                        key={example.id}
+                        onClick={() => handleExampleClick(example)}
+                        className={`group relative bg-gradient-to-br ${example.color} border ${example.borderColor} rounded-2xl p-4 cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300`}
+                      >
+                        <div className='flex items-start gap-3'>
+                          <div
+                            className={`w-10 h-10 ${example.iconBg} rounded-xl flex items-center justify-center text-xl flex-shrink-0`}
+                          >
+                            {example.icon}
+                          </div>
+                          <div className='flex-1 min-w-0'>
+                            <h3 className='text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1'>
+                              {example.title}
+                            </h3>
+                            <p className='text-xs text-gray-500 dark:text-gray-400 line-clamp-2'>
+                              {example.description}
+                            </p>
+                          </div>
+                        </div>
+                        <div className='absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity'>
+                          <RightOutlined className='text-xs text-gray-400' />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
 
-          {/* <TabContent apps={apps?.app_list || []} loading={loading} refresh={refresh} /> */}
+          {/* Footer Promo - Only show when no messages */}
+          {messages.length === 0 && (
+            <div className='absolute bottom-6 left-0 right-0 flex justify-center'>
+              <div className='bg-gray-50 dark:bg-[#2c2d31] px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center gap-4 shadow-sm cursor-pointer hover:bg-gray-100'>
+                <div className='w-8 h-8 bg-black rounded-lg text-white flex items-center justify-center font-serif italic'>
+                  D
+                </div>
+                <div className='flex flex-col'>
+                  <span className='text-xs font-bold text-gray-800 dark:text-gray-200'>Data-Driven Decisions</span>
+                  <span className='text-[10px] text-gray-500'>Empower your business with AI analytics</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      </ConfigProvider>
-    </div>
+
+        {/* Database Selection Modal */}
+        <Modal
+          title={
+            <div className='flex items-center gap-2'>
+              <DatabaseOutlined />
+              Select Data Source
+            </div>
+          }
+          open={isDbModalOpen}
+          onCancel={() => setIsDbModalOpen(false)}
+          footer={null}
+          width={500}
+        >
+          <List
+            itemLayout='horizontal'
+            dataSource={dataSources || []}
+            renderItem={(item: DataSource) => (
+              <List.Item
+                className={`cursor-pointer hover:bg-gray-50 rounded-lg px-2 transition-colors ${selectedDb?.id === item.id ? 'bg-blue-50' : ''}`}
+                onClick={() => {
+                  setSelectedDb(item);
+                  setIsDbModalOpen(false);
+                }}
+                actions={[selectedDb?.id === item.id && <CheckCircleFilled className='text-blue-500' />]}
+              >
+                <List.Item.Meta
+                  avatar={<div className='mt-1 bg-gray-100 p-2 rounded-lg'>{getDbIcon(item.type)}</div>}
+                  title={item.db_name}
+                  description={<span className='text-xs text-gray-400'>{item.type}</span>}
+                />
+              </List.Item>
+            )}
+            locale={{ emptyText: 'No data sources found' }}
+          />
+          <div className='mt-4 pt-4 border-t border-gray-100 text-center'>
+            <Button type='dashed' block icon={<PlusOutlined />} onClick={() => router.push('/construct/database')}>
+              Add New Data Source
+            </Button>
+          </div>
+        </Modal>
+
+        {/* Knowledge Base Selection Modal */}
+        <Modal
+          title={
+            <div className='flex items-center gap-2'>
+              <BookOutlined />
+              Select Knowledge Base
+            </div>
+          }
+          open={isKnowledgeModalOpen}
+          onCancel={() => setIsKnowledgeModalOpen(false)}
+          footer={null}
+          width={500}
+        >
+          <List
+            itemLayout='horizontal'
+            dataSource={knowledgeSpaces || []}
+            renderItem={(item: KnowledgeSpace) => (
+              <List.Item
+                className={`cursor-pointer hover:bg-gray-50 rounded-lg px-2 transition-colors ${selectedKnowledge?.id === item.id ? 'bg-orange-50' : ''}`}
+                onClick={() => {
+                  setSelectedKnowledge(item);
+                  setIsKnowledgeModalOpen(false);
+                }}
+                actions={[selectedKnowledge?.id === item.id && <CheckCircleFilled className='text-orange-500' />]}
+              >
+                <List.Item.Meta
+                  avatar={
+                    <div className='mt-1 bg-gray-100 p-2 rounded-lg'>
+                      <ReadOutlined className='text-orange-500' />
+                    </div>
+                  }
+                  title={item.name}
+                  description={<span className='text-xs text-gray-400'>{item.vector_type}</span>}
+                />
+              </List.Item>
+            )}
+            locale={{ emptyText: 'No knowledge bases found' }}
+          />
+          <div className='mt-4 pt-4 border-t border-gray-100 text-center'>
+            <Button type='dashed' block icon={<PlusOutlined />} onClick={() => router.push('/construct/knowledge')}>
+              Add New Knowledge Base
+            </Button>
+          </div>
+        </Modal>
+      </div>
+    </ConfigProvider>
   );
 };
 

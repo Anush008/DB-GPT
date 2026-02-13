@@ -8,7 +8,7 @@ import logging
 import time
 from concurrent.futures import Executor, ThreadPoolExecutor
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, final
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, final, cast
 
 from jinja2 import Template
 
@@ -181,6 +181,68 @@ class ConversableAgent(Role, Agent):
 
     def bind(self, target: Any) -> "ConversableAgent":
         """Bind the resources to the agent."""
+        # Support binding Skill instances so agents can receive skills via .bind(skill)
+        # Allow binding of FileBasedSkill (Claude-style) by converting it to a
+        # core Skill instance. This lets callers pass either a core Skill or a
+        # file-based skill parser result.
+        try:
+            from dbgpt.agent.claude_skill import FileBasedSkill
+        except Exception:
+            FileBasedSkill = None  # type: ignore
+
+        # If a FileBasedSkill instance was provided, try to convert it into
+        # a core Skill so downstream code can treat skills uniformly.
+        if FileBasedSkill is not None and isinstance(target, FileBasedSkill):
+            try:
+                from dbgpt.agent.skill.base import Skill, SkillMetadata, SkillType
+
+                meta = target.metadata
+                skill_type_val = SkillType.Custom
+                if getattr(meta, "skill_type", None):
+                    try:
+                        skill_type_val = SkillType(meta.skill_type)
+                    except Exception:
+                        skill_type_val = SkillType.Custom
+
+                core_meta = SkillMetadata(
+                    name=meta.name,
+                    description=meta.description,
+                    version=getattr(meta, "version", "1.0.0") or "1.0.0",
+                    author=getattr(meta, "author", None),
+                    skill_type=skill_type_val,
+                    tags=getattr(meta, "tags", []) or [],
+                )
+
+                prompt_template = None
+                if hasattr(target, "get_prompt"):
+                    try:
+                        prompt_template = target.get_prompt()
+                    except Exception:
+                        pass
+                if prompt_template is None and hasattr(target, "instructions"):
+                    prompt_template = PromptTemplate.from_template(target.instructions)
+
+                skill_obj = Skill(
+                    metadata=core_meta,
+                    prompt_template=prompt_template,
+                    required_tools=getattr(meta, "required_tools", []) or [],
+                    required_knowledge=getattr(meta, "required_knowledge", []) or [],
+                    config=getattr(meta, "config", {}) or {},
+                )
+
+                # replace target with the constructed core Skill instance
+                target = skill_obj
+            except Exception:
+                # if conversion fails, continue and let subsequent checks handle it
+                pass
+
+        try:
+            # local import to avoid circular imports at module import time
+            from dbgpt.agent.skill.base import SkillBase
+
+            is_skill = isinstance(target, SkillBase)
+        except Exception:
+            is_skill = False
         if isinstance(target, LLMConfig):
             self.llm_config = target
         elif isinstance(target, GptsMemory):
@@ -193,6 +255,16 @@ class ConversableAgent(Role, Agent):
             self.memory = target
         elif isinstance(target, ProfileConfig):
             self.profile = target
+        elif is_skill:
+            # Bind skill to agent and adopt skill's prompt template as bind_prompt
+            # so the skill's instructions become the agent's system prompt.
+            self._skill = target
+            try:
+                prompt_template = getattr(target, "prompt_template", None)
+                if prompt_template is not None:
+                    self.bind_prompt = cast(Optional[PromptTemplate], prompt_template)
+            except Exception:
+                pass
         elif isinstance(target, type) and issubclass(target, Action):
             self.actions.append(target())
         elif isinstance(target, Action):
@@ -329,6 +401,21 @@ class ConversableAgent(Role, Agent):
         **kwargs,
     ) -> AgentMessage:
         """Generate a reply based on the received messages."""
+        stream_callback = kwargs.pop("stream_callback", None)
+
+        async def _emit_stream(event_type: str, payload: Dict[str, Any]) -> None:
+            if not stream_callback:
+                return
+            try:
+                if asyncio.iscoroutinefunction(stream_callback):
+                    await stream_callback(event_type, payload)
+                    return
+                result = stream_callback(event_type, payload)
+                if asyncio.iscoroutine(result):
+                    await result
+            except Exception:
+                logger.exception("stream_callback error")
+
         logger.info(
             f"generate agent reply!sender={sender}, rely_messages_len={rely_messages}"
         )
@@ -422,14 +509,34 @@ class ConversableAgent(Role, Agent):
                     },
                 ) as span:
                     # 1.Think about how to do things
+                    async def _llm_stream_callback(payload: Dict[str, Any]) -> None:
+                        await _emit_stream(
+                            "thinking_chunk",
+                            {
+                                "round": current_retry_counter + 1,
+                                "delta_text": payload.get("delta_text", ""),
+                                "delta_thinking": payload.get("delta_thinking", ""),
+                            },
+                        )
+
                     llm_reply, model_name = await self.thinking(
-                        thinking_messages, sender
+                        thinking_messages,
+                        sender,
+                        stream_callback=_llm_stream_callback,
                     )
                     reply_message.model_name = model_name
                     reply_message.content = llm_reply
                     reply_message.resource_info = resource_info
                     span.metadata["llm_reply"] = llm_reply
                     span.metadata["model_name"] = model_name
+                    await _emit_stream(
+                        "thinking",
+                        {
+                            "round": current_retry_counter + 1,
+                            "llm_reply": llm_reply,
+                            "model_name": model_name,
+                        },
+                    )
 
                 with root_tracer.start_span(
                     "agent.generate_reply.review",
@@ -472,6 +579,13 @@ class ConversableAgent(Role, Agent):
                         reply_message.action_report = act_out
                     span.metadata["action_report"] = (
                         act_out.to_dict() if act_out else None
+                    )
+                    await _emit_stream(
+                        "act",
+                        {
+                            "round": current_retry_counter + 1,
+                            "action_output": act_out.to_dict() if act_out else None,
+                        },
                     )
 
                 with root_tracer.start_span(
@@ -556,6 +670,7 @@ class ConversableAgent(Role, Agent):
         messages: List[AgentMessage],
         sender: Optional[Agent] = None,
         prompt: Optional[str] = None,
+        stream_callback: Optional[Callable[[Dict[str, Any]], Any]] = None,
     ) -> Tuple[Optional[str], Optional[str]]:
         """Think and reason about the current task goal.
 
@@ -588,6 +703,7 @@ class ConversableAgent(Role, Agent):
                     conv_id=self.not_null_agent_context.conv_id,
                     sender=sender.role if sender else "?",
                     stream_out=self.stream_out,
+                    stream_callback=stream_callback,
                 )
                 return response, llm_model
             except LLMChatError as e:
@@ -962,7 +1078,7 @@ class ConversableAgent(Role, Agent):
             if can_uses and len(can_uses) > 0:
                 return can_uses[0]
             else:
-                raise ValueError("No model service available!")
+                return "deepseek-chat"
         except Exception as e:
             logger.error(f"{self.role} get next llm failed!{str(e)}")
             raise ValueError(f"Failed to allocate model service,{str(e)}!")
@@ -1056,15 +1172,18 @@ class ConversableAgent(Role, Agent):
         """Build system prompt."""
         system_prompt = None
         if self.bind_prompt:
+
+            class _SafeDict(dict):
+                def __missing__(self, key):
+                    return ""
+
             prompt_param = {}
             if resource_vars:
                 prompt_param.update(resource_vars)
             if context:
                 prompt_param.update(context)
             if self.bind_prompt.template_format == "f-string":
-                system_prompt = self.bind_prompt.template.format(
-                    **prompt_param,
-                )
+                system_prompt = self.bind_prompt.format(**prompt_param)
             elif self.bind_prompt.template_format == "jinja2":
                 system_prompt = Template(self.bind_prompt.template).render(prompt_param)
             else:

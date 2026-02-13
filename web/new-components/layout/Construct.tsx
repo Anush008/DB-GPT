@@ -6,6 +6,7 @@ import Icon, {
   ForkOutlined,
   MessageOutlined,
   PartitionOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 import { ConfigProvider, Tabs } from 'antd';
 import { t } from 'i18next';
@@ -65,6 +66,12 @@ function ConstructLayout({ children }: { children: React.ReactNode }) {
       name: t('Prompt'),
       icon: <MessageOutlined />,
       path: '/prompt',
+    },
+    {
+      key: 'skills',
+      name: t('skills') || '技能',
+      path: '/skills',
+      icon: <ThunderboltOutlined />,
     },
     {
       key: 'dbgpts',

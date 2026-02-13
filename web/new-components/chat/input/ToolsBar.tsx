@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 
 import { parseResourceValue, transformFileUrl } from '@/utils';
 
+import KnowledgeSelector from './KnowledgeSelector';
 import MaxNewTokens from './MaxNewTokens';
 import ModelSwitcher from './ModelSwitcher';
 import Resource from './Resource';
@@ -231,8 +232,9 @@ const ToolsBar: React.FC<{
   return (
     <div className='flex flex-col  mb-2'>
       <div className='flex items-center justify-between h-full w-full'>
-        <div className='flex gap-3 text-lg'>
+        <div className='flex gap-3 text-lg items-center'>
           <ModelSwitcher />
+          <KnowledgeSelector />
           <Resource fileList={fileList} setFileList={setFileList} setLoading={setLoading} fileName={fileName} />
           <Temperature temperatureValue={temperatureValue} setTemperatureValue={setTemperatureValue} />
           <MaxNewTokens maxNewTokensValue={maxNewTokensValue} setMaxNewTokensValue={setMaxNewTokensValue} />

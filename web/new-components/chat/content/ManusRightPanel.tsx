@@ -520,7 +520,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
   outputs,
   isRunning,
   onRerun,
-  terminalTitle = 'AI 的电脑',
+  terminalTitle = 'DB-GPT 的电脑',
   onCollapse,
   artifacts,
   onArtifactClick,
@@ -595,7 +595,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
   // and code+html pairs into tabbed views (渲染结果 / 源代码)
   const outputGroups = useMemo(() => {
     const groups: Array<
-      | { type: 'code-execution'; codes: ExecutionOutput[]; results: ExecutionOutput[] }
+      | { type: 'code-execution'; codes: ExecutionOutput[]; results: ExecutionOutput[]; images: ExecutionOutput[] }
       | { type: 'html-tabbed'; code?: ExecutionOutput; html: ExecutionOutput }
       | { type: 'single'; output: ExecutionOutput }
     > = [];
@@ -621,7 +621,12 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
             results.push(visibleOutputs[i]);
             i += 1;
           }
-          groups.push({ type: 'code-execution', codes, results });
+          const images: ExecutionOutput[] = [];
+          while (i < visibleOutputs.length && visibleOutputs[i].output_type === 'image') {
+            images.push(visibleOutputs[i]);
+            i += 1;
+          }
+          groups.push({ type: 'code-execution', codes, results, images });
         }
       } else if (visibleOutputs[i].output_type === 'html') {
         groups.push({ type: 'html-tabbed', html: visibleOutputs[i] });
@@ -753,7 +758,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
       )}
 
       {/* Content Area */}
-      <div className={classNames('flex-1 overflow-y-auto', panelView === 'html-preview' ? 'p-0' : 'p-5 space-y-4')}>
+      <div className={classNames('flex-1 overflow-y-auto flex flex-col min-h-0', panelView === 'html-preview' ? 'p-0' : 'p-5 space-y-4')}>
         {panelView === 'html-preview' && previewArtifact ? (
           <div className='w-full h-full flex flex-col'>
             <iframe
@@ -818,7 +823,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
             )}
           </div>
         ) : activeStep ? (
-          <div className='rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a1b1e] overflow-hidden'>
+          <div className='rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a1b1e] overflow-hidden flex-1 flex flex-col min-h-0'>
             {activeStep.type === 'python' || activeStep.type === 'html' ? (
               <div className='flex items-center justify-between px-4 py-3'>
                 <div className='flex items-center gap-3 min-w-0 flex-1'>
@@ -887,13 +892,13 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
             {/* Divider + Outputs */}
             {visibleOutputs.length > 0 && (
               <>
-                <div className='border-t border-gray-100 dark:border-gray-800' />
-                <div className='p-4 space-y-3'>
+                <div className='border-t border-gray-100 dark:border-gray-800 shrink-0' />
+                <div className='flex-1 min-h-0 p-4 flex flex-col space-y-3 overflow-y-auto'>
                   {outputGroups.map((group, gIdx) =>
                     group.type === 'code-execution' ? (
-                      <div key={`group-${gIdx}`} className='rounded-xl overflow-hidden border border-gray-700/50'>
-                        <div className='relative'>
-                          <span className='absolute top-2 right-2 z-10 text-[10px] text-gray-400 bg-gray-800/80 px-2 py-0.5 rounded'>
+                      <div key={`group-${gIdx}`} className='rounded-xl overflow-hidden border border-gray-700/50 flex flex-col flex-1 min-h-0'>
+                        <div className='relative overflow-auto flex-1 min-h-[100px]'>
+                          <span className='sticky top-0 right-0 float-right z-10 text-[10px] text-gray-400 bg-gray-800/80 px-2 py-0.5 rounded mr-2 mt-2'>
                             代码
                           </span>
                           <CodePreview
@@ -904,14 +909,33 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
                         </div>
                         {group.results.length > 0 && (
                           <>
-                            <div className='border-t border-gray-700/50' />
-                            <div className='relative bg-gray-900'>
-                              <span className='absolute top-2 right-2 z-10 text-[10px] text-gray-400 bg-gray-800/80 px-2 py-0.5 rounded'>
+                            <div className='border-t border-gray-700/50 shrink-0' />
+                            <div className='relative overflow-auto bg-gray-900 flex-1 min-h-[60px]'>
+                              <span className='sticky top-0 right-0 float-right z-10 text-[10px] text-gray-400 bg-gray-800/80 px-2 py-0.5 rounded mr-2 mt-2'>
                                 执行结果
                               </span>
-                              <div className='px-4 py-3 text-sm text-green-400 font-mono whitespace-pre-wrap leading-relaxed overflow-x-auto'>
+                              <div className='px-4 py-3 text-sm text-green-400 font-mono whitespace-pre-wrap leading-relaxed'>
                                 {group.results.map(r => String(r.content)).join('\n')}
                               </div>
+                            </div>
+                          </>
+                        )}
+                        {group.images.length > 0 && (
+                          <>
+                            <div className='border-t border-gray-700/50 shrink-0' />
+                            <div className='p-3 space-y-2 bg-gray-50 dark:bg-gray-900/50'>
+                              {group.images.map((img, imgIdx) => (
+                                <div key={`img-${imgIdx}`} className='rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700'>
+                                  <img
+                                    src={resolveImageUrl(
+                                      typeof img.content === 'string' ? img.content : img.content?.url || img.content?.src || String(img.content),
+                                    )}
+                                    alt='Generated chart'
+                                    className='w-full h-auto object-contain'
+                                    style={{ maxHeight: 600 }}
+                                  />
+                                </div>
+                              ))}
                             </div>
                           </>
                         )}

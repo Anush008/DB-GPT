@@ -2,7 +2,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import pandas as pd
 
@@ -124,6 +124,7 @@ class Excel2TableAgent:
         messages: List[AgentMessage],
         sender: Optional[Agent] = None,
         prompt: Optional[str] = None,
+        stream_callback: Optional[Callable[[Dict[str, Any]], Any]] = None,
     ) -> Tuple[Optional[str], Optional[str]]:
         all_file_data = []
         for excel_file in excel_files:
@@ -136,7 +137,9 @@ class Excel2TableAgent:
             message_parts.append(f"\n文件 {i}: {filename}")
             message_parts.append(f"数据内容：\n{mdstr}")
         prompt = "\n".join(message_parts)
-        result = await super().thinking(messages, sender, prompt)
+        result = await super().thinking(
+            messages, sender, prompt, stream_callback=stream_callback
+        )
         return result
 
     def _init_reply_message(

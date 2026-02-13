@@ -4,7 +4,7 @@ import { getUserId } from '@/utils';
 import { HEADER_USER_ID_KEY } from '@/utils/constants/index';
 import { EventStreamContentType, fetchEventSource } from '@microsoft/fetch-event-source';
 import { message } from 'antd';
-import { useCallback, useContext, useState } from 'react';
+import { useCallback, useContext, useRef, useState } from 'react';
 
 type Props = {
   queryAgentURL?: string;
@@ -24,10 +24,12 @@ type ChatParams = {
 
 const useChat = ({ queryAgentURL = '/api/v1/chat/completions', app_code }: Props) => {
   const [ctrl, setCtrl] = useState<AbortController>({} as AbortController);
+  const lastMessageRef = useRef<string>('');
   const { scene } = useContext(ChatContext);
   const chat = useCallback(
     async ({ data, chatId, onMessage, onClose, onDone, onError, ctrl }: ChatParams) => {
       ctrl && setCtrl(ctrl);
+      lastMessageRef.current = '';
       if (!data?.user_input && !data?.doc_id) {
         message.warning(i18n.t('no_context_tip'));
         return;
@@ -70,6 +72,7 @@ const useChat = ({ queryAgentURL = '/api/v1/chat/completions', app_code }: Props
           },
           onclose() {
             ctrl && ctrl.abort();
+            lastMessageRef.current = '';
             onClose?.();
           },
           onerror(err) {
@@ -93,18 +96,30 @@ const useChat = ({ queryAgentURL = '/api/v1/chat/completions', app_code }: Props
                 message = parsedData.choices?.[0]?.message?.content;
               }
             } catch {
-              message.replaceAll('\\n', '\n');
+              if (typeof message === 'string') {
+                message = message.replaceAll('\\n', '\n');
+              }
             }
             if (typeof message === 'string') {
               if (needReplaceNewline) {
                 message = message.replaceAll('\\n', '\n');
               }
               if (message === '[DONE]') {
+                lastMessageRef.current = '';
                 onDone?.();
               } else if (message?.startsWith('[ERROR]')) {
                 onError?.(message?.replace('[ERROR]', ''));
               } else {
-                onMessage?.(message);
+                if (scene === 'chat_agent') {
+                  onMessage?.(message);
+                } else {
+                  const previous = lastMessageRef.current;
+                  const delta = message.startsWith(previous) ? message.slice(previous.length) : message;
+                  lastMessageRef.current = message;
+                  if (delta) {
+                    onMessage?.(delta);
+                  }
+                }
               }
             } else {
               onMessage?.(message);

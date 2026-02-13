@@ -67,6 +67,8 @@ export type IChatDialogueSchema = {
   select_param: string;
   app_code: string;
   param_need?: ParamNeed[];
+  gmt_created?: string;
+  gmt_modified?: string;
 };
 
 export type UserParam = {

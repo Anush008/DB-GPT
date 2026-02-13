@@ -78,6 +78,8 @@ export interface ManusLeftPanelProps {
   artifacts?: ArtifactItem[];
   onArtifactClick?: (artifact: ArtifactItem) => void;
   onViewAllFiles?: () => void;
+  isCollapsed?: boolean;
+  onExpand?: () => void;
   attachedFile?: {
     name: string;
     size: number;
@@ -413,6 +415,29 @@ const StepCard: React.FC<{
 
 StepCard.displayName = 'StepCard';
 
+const ThoughtBubble: React.FC<{ text: string }> = memo(({ text }) => {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = text.length > 60;
+  const display = expanded || !isLong ? text : text.slice(0, 60) + '...';
+
+  return (
+    <div
+      className={classNames('flex items-start gap-1.5 py-1 px-1 min-w-0', { 'cursor-pointer': isLong })}
+      onClick={() => isLong && setExpanded(!expanded)}
+    >
+      <span className='text-[10px] text-gray-300 dark:text-gray-600 mt-0.5 flex-shrink-0 select-none'>💭</span>
+      <p className='text-[11px] text-gray-400 dark:text-gray-500 leading-relaxed m-0 min-w-0 break-words italic'>
+        <StreamingText text={display} />
+        {isLong && !expanded && (
+          <span className='text-[10px] text-gray-300 dark:text-gray-600 ml-1 not-italic'>▸</span>
+        )}
+      </p>
+    </div>
+  );
+});
+
+ThoughtBubble.displayName = 'ThoughtBubble';
+
 // Section Component
 const SectionBlock: React.FC<{
   section: ThinkingSection;
@@ -477,10 +502,7 @@ const SectionBlock: React.FC<{
       {isExpanded && (
         <div className='ml-7 space-y-2 overflow-hidden'>
            {stepThoughts?.['initial'] && (
-            <div className='flex items-start gap-2 py-1.5 px-1 min-w-0'>
-              <span className='text-xs text-gray-300 dark:text-gray-600 mt-0.5 flex-shrink-0'>💭</span>
-              <p className='text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed m-0 line-clamp-2 min-w-0 break-words'><StreamingText text={stepThoughts['initial']} /></p>
-            </div>
+            <ThoughtBubble text={stepThoughts['initial']} />
           )}
 
           {hasObservations &&
@@ -497,10 +519,7 @@ const SectionBlock: React.FC<{
                 onClick={() => onStepClick(step.id)}
               />
               {stepThoughts?.[step.id] && (
-                <div className='flex items-start gap-2 py-1.5 px-1 min-w-0'>
-                  <span className='text-xs text-gray-300 dark:text-gray-600 mt-0.5 flex-shrink-0'>💭</span>
-                  <p className='text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed m-0 line-clamp-2 min-w-0 break-words'><StreamingText text={stepThoughts[step.id]} /></p>
-                </div>
+                <ThoughtBubble text={stepThoughts[step.id]} />
               )}
             </React.Fragment>
           ))}
@@ -525,6 +544,8 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
   artifacts,
   onArtifactClick,
   onViewAllFiles,
+  isCollapsed,
+  onExpand,
   attachedFile,
   attachedKnowledge,
 }) => {
@@ -534,6 +555,40 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
     },
     [onStepClick],
   );
+
+  // Collapsed mode: show compact summary of the round
+  if (isCollapsed) {
+    return (
+      <div
+        onClick={onExpand}
+        className='group px-4 py-3 border-b border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-gray-50/50 dark:hover:bg-[#1a1b1e]/50 transition-colors'
+      >
+        {/* User query bubble (compact) */}
+        {userQuery && (
+          <div className='flex justify-end mb-2'>
+            <div className='max-w-[85%]'>
+              <div className='rounded-2xl bg-gray-100 dark:bg-[#2a2b2f] px-3 py-2 text-sm text-gray-800 dark:text-gray-200 leading-relaxed line-clamp-2'>
+                {userQuery}
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Truncated assistant response */}
+        {assistantText && (
+          <div className='text-sm text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed'>
+            {assistantText.slice(0, 150)}{assistantText.length > 150 ? '...' : ''}
+          </div>
+        )}
+        {/* Completed indicator */}
+        {!assistantText && sections.length > 0 && (
+          <div className='flex items-center gap-1.5 text-xs text-gray-400'>
+            <CheckCircleFilled className='text-emerald-500' />
+            <span>{sections.length} 个步骤已完成</span>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className='flex flex-col h-full'>
