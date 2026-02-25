@@ -264,6 +264,7 @@ class Service(
             params=param_dict,
             description=res.comment,
             id=res.id,
+            db_name=res.db_name,
             gmt_created=res.gmt_created,
             gmt_modified=res.gmt_modified,
         )

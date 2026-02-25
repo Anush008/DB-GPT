@@ -9,6 +9,7 @@ import {
   ClockCircleOutlined,
   CodeOutlined,
   ConsoleSqlOutlined,
+  DatabaseOutlined,
   DesktopOutlined,
   DownloadOutlined,
   EditOutlined,
@@ -34,7 +35,7 @@ import MarkdownContext from '@/new-components/common/MarkdownContext';
 
 export type StepStatus = 'pending' | 'running' | 'completed' | 'error';
 
-export type StepType = 'read' | 'edit' | 'write' | 'bash' | 'grep' | 'glob' | 'task' | 'skill' | 'python' | 'html' | 'other';
+export type StepType = 'read' | 'edit' | 'write' | 'bash' | 'grep' | 'glob' | 'task' | 'skill' | 'python' | 'html' | 'sql' | 'other';
 
 export interface ExecutionStep {
   id: string;
@@ -97,6 +98,10 @@ export interface ManusLeftPanelProps {
     name: string;
     id: string;
   };
+  attachedDb?: {
+    db_name: string;
+    db_type: string;
+  };
 }
 
 // Get step icon based on type and status
@@ -125,6 +130,8 @@ const getStepIcon = (type: StepType, status: StepStatus) => {
     case 'task':
     case 'skill':
       return <PlayCircleOutlined className={classNames(iconClass, 'text-indigo-500')} />;
+    case 'sql':
+      return <ConsoleSqlOutlined className={classNames(iconClass, 'text-emerald-600')} />;
     default:
       return <FileTextOutlined className={classNames(iconClass, 'text-gray-500')} />;
   }
@@ -141,6 +148,7 @@ const getTypeLabel = (type: StepType): string => {
     glob: '查找文件',
     task: '执行任务',
     skill: '加载技能',
+    sql: 'SQL查询',
     python: 'Python',
     html: 'HTML',
     other: '操作',
@@ -161,6 +169,7 @@ const getIconBgClass = (type: StepType): string => {
     html: 'bg-orange-50 dark:bg-orange-900/30',
     task: 'bg-indigo-50 dark:bg-indigo-900/30',
     skill: 'bg-indigo-50 dark:bg-indigo-900/30',
+    sql: 'bg-emerald-50 dark:bg-emerald-900/30',
     other: 'bg-gray-50 dark:bg-gray-800',
   };
   return bgClasses[type] || 'bg-gray-50 dark:bg-gray-800';
@@ -676,6 +685,7 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
   attachedFile,
   attachedKnowledge,
   attachedSkill,
+  attachedDb,
 }) => {
   const handleStepClick = useCallback(
     (stepId: string, sectionId: string) => {
@@ -758,6 +768,17 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
                   <div className='min-w-0 flex-1'>
                     <div className='text-sm font-medium text-gray-800 dark:text-gray-200 truncate'>{attachedSkill.name}</div>
                     <div className='text-[11px] text-gray-400 dark:text-gray-500'>技能</div>
+                  </div>
+                </div>
+              )}
+              {attachedDb && (
+                <div className='flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700/60 bg-white dark:bg-[#1a1b1e] shadow-sm'>
+                  <div className='w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0'>
+                    <DatabaseOutlined className='text-blue-500 text-base' />
+                  </div>
+                  <div className='min-w-0 flex-1'>
+                    <div className='text-sm font-medium text-gray-800 dark:text-gray-200 truncate'>{attachedDb.db_name}</div>
+                    <div className='text-[11px] text-gray-400 dark:text-gray-500'>{attachedDb.db_type || '数据库'}</div>
                   </div>
                 </div>
               )}

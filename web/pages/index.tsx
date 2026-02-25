@@ -119,14 +119,14 @@ const _getFileIcon = (fileName: string, mimeType?: string) => {
 };
 
 interface DataSource {
-  id: string;
-  name: string;
+  id: number;
   type: string;
-  host?: string;
-  port?: number;
-  user?: string;
-  db_name: string;
-  comment?: string;
+  params: Record<string, any>;
+  description?: string;
+  db_name: string;  // derived from params.name
+  db_type: string;  // alias for type
+  gmt_created?: string;
+  gmt_modified?: string;
 }
 
 // Define Knowledge Base Interface (Partial)
@@ -156,6 +156,7 @@ interface ChatMessage {
   attachedFile?: FileAttachment;
   attachedKnowledge?: KnowledgeSpace;
   attachedSkill?: { name: string; id: string };
+  attachedDb?: { db_name: string; db_type: string };
 }
 
 interface ExecutionStep {
@@ -310,6 +311,7 @@ const convertToManusFormat = (
   const getStepType = (title?: string): StepType => {
     const lower = (title || '').toLowerCase();
     if (lower.includes('load_skill') || lower.includes('load skill')) return 'skill';
+    if (lower.includes('sql_query') || lower.includes('sql query') || lower.includes('sql查询')) return 'sql';
     if (lower.includes('read') || lower.includes('load')) return 'read';
     if (lower.includes('edit')) return 'edit';
     if (lower.includes('write') || lower.includes('save')) return 'write';
@@ -536,6 +538,9 @@ const Playground: NextPage = () => {
   const [isKnowledgePanelOpen, setIsKnowledgePanelOpen] = useState(false);
   const [knowledgeSearchQuery, setKnowledgeSearchQuery] = useState('');
 
+  const [isDbPanelOpen, setIsDbPanelOpen] = useState(false);
+  const [dbSearchQuery, setDbSearchQuery] = useState('');
+
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const [rightPanelView, setRightPanelView] = useState<PanelView>('execution');
@@ -553,9 +558,15 @@ const Playground: NextPage = () => {
   // Fetch Data Sources
   const { data: dataSources, loading: _loadingSources } = useRequest(async () => {
     try {
-      const response = await axios.get('/api/v2/serve/datasources');
-      if (response.data.success) {
-        return response.data.data as DataSource[];
+      const response: any = await axios.get('/api/v2/serve/datasources');
+      // ctx-axios interceptor returns response.data directly, so response is {success, data, ...}
+      const result = response?.success !== undefined ? response : response?.data;
+      if (result?.success) {
+        return (result.data || []).map((item: any) => ({
+          ...item,
+          db_name: item.db_name || item.params?.name || item.params?.database || `${item.type}-${item.id}`,
+          db_type: item.type,
+        })) as DataSource[];
       }
       return [];
     } catch (e) {
@@ -1319,6 +1330,7 @@ const Playground: NextPage = () => {
           : undefined,
         attachedKnowledge: selectedKnowledge ?? undefined,
         attachedSkill: effectiveSkill ? { name: effectiveSkill.name, id: effectiveSkill.id } : undefined,
+        attachedDb: selectedDb ? { db_name: selectedDb.db_name, db_type: selectedDb.db_type } : undefined,
       },
       {
         id: responseId,
@@ -1847,6 +1859,7 @@ const Playground: NextPage = () => {
     if (lowerType.includes('mysql')) return <ConsoleSqlOutlined className='text-blue-500' />;
     if (lowerType.includes('postgre')) return <DatabaseOutlined className='text-blue-400' />;
     if (lowerType.includes('mongo')) return <CloudServerOutlined className='text-green-500' />;
+    if (lowerType.includes('sqlite')) return <DatabaseOutlined className='text-amber-500' />;
     return <DatabaseOutlined className='text-gray-500' />;
   };
 
@@ -1880,6 +1893,11 @@ const Playground: NextPage = () => {
               <span>DB-GPT</span>
             </div>
             <div className='flex items-center gap-4'>
+              {selectedDb && (
+                <Tag className='flex items-center gap-1 bg-blue-50 border-blue-200 text-blue-700 px-3 py-1 rounded-full text-xs'>
+                  {getDbIcon(selectedDb.type)} <span className='font-medium ml-1'>{selectedDb.db_name}</span>
+                </Tag>
+              )}
               {messages.length > 0 && (
                 <Button type='text' size='small' onClick={handleClearChat} className='text-gray-500'>
                   Clear Chat
@@ -1944,6 +1962,7 @@ const Playground: NextPage = () => {
                         attachedFile={round.humanMsg?.attachedFile}
                         attachedKnowledge={round.humanMsg?.attachedKnowledge}
                         attachedSkill={round.humanMsg?.attachedSkill}
+                        attachedDb={round.humanMsg?.attachedDb}
                         assistantText={roundAssistantText}
                         modelName={round.viewMsg?.model_name || model}
                         stepThoughts={stepThoughts}
@@ -2247,6 +2266,7 @@ const Playground: NextPage = () => {
                     <ManusRightPanel
                       activeStep={activeStep}
                       outputs={outputs}
+                      databaseType={selectedDb?.db_type}
                       isRunning={isRunning}
                       onCollapse={() => setRightPanelCollapsed(true)}
                       onRerun={() => {}}
@@ -2280,8 +2300,8 @@ const Playground: NextPage = () => {
             </div>
           ) : (
             // Welcome Mode: Display Hero Section
-            <div className='flex-1 flex flex-col items-center justify-center p-4 pb-32 overflow-y-auto'>
-              <div className='w-full max-w-3xl flex flex-col items-center animate-fade-in-up'>
+            <div className='flex-1 flex flex-col items-center justify-center px-6 py-4 pb-20 overflow-y-auto'>
+              <div className='w-full max-w-[860px] flex flex-col items-center animate-fade-in-up'>
                 <div className='flex flex-col items-center mb-8'>
                   <div className='px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 text-xs font-semibold rounded-full'>
                     Intelligent Data Analysis Agent
@@ -2315,7 +2335,7 @@ const Playground: NextPage = () => {
                           onClose={() => setSelectedDb(null)}
                           className='flex items-center gap-1 bg-blue-50 border-blue-200 text-blue-700 px-3 py-1 rounded-full'
                         >
-                          <DatabaseOutlined /> <span className='font-medium ml-1'>{selectedDb.db_name}</span>
+                          {getDbIcon(selectedDb.type)} <span className='font-medium ml-1'>{selectedDb.db_name}</span>
                         </Tag>
                       )}
                       {selectedKnowledge && (
@@ -2386,7 +2406,7 @@ const Playground: NextPage = () => {
                               key: 'database',
                               label: '使用数据库',
                               icon: <DatabaseOutlined />,
-                              onClick: () => setIsDbModalOpen(true),
+                              onClick: () => setTimeout(() => setIsDbPanelOpen(true), 100),
                             },
                           ],
                         }}
@@ -2519,6 +2539,127 @@ const Playground: NextPage = () => {
                               <ThunderboltOutlined className={selectedSkill ? 'text-purple-500' : ''} />
                               {selectedSkill && (
                                 <span className='absolute -top-1 -right-1 bg-purple-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold'>
+                                  1
+                                </span>
+                              )}
+                            </div>
+                          </Button>
+                        </Tooltip>
+                      </Popover>
+
+                      {/* Database Selector Popover */}
+                      <Popover
+                        trigger='click'
+                        placement='topLeft'
+                        open={isDbPanelOpen}
+                        onOpenChange={setIsDbPanelOpen}
+                        overlayClassName='manus-database-menu'
+                        overlayInnerStyle={{ padding: 0, borderRadius: 12 }}
+                        content={
+                          <div className='w-[320px] bg-white dark:bg-[#2c2d31] rounded-xl shadow-xl overflow-hidden'>
+                            <div className='p-3 border-b border-gray-100 dark:border-gray-700'>
+                              <Input
+                                placeholder='搜索数据库'
+                                prefix={<SearchOutlined className='text-gray-400' />}
+                                value={dbSearchQuery}
+                                onChange={e => setDbSearchQuery(e.target.value)}
+                                className='rounded-lg'
+                                allowClear
+                                size='small'
+                              />
+                            </div>
+
+                            <div className='max-h-[300px] overflow-y-auto'>
+                              {(dataSources || [])
+                                .filter(
+                                  ds =>
+                                    !dbSearchQuery ||
+                                    ds.db_name.toLowerCase().includes(dbSearchQuery.toLowerCase()) ||
+                                    ds.type.toLowerCase().includes(dbSearchQuery.toLowerCase()) ||
+                                    (ds.description &&
+                                      ds.description.toLowerCase().includes(dbSearchQuery.toLowerCase())),
+                                )
+                                .map(ds => (
+                                  <div
+                                    key={ds.id}
+                                    onClick={() => {
+                                      setSelectedDb(ds);
+                                      setIsDbPanelOpen(false);
+                                      setDbSearchQuery('');
+                                    }}
+                                    className={`flex items-start gap-3 px-3 py-2.5 cursor-pointer transition-all hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                                      selectedDb?.id === ds.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                                    }`}
+                                  >
+                                    <div className='flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white text-xs'>
+                                      {getDbIcon(ds.type)}
+                                    </div>
+                                    <div className='flex-1 min-w-0'>
+                                      <div className='flex items-center gap-2'>
+                                        <span className='font-medium text-sm text-gray-800 dark:text-gray-200'>
+                                          {ds.db_name}
+                                        </span>
+                                        <span className='text-[10px] text-gray-400 bg-gray-100 dark:bg-gray-700 rounded px-1.5 py-0.5'>
+                                          {ds.type}
+                                        </span>
+                                      </div>
+                                      {ds.description && (
+                                        <p className='text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2'>
+                                          {ds.description}
+                                        </p>
+                                      )}
+                                    </div>
+                                    {selectedDb?.id === ds.id && (
+                                      <CheckCircleFilled className='text-blue-500 flex-shrink-0 text-sm' />
+                                    )}
+                                  </div>
+                                ))}
+
+                              {(dataSources || []).filter(
+                                ds =>
+                                  !dbSearchQuery ||
+                                  ds.db_name.toLowerCase().includes(dbSearchQuery.toLowerCase()) ||
+                                  ds.type.toLowerCase().includes(dbSearchQuery.toLowerCase()) ||
+                                  (ds.description && ds.description.toLowerCase().includes(dbSearchQuery.toLowerCase())),
+                              ).length === 0 && (
+                                <div className='text-center py-8 text-gray-400'>
+                                  <DatabaseOutlined className='text-2xl mb-2 opacity-50' />
+                                  <div className='text-xs'>
+                                    {dbSearchQuery ? '未找到匹配的数据库' : '暂无可用数据库'}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className='border-t border-gray-100 dark:border-gray-700 px-3 py-2 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/50'>
+                              <span className='text-[10px] text-gray-400'>
+                                {(dataSources || []).length} 个数据库可用
+                              </span>
+                              <Button
+                                type='link'
+                                size='small'
+                                onClick={() => {
+                                  router.push('/construct/database');
+                                  setIsDbPanelOpen(false);
+                                }}
+                                className='text-[10px] p-0 h-auto'
+                              >
+                                管理数据库 →
+                              </Button>
+                            </div>
+                          </div>
+                        }
+                      >
+                        <Tooltip title={selectedDb ? `数据库: ${selectedDb.db_name}` : '选择数据库'}>
+                          <Button
+                            type='text'
+                            shape='circle'
+                            className={`relative text-gray-500 hover:bg-gray-100 ${selectedDb ? 'bg-blue-50 text-blue-500' : ''}`}
+                          >
+                            <div className='relative'>
+                              <DatabaseOutlined className={selectedDb ? 'text-blue-500' : ''} />
+                              {selectedDb && (
+                                <span className='absolute -top-1 -right-1 bg-blue-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold'>
                                   1
                                 </span>
                               )}

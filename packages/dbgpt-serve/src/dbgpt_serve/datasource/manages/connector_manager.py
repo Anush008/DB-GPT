@@ -306,7 +306,7 @@ class ConnectorManager(BaseComponent):
             bool: True if connection is successful.
         """
         try:
-            pwd = request.params["password"]
+            pwd = request.params.get("password")
             if pwd:
                 request.params["password"] = _resolve_env_vars(pwd)
 

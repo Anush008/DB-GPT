@@ -224,9 +224,19 @@ function SideBar() {
     return (
       <div className='flex flex-col justify-between pt-4 h-screen bg-bar dark:bg-[#232734] animate-fade animate-duration-300'>
         <div>
-          <Link href='/' className='flex justify-center items-center pb-4'>
-            <Image src='/LOGO_SMALL.png' alt='DB-GPT' width={40} height={40} />
-          </Link>
+          <div className='flex flex-col items-center pb-2'>
+            <Link href='/' className='flex justify-center items-center pb-2'>
+              <Image src='/LOGO_SMALL.png' alt='DB-GPT' width={40} height={40} />
+            </Link>
+            <Tooltip title={t('Show_Sidebar') || '展开侧栏'} placement='right'>
+              <div
+                onClick={handleToggleMenu}
+                className='flex items-center justify-center w-7 h-7 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700 dark:hover:text-gray-300 cursor-pointer transition-colors'
+              >
+                <MenuUnfoldOutlined style={{ fontSize: 14 }} />
+              </div>
+            </Tooltip>
+          </div>
           <div className='flex flex-col gap-4 items-center'>
             {functions.map(item => (
               <Link key={item.key} className='h-12 flex items-center' href={item.path}>
@@ -269,11 +279,21 @@ function SideBar() {
 
   // ============ EXPANDED SIDEBAR ============
   return (
-    <div className='flex flex-col h-screen px-4 pt-4 bg-bar dark:bg-[#232734] animate-fade animate-duration-300'>
-      {/* LOGO */}
-      <Link href='/' className='flex items-center justify-center p-2 pb-4'>
-        <Image src={logo} alt='DB-GPT' width={180} height={40} />
-      </Link>
+    <div className='flex flex-col h-screen w-[240px] min-w-[240px] px-4 pt-4 bg-bar dark:bg-[#232734] animate-fade animate-duration-300'>
+      {/* LOGO + Collapse Toggle */}
+      <div className='flex items-center justify-between p-2 pb-4'>
+        <Link href='/' className='flex items-center'>
+          <Image src={logo} alt='DB-GPT' width={140} height={32} />
+        </Link>
+        <Tooltip title={t('Close_Sidebar') || '收起侧栏'}>
+          <div
+            onClick={handleToggleMenu}
+            className='flex items-center justify-center w-7 h-7 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700 dark:hover:text-gray-300 cursor-pointer transition-colors'
+          >
+            <MenuFoldOutlined style={{ fontSize: 14 }} />
+          </div>
+        </Tooltip>
+      </div>
 
       {/* New Task Button */}
       <Link href='/'>

@@ -25,6 +25,7 @@ from dbgpt_app.openapi.api_view_model import (
 )
 from dbgpt_serve.utils.auth import UserRequest, get_user_from_headers
 
+from dbgpt_serve.datasource.manages import ConnectorManager
 router = APIRouter()
 CFG = Config()
 logger = logging.getLogger(__name__)
@@ -453,6 +454,7 @@ async def _react_agent_stream(
     file_path = None
     knowledge_space = None
     skill_name = None
+    database_name = None
     if dialogue.ext_info and isinstance(dialogue.ext_info, dict):
         file_path = dialogue.ext_info.get("file_path")
         skill_name = dialogue.ext_info.get("skill_name")
@@ -462,6 +464,7 @@ async def _react_agent_stream(
             or dialogue.ext_info.get("knowledge_space_name")
             or dialogue.ext_info.get("knowledge_space_id")
         )
+        database_name = dialogue.ext_info.get("database_name")
 
     def build_step(title: str, detail: str):
         nonlocal step
@@ -604,6 +607,37 @@ async def _react_agent_stream(
             knowledge_context = f"""
 ## Knowledge Base
 - Warning: Failed to load knowledge space '{knowledge_space}'. Error: {str(e)}
+"""
+
+    # Step 4: Load database connector if specified in ext_info
+    database_connector = None
+    database_context = ""
+    if database_name:
+        try:
+            local_db_manager = ConnectorManager.get_instance(CFG.SYSTEM_APP)
+            database_connector = local_db_manager.get_connector(database_name)
+            table_names = list(database_connector.get_table_names())
+            table_info = database_connector.get_table_info_no_throw()
+            database_context = f"""
+## 数据库信息
+- 数据库名: {database_name}
+- 可用表: {', '.join(table_names)}
+- 表结构:
+{table_info}
+- 使用 'sql_query' 工具执行 SQL 查询
+- **只允许 SELECT 查询，禁止 INSERT/UPDATE/DELETE/DROP/ALTER/TRUNCATE**
+"""
+            logger.info(
+                f"Loaded database connector: {database_name} "
+                f"(tables: {', '.join(table_names)})"
+            )
+        except Exception as e:
+            logger.warning(
+                f"Failed to load database connector: {e}", exc_info=e
+            )
+            database_context = f"""
+## 数据库
+- 警告: 加载数据库 '{database_name}' 失败。错误: {str(e)}
 """
 
     react_state: Dict[str, Any] = {
@@ -1007,6 +1041,101 @@ print(json.dumps(summary, ensure_ascii=False))
                         {
                             "output_type": "text",
                             "content": f"Knowledge retrieval failed: {str(e)}",
+                        }
+                    ]
+                },
+                ensure_ascii=False,
+            )
+
+    @tool(
+        description=(
+            "对用户选择的数据库执行 SQL 查询（仅支持 SELECT）。"
+            "参数: {\"sql\": \"SELECT 语句\"}"
+        )
+    )
+    def sql_query(sql: str) -> str:
+        """Execute a read-only SQL query against the selected database."""
+        if database_connector is None:
+            return json.dumps(
+                {
+                    "chunks": [
+                        {
+                            "output_type": "text",
+                            "content": "未选择数据库，请先在左侧面板选择一个数据源。",
+                        }
+                    ]
+                },
+                ensure_ascii=False,
+            )
+
+        sql_stripped = sql.strip().rstrip(";")
+        sql_upper = sql_stripped.upper().lstrip()
+        forbidden = [
+            "INSERT", "UPDATE", "DELETE", "DROP",
+            "ALTER", "TRUNCATE", "CREATE", "GRANT", "REVOKE",
+        ]
+        for kw in forbidden:
+            if sql_upper.startswith(kw):
+                return json.dumps(
+                    {
+                        "chunks": [
+                            {
+                                "output_type": "text",
+                                "content": f"安全限制: 不允许执行 {kw} 语句，仅支持 SELECT 查询。",
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                )
+
+        try:
+            result = database_connector.run(sql_stripped)
+            if not result:
+                return json.dumps(
+                    {
+                        "chunks": [
+                            {"output_type": "text", "content": "查询返回空结果。"}
+                        ]
+                    },
+                    ensure_ascii=False,
+                )
+
+            # result[0] = column names, result[1:] = data rows
+            columns = result[0]
+            col_names = [
+                str(c[0]) if isinstance(c, tuple) else str(c) for c in columns
+            ]
+            rows = result[1:]
+
+            # Build markdown table
+            header = "| " + " | ".join(col_names) + " |"
+            separator = "| " + " | ".join(["---"] * len(col_names)) + " |"
+            md_rows = []
+            for row in rows[:50]:
+                md_rows.append(
+                    "| "
+                    + " | ".join(str(v) for v in row)
+                    + " |"
+                )
+            table = "\n".join([header, separator] + md_rows)
+            if len(rows) > 50:
+                table += f"\n\n（仅显示前 50 行，共 {len(rows)} 行）"
+
+            return json.dumps(
+                {
+                    "chunks": [
+                        {"output_type": "markdown", "content": table}
+                    ]
+                },
+                ensure_ascii=False,
+            )
+        except Exception as e:
+            return json.dumps(
+                {
+                    "chunks": [
+                        {
+                            "output_type": "text",
+                            "content": f"SQL 执行失败: {str(e)}",
                         }
                     ]
                 },
@@ -1823,6 +1952,7 @@ print(json.dumps(summary, ensure_ascii=False))
 
 {file_context}
 {knowledge_context}
+{database_context}
 ## ReAct 输出格式
 每轮交互必须输出：
 Thought: 分析当前任务状态，思考下一步需要做什么
@@ -1838,6 +1968,7 @@ Action Input: 工具参数的 JSON 格式
                 get_skill_resource,
                 execute_skill_script_file,
                 html_interpreter,
+                sql_query,
                 Terminate(),
             ]
             + business_tools
@@ -1923,7 +2054,10 @@ Action Input: {{"skill_name": "financial-report-analyzer", "script_file_name": "
    - **图片嵌入与说明（重要）**: 之前 code_interpreter 的 Observation 中返回了图片URL（格式 `/images/xxxx_chart.png`），**必须使用这些完整的实际URL**。用 `<img src="/images/xxxx_chart.png" style="max-width:100%;height:auto">` 嵌入。**绝对不要**猜测或编造图片路径。
    - **图表说明规范**: 在每个 `<img>` 标签后添加文字说明，说明应包含：1) 图表类型 2) 关键数据发现 3) 业务洞察（1-2句话）
    {available_images_hint}
-8. **terminate**: 任务完成时返回最终答案，Action Input 必须为 {{"result": "你的最终回答内容"}}
+8. **sql_query**: 对选择的数据库执行 SQL 查询，参数: {{"sql": "SELECT 语句"}}
+   - 仅支持 SELECT 查询，禁止任何修改数据的操作
+   - 使用数据库信息部分提供的表结构来编写正确的 SQL
+9. **terminate**: 任务完成时返回最终答案，Action Input 必须为 {{"result": "你的最终回答内容"}}
 
 
 ## ⚠️ 网页报告生成的强制流程（违反将导致用户看不到报告）
@@ -1936,6 +2070,7 @@ Action Input: {{"skill_name": "financial-report-analyzer", "script_file_name": "
 ## 业务工具（可直接执行）
 {file_context}
 {knowledge_context}
+{database_context}
 {skill_prompt_context}
 {execution_instruction}
 ## ReAct 输出格式
@@ -1957,6 +2092,7 @@ Action Input: 工具参数的 JSON 格式
                 execute_skill_script_file,
                 code_interpreter,
                 html_interpreter,
+                sql_query,
                 Terminate(),
             ]
             + business_tools

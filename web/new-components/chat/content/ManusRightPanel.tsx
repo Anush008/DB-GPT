@@ -7,8 +7,10 @@ import {
   CheckCircleFilled,
   CloseCircleFilled,
   CodeOutlined,
+  CopyOutlined,
   ConsoleSqlOutlined,
   DesktopOutlined,
+  DatabaseOutlined,
   DownOutlined,
   EditOutlined,
   ExportOutlined,
@@ -83,6 +85,8 @@ export interface ManusRightPanelProps {
   onPanelViewChange?: (view: PanelView) => void;
   /** Artifact to preview in html-preview mode */
   previewArtifact?: ArtifactItem | null;
+  /** Database type for SQL editor display (e.g. 'sqlite', 'mysql', 'postgres') */
+  databaseType?: string;
 }
 
 export type PanelView = 'execution' | 'files' | 'html-preview';
@@ -107,9 +111,24 @@ const getStepTypeIcon = (type: StepType) => {
     case 'task':
     case 'skill':
       return <PlayCircleOutlined className='text-indigo-500' />;
+    case 'sql':
+      return <ConsoleSqlOutlined className='text-emerald-600' />;
     default:
       return <FileTextOutlined className='text-gray-500' />;
   }
+};
+
+// Get database type icon and label
+const getDbTypeInfo = (dbType?: string): { icon: React.ReactNode; label: string } => {
+  if (!dbType) return { icon: <DatabaseOutlined className='text-gray-500 text-sm' />, label: 'Database' };
+  const lower = dbType.toLowerCase();
+  if (lower.includes('mysql')) return { icon: <ConsoleSqlOutlined className='text-blue-500 text-sm' />, label: 'MySQL' };
+  if (lower.includes('postgre')) return { icon: <DatabaseOutlined className='text-blue-400 text-sm' />, label: 'PostgreSQL' };
+  if (lower.includes('sqlite')) return { icon: <DatabaseOutlined className='text-amber-500 text-sm' />, label: 'SQLite' };
+  if (lower.includes('mongo')) return { icon: <DatabaseOutlined className='text-green-500 text-sm' />, label: 'MongoDB' };
+  if (lower.includes('oracle')) return { icon: <DatabaseOutlined className='text-red-500 text-sm' />, label: 'Oracle' };
+  if (lower.includes('mssql') || lower.includes('sqlserver')) return { icon: <DatabaseOutlined className='text-indigo-500 text-sm' />, label: 'SQL Server' };
+  return { icon: <DatabaseOutlined className='text-gray-500 text-sm' />, label: dbType };
 };
 
 // Get status badge
@@ -876,6 +895,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
   panelView: controlledPanelView,
   onPanelViewChange,
   previewArtifact,
+  databaseType,
 }) => {
   const [inputCollapsed, setInputCollapsed] = useState(false);
   const [internalPanelView, setInternalPanelView] = useState<PanelView>('execution');
@@ -1210,7 +1230,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
                   <div className='flex items-center gap-3 min-w-0 flex-1'>
                     <div
                       className={classNames('w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0', {
-                        'bg-emerald-50 dark:bg-emerald-900/30': activeStep.type === 'read',
+                        'bg-emerald-50 dark:bg-emerald-900/30': activeStep.type === 'read' || activeStep.type === 'sql',
                         'bg-amber-50 dark:bg-amber-900/30': activeStep.type === 'edit' || activeStep.type === 'write',
                         'bg-purple-50 dark:bg-purple-900/30': activeStep.type === 'bash',
                         'bg-cyan-50 dark:bg-cyan-900/30': activeStep.type === 'grep' || activeStep.type === 'glob',
@@ -1298,6 +1318,101 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
                         );
                       }
                       return null;
+                    })() || activeStep.type === 'sql' && activeStep.detail.includes('Action: sql_query') && (() => {
+                      // Parse SQL from Action Input JSON
+                      const inputMatch = activeStep.detail.match(/Action Input:\s*({[\s\S]*?})(?:\n|$)/);
+                      let sql = '';
+                      if (inputMatch) {
+                        try {
+                          const parsed = JSON.parse(inputMatch[1]);
+                          sql = parsed.sql || '';
+                        } catch {
+                          // fallback: extract raw sql string
+                          const rawMatch = inputMatch[1].match(/"sql"\s*:\s*"([\s\S]*?)"/);
+                          if (rawMatch) sql = rawMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+                        }
+                      }
+                      if (!sql) return null;
+
+                      // Simple SQL keyword highlighting
+                      const highlightSQL = (sqlStr: string) => {
+                        const parts: { text: string; type: 'keyword' | 'string' | 'number' | 'plain' }[] = [];
+                        let remaining = sqlStr;
+                        let safetyCounter = 0;
+
+                        while (remaining.length > 0 && safetyCounter < 10000) {
+                          safetyCounter++;
+                          // Check for string literal first
+                          const strMatch = remaining.match(/^('[^']*')/);
+                          if (strMatch) {
+                            parts.push({ text: strMatch[1], type: 'string' });
+                            remaining = remaining.slice(strMatch[1].length);
+                            continue;
+                          }
+                          // Check for keyword
+                          const kwMatch = remaining.match(/^\b(SELECT|FROM|WHERE|JOIN|LEFT|RIGHT|INNER|OUTER|FULL|CROSS|ON|AND|OR|NOT|IN|EXISTS|BETWEEN|LIKE|IS|NULL|AS|CASE|WHEN|THEN|ELSE|END|GROUP\s+BY|ORDER\s+BY|HAVING|LIMIT|OFFSET|UNION|ALL|DISTINCT|COUNT|SUM|AVG|MIN|MAX|COALESCE|CAST|DESC|ASC)\b/i);
+                          if (kwMatch) {
+                            parts.push({ text: kwMatch[1].toUpperCase(), type: 'keyword' });
+                            remaining = remaining.slice(kwMatch[1].length);
+                            continue;
+                          }
+                          // Check for number
+                          const numMatch = remaining.match(/^\b(\d+\.?\d*)\b/);
+                          if (numMatch) {
+                            parts.push({ text: numMatch[1], type: 'number' });
+                            remaining = remaining.slice(numMatch[1].length);
+                            continue;
+                          }
+                          // Plain character
+                          parts.push({ text: remaining[0], type: 'plain' });
+                          remaining = remaining.slice(1);
+                        }
+
+                        return parts.map((p, i) => {
+                          switch (p.type) {
+                            case 'keyword':
+                              return <span key={i} className='text-[#569cd6] font-semibold'>{p.text}</span>;
+                            case 'string':
+                              return <span key={i} className='text-[#ce9178]'>{p.text}</span>;
+                            case 'number':
+                              return <span key={i} className='text-[#b5cea8]'>{p.text}</span>;
+                            default:
+                              return <span key={i}>{p.text}</span>;
+                          }
+                        });
+                      };
+
+                      return (
+                        <div className='rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-[#1a1b1e]'>
+                          {/* Header bar */}
+                          <div className='flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-[#252629] border-b border-gray-200 dark:border-gray-700'>
+                            <div className='flex items-center gap-2'>
+                              {getDbTypeInfo(databaseType).icon}
+                              <span className='text-xs font-semibold text-gray-600 dark:text-gray-300'>SQL Query</span>
+                              {databaseType && <span className='text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-medium'>{getDbTypeInfo(databaseType).label}</span>}
+                              <span className='text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 font-medium'>READ ONLY</span>
+                            </div>
+                            <Tooltip title='复制SQL'>
+                              <button
+                                className='flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
+                                onClick={() => {
+                                  navigator.clipboard.writeText(sql);
+                                  message.success('SQL已复制到剪贴板');
+                                }}
+                              >
+                                <CopyOutlined className='text-xs' />
+                                <span>Copy</span>
+                              </button>
+                            </Tooltip>
+                          </div>
+                          {/* SQL code area */}
+                          <div className='bg-[#1e1e2e] dark:bg-[#0d0d11] overflow-x-auto'>
+                            <pre className='text-[13px] leading-6 font-mono text-gray-200 p-4 m-0 whitespace-pre-wrap break-words'>
+                              <code>{highlightSQL(sql)}</code>
+                            </pre>
+                          </div>
+                        </div>
+                      );
                     })() || (
                       <div className='text-xs text-gray-500 dark:text-gray-400 font-mono whitespace-pre-wrap bg-gray-50 dark:bg-[#161719] rounded-lg px-3 py-2'>
                         {activeStep.detail}
