@@ -445,6 +445,21 @@ const EXAMPLE_CARDS = [
     color: 'from-blue-500/10 to-cyan-500/10',
     borderColor: 'border-blue-200/60 dark:border-blue-800/40',
     iconBg: 'bg-blue-100 dark:bg-blue-900/40',
+    skillName: 'walmart-sales-analyzer',
+  },
+  {
+    id: 'csv_visual_report',
+    icon: '📋',
+    title: '自主分析表格',
+    description: '自主分析CSV表格数据，生成可视化网页报告',
+    query:
+      '请自主分析这份表格，理解数据结构、字段含义和基本信息，然后进行深入分析并生成一份精美的可视化网页报告。',
+    fileName: 'Walmart_Sales.csv',
+    fileType: 'text/csv',
+    fileSize: 363735, // ~355.21 KB
+    color: 'from-emerald-500/10 to-teal-500/10',
+    borderColor: 'border-emerald-200/60 dark:border-emerald-800/40',
+    iconBg: 'bg-emerald-100 dark:bg-emerald-900/40',
   },
   {
     id: 'fin_report',

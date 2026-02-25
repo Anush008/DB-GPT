@@ -465,6 +465,159 @@ const parseSkillResourceDetail = (
     return null;
   }
 };
+
+// Parse execute_skill_script_file detail text to extract script info and output
+const parseSkillScriptDetail = (
+  detail?: string,
+): { skillName: string; scriptFileName: string; args: Record<string, any>; outputText: string } | null => {
+  if (!detail) return null;
+  try {
+    const inputMatch = detail.match(/Action Input:\s*({[\s\S]*?})(?:\n|$)/);
+    if (!inputMatch) return null;
+    const input = JSON.parse(inputMatch[1]);
+    const skillName = input.skill_name || '';
+    const scriptFileName = input.script_file_name || '';
+    const args = input.args || {};
+    if (!skillName && !scriptFileName) return null;
+    const afterInput = detail.slice(detail.indexOf(inputMatch[0]) + inputMatch[0].length);
+    const outputText = afterInput.trim();
+    return { skillName, scriptFileName, args, outputText };
+  } catch {
+    return null;
+  }
+};
+
+/** Extract /images/ URLs from text */
+const extractImageUrls = (text: string): string[] => {
+  if (!text) return [];
+  const matches = text.match(/\/images\/[^\s"')]+/g);
+  return matches ? [...new Set(matches)] : [];
+};
+
+/** Split-pane renderer for execute_skill_script_file steps */
+const SkillScriptRenderer: React.FC<{
+  parsed: { skillName: string; scriptFileName: string; args: Record<string, any>; outputText: string };
+  outputs: ExecutionOutput[];
+}> = memo(({ parsed, outputs }) => {
+  // Separate code outputs (script source) from other outputs — concatenate all
+  // code chunks because the backend may split large code across multiple events.
+  const codeOutputs = outputs.filter(o => o.output_type === 'code');
+  const scriptSource = codeOutputs.length > 0 ? codeOutputs.map(o => String(o.content)).join('') : null;
+  const imageOutputs = outputs.filter(o => o.output_type === 'image');
+  const textOutputs = outputs.filter(o => o.output_type === 'text');
+  // Also extract image URLs from outputText that may not be in outputs
+  const inlineImageUrls = extractImageUrls(parsed.outputText);
+  // Deduplicate: filter out URLs already in imageOutputs
+  const existingUrls = new Set(imageOutputs.map(o => typeof o.content === 'string' ? o.content : o.content?.url || ''));
+  const extraImageUrls = inlineImageUrls.filter(u => !existingUrls.has(u));
+  const cleanTextOutputs = textOutputs.map(o => {
+    const text = String(o.content);
+    const cleaned = text.split('\n').filter(line => !line.match(/^\s*[-\u2013]\s*\/images\//)).join('\n').trim();
+    return { ...o, content: cleaned };
+  }).filter(o => o.content);
+  const cleanOutputText = parsed.outputText
+    .split('\n')
+    .filter(line => !line.match(/^\s*[-\u2013]\s*\/images\//) && !line.match(/\u5df2\u751f\u6210\u7684\u56fe\u7247URL/))
+    .join('\n')
+    .trim();
+  const htmlReportMatch = parsed.outputText.match(/HTML[_ ]report[_ ]generated[_ ]at:\s*(.+)/i);
+
+  return (
+    <div className='flex flex-1 min-h-0 overflow-hidden'>
+      {/* Left Pane - Script Source Code */}
+      <div className='w-[45%] flex-shrink-0 border-r border-gray-200 dark:border-gray-700 overflow-y-auto flex flex-col bg-[#0f172a]'>
+        {/* Header */}
+        <div className='px-4 py-3 border-b border-gray-700/50 bg-[#1e293b] flex-shrink-0'>
+          <div className='flex items-center gap-2 mb-1.5'>
+            <span className='inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-900/40 text-indigo-300 border border-indigo-700/50'>
+              {parsed.skillName}
+            </span>
+          </div>
+          <div className='flex items-center gap-2'>
+            <CodeOutlined className='text-blue-400 text-xs' />
+            <span className='text-sm font-medium text-gray-200 break-all font-mono'>
+              {parsed.scriptFileName}
+            </span>
+          </div>
+        </div>
+
+        {/* Script Source Code */}
+        <div className='flex-1 min-h-0 overflow-auto'>
+          {scriptSource ? (
+            <CodePreview
+              code={scriptSource}
+              language='python'
+              customStyle={{ background: '#0f172a', margin: 0, borderRadius: 0, padding: '12px 16px' }}
+            />
+          ) : (
+            <div className='flex flex-col items-center justify-center py-12 text-gray-500'>
+              <CodeOutlined className='text-2xl mb-2' />
+              <span className='text-xs'>\u52A0\u8F7D\u811A\u672C\u4E2D...</span>
+            </div>
+          )}
+        </div>
+      </div>
+      {/* Right Pane - Results */}
+      <div className='flex-1 min-w-0 overflow-y-auto'>
+        {/* HTML report badge */}
+        {htmlReportMatch && (
+          <div className='flex items-center gap-2 px-3 py-2 mx-3 mt-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800'>
+            <FileTextOutlined className='text-emerald-500' />
+            <span className='text-xs font-medium text-emerald-700 dark:text-emerald-400 break-all'>
+              {htmlReportMatch[1].trim()}
+            </span>
+          </div>
+        )}
+        {/* Text results */}
+        {cleanTextOutputs.length > 0 && cleanTextOutputs.map((o, idx) => (
+          <div key={`text-${idx}`} className='rounded-lg bg-gray-900 mx-3 mt-2 px-4 py-3 text-sm text-green-400 font-mono whitespace-pre-wrap leading-relaxed overflow-x-auto'>
+            {String(o.content)}
+          </div>
+        ))}
+        {/* Fallback: if no text outputs but cleanOutputText has content */}
+        {cleanTextOutputs.length === 0 && cleanOutputText && !htmlReportMatch && (
+          <div className='rounded-lg bg-gray-900 mx-3 mt-2 px-4 py-3 text-sm text-green-400 font-mono whitespace-pre-wrap leading-relaxed overflow-x-auto'>
+            {cleanOutputText}
+          </div>
+        )}
+        {/* Images from outputs */}
+        {imageOutputs.map((img, idx) => (
+          <div key={`img-${idx}`} className='overflow-hidden bg-gray-50 dark:bg-gray-900'>
+            <img
+              src={resolveImageUrl(
+                typeof img.content === 'string' ? img.content : img.content?.url || img.content?.src || String(img.content),
+              )}
+              alt={`Result ${idx + 1}`}
+              className='w-full h-auto block'
+
+            />
+          </div>
+        ))}
+        {/* Extra images extracted from outputText */}
+        {extraImageUrls.map((url, idx) => (
+          <div key={`extra-img-${idx}`} className='overflow-hidden bg-gray-50 dark:bg-gray-900'>
+            <img
+              src={resolveImageUrl(url)}
+              alt={`Generated ${idx + 1}`}
+              className='w-full h-auto block'
+
+            />
+          </div>
+        ))}
+        {/* Empty state */}
+        {imageOutputs.length === 0 && extraImageUrls.length === 0 && cleanTextOutputs.length === 0 && !cleanOutputText && !htmlReportMatch && (
+          <div className='flex flex-col items-center justify-center py-8 text-gray-400'>
+            <FileSearchOutlined className='text-2xl mb-2' />
+            <span className='text-xs'>\u7B49\u5F85\u6267\u884C\u7ED3\u679C...</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+
+SkillScriptRenderer.displayName = 'SkillScriptRenderer';
+
 const HtmlTabbedRenderer: React.FC<{ code?: ExecutionOutput; html: ExecutionOutput }> = memo(({ code, html }) => {
   const [activeTab, setActiveTab] = useState<'preview' | 'source'>('preview');
   const htmlContent = html.content;
@@ -1028,24 +1181,28 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
 
                 {/* Expanded detail */}
                 {!inputCollapsed && activeStep.detail && (
-                  <div className='px-4 pb-3'>
-                    {activeStep.detail.includes('Action: get_skill_resource') && (() => {
+                  <div className={activeStep.detail.includes('Action: execute_skill_script_file') ? 'flex-1 min-h-0 flex flex-col' : 'px-4 pb-3'}>
+                    {activeStep.detail.includes('Action: execute_skill_script_file') && (() => {
+                      const parsed = parseSkillScriptDetail(activeStep.detail);
+                      if (parsed) {
+                        return <SkillScriptRenderer parsed={parsed} outputs={visibleOutputs} />;
+                      }
+                      return null;
+                    })() || activeStep.detail.includes('Action: get_skill_resource') && (() => {
                       const parsed = parseSkillResourceDetail(activeStep.detail);
                       if (parsed) {
                         const resourceName = parsed.resourcePath.split('/').pop() || parsed.resourcePath;
                         return (
                           <div className='rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-[#161719]'>
-                            {/* Header: skill name + resource name */}
                             <div className='flex items-center gap-2 px-3 py-2.5 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1a1b1e]'>
                               <div className='flex items-center gap-1.5'>
                                 <span className='inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800'>
                                   {parsed.skillName}
                                 </span>
                               </div>
-                              <span className='text-gray-300 dark:text-gray-600'>·</span>
+                              <span className='text-gray-300 dark:text-gray-600'>{"\u00b7"}</span>
                               <span className='text-sm font-medium text-gray-700 dark:text-gray-300 truncate'>{resourceName}</span>
                             </div>
-                            {/* Markdown content */}
                             {parsed.content && (
                               <div className='px-4 py-3 text-sm text-gray-600 dark:text-gray-400 leading-relaxed overflow-auto max-h-[600px] prose prose-sm dark:prose-invert max-w-none'>
                                 <MarkDownContext>{parsed.content}</MarkDownContext>
@@ -1066,7 +1223,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
             )}
 
             {/* Divider + Outputs (hide for get_skill_resource since content is already shown above) */}
-            {visibleOutputs.length > 0 && !activeStep?.detail?.includes('Action: get_skill_resource') && (
+            {visibleOutputs.length > 0 && !activeStep?.detail?.includes('Action: get_skill_resource') && !activeStep?.detail?.includes('Action: execute_skill_script_file') && (
               <>
                 <div className='border-t border-gray-100 dark:border-gray-800 shrink-0' />
                 <div className='flex-1 min-h-0 p-4 flex flex-col space-y-3 overflow-y-auto'>

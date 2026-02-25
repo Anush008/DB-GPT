@@ -361,7 +361,30 @@ const StepCard: React.FC<{
     const timer = setTimeout(() => setIsVisible(true), 50);
     return () => clearTimeout(timer);
   }, []);
-
+  // Compact pill for "思考中" thinking steps
+  if (step.title === '思考中' && step.status === 'running') {
+    return (
+      <div
+        onClick={onClick}
+        className={classNames(
+          'inline-flex items-center gap-2 px-3 py-1.5 rounded-full cursor-pointer transition-all duration-200',
+          'bg-gray-100 dark:bg-gray-800',
+          'transform',
+          {
+            'opacity-0 translate-y-1': !isVisible,
+            'opacity-100 translate-y-0': isVisible,
+          },
+        )}
+        style={{ transition: 'opacity 0.2s ease-out, transform 0.2s ease-out' }}
+      >
+        <span className='relative flex h-2.5 w-2.5'>
+          <span className='animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75' />
+          <span className='relative inline-flex rounded-full h-2.5 w-2.5 bg-gradient-to-r from-blue-400 to-cyan-400' />
+        </span>
+        <span className='text-sm text-gray-700 dark:text-gray-300'>思考中</span>
+      </div>
+    );
+  }
   return (
     <div
       onClick={onClick}
@@ -407,14 +430,12 @@ const StepCard: React.FC<{
       >
         {getTypeLabel(step.type)}
       </span>
-
       <div className='flex flex-col min-w-0 flex-1'>
         <span className='text-sm font-medium text-gray-800 dark:text-gray-200 truncate'>{step.title}</span>
         {detailLine && (
           <span className='text-[11px] text-gray-500 dark:text-gray-400 truncate'>{detailLine}</span>
         )}
       </div>
-
       <div className='flex-shrink-0'>
         {step.status === 'pending' && <ClockCircleOutlined className='text-xs text-gray-400' />}
         {step.status === 'running' && <LoadingOutlined spin className='text-xs text-blue-500' />}

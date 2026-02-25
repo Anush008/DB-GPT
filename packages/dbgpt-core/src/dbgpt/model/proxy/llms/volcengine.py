@@ -42,7 +42,7 @@ class VolcengineDeployModelParameters(OpenAICompatibleDeployModelParameters):
     provider: str = "proxy/volcengine"
 
     api_base: Optional[str] = field(
-        default="${env:ARK_API_BASE:-https://ark.cn-beijing.volces.com/api/v3}",
+        default="${env:ARK_API_BASE:-https://ark.cn-beijing.volces.com/api/coding/v3}",
         metadata={
             "help": _("The base url of the Volcengine API."),
         },

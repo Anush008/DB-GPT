@@ -18,6 +18,10 @@ EXAMPLE_FILES = {
         "path": "docker/examples/excel/Walmart_Sales.csv",
         "name": "Walmart_Sales.csv",
     },
+    "csv_visual_report": {
+        "path": "docker/examples/excel/Walmart_Sales.csv",
+        "name": "Walmart_Sales.csv",
+    },
     "fin_report": {
         "path": "docker/examples/fin_report/pdf/2020-01-23__浙江海翔药业股份有限公司__002099__海翔药业__2019年__年度报告.pdf",
         "name": "2020-01-23__浙江海翔药业股份有限公司__002099__海翔药业__2019年__年度报告.pdf",

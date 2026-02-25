@@ -568,7 +568,10 @@ async def _react_agent_stream(
                     continue
                 output_type = item.get("output_type") or "text"
                 payload = item.get("content")
-                if output_type in ["text", "markdown", "code"] and isinstance(
+                if output_type == "code" and isinstance(payload, str):
+                    # Send code as a single chunk — never split it.
+                    raw_chunks.append(step_chunk(step_id, output_type, payload))
+                elif output_type in ["text", "markdown"] and isinstance(
                     payload, str
                 ):
                     for chunk in chunk_text(payload, max_len=800):
@@ -1294,11 +1297,31 @@ print(json.dumps(summary, ensure_ascii=False))
                 output_dir=out_dir,
             )
 
+
+            # Read script source code and prepend as a 'code' chunk
+            # so the frontend can display it in the left pane.
+            try:
+                _skill_path = sm._get_skill_path(skill_name)
+                _sf = script_file_name.lstrip('/\\')
+                if _sf.startswith('scripts/') or _sf.startswith('scripts\\'):
+                    _sf = _sf[8:]
+                _script_abs = os.path.join(_skill_path, 'scripts', _sf)
+                with open(_script_abs, 'r', encoding='utf-8') as _f:
+                    _script_source = _f.read()
+            except Exception:
+                _script_source = None
+
             # Post-process: copy image files to static dir and replace
             # absolute paths with /images/ URLs.
             try:
                 result_obj = json.loads(result_str)
                 chunks = result_obj.get("chunks", [])
+                # Prepend script source code as a 'code' chunk
+                if _script_source:
+                    chunks.insert(0, {
+                        "output_type": "code",
+                        "content": _script_source,
+                    })
                 os.makedirs(STATIC_MESSAGE_IMG_PATH, exist_ok=True)
                 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"}
                 for chunk in chunks:
@@ -1319,6 +1342,15 @@ print(json.dumps(summary, ensure_ascii=False))
                                 react_state.setdefault(
                                     "generated_images", []
                                 ).append(img_url)
+                                # Also store a map: original filename (no ext)
+                                # -> served URL for template placeholder resolution.
+                                # e.g. "financial_overview" -> "/images/abc_financial_overview.png"
+                                orig_stem = os.path.splitext(
+                                    os.path.basename(abs_path)
+                                )[0].lower()
+                                react_state.setdefault(
+                                    "image_url_map", {}
+                                )[orig_stem] = img_url
 
                 # Append image URL summary for LLM reference
                 all_images = react_state.get("generated_images", [])
@@ -1351,14 +1383,14 @@ print(json.dumps(summary, ensure_ascii=False))
             )
 
     @tool(
-        description="Render HTML content as a web report. "
-        "Supports three modes: "
-        "(1) template_path + data (RECOMMENDED): pass a template file path (relative to skills dir) "
-        "and a data dict whose keys match {{PLACEHOLDER}} tokens in the template. "
-        "The backend reads the template and performs all replacements. "
-        "(2) file_path: pass a path to an .html file on disk. "
-        "(3) html: pass a complete HTML string directly (only for short content). "
-        'Parameters: {"template_path": "skill-name/templates/report.html", "data": {"KEY": "value", ...}, "title": "Report Title"}'
+        description="将 HTML 渲染为可交互的网页报告，这是向用户展示网页报告的唯一方式。"
+        "【默认用法】直接传入完整的 HTML 字符串：{\"html\": \"<html>...</html>\", \"title\": \"报告标题\"}。"
+        "你需要自己生成完整的 HTML 代码（包含 <!DOCTYPE html>、<html>、<head>、<body> 等），然后传给 html 参数即可。"
+        "HTML 可以很长，没有长度限制，不需要分段传入。"
+        "【禁止】不要用 code_interpreter 写 HTML 再 print，不要用 code_interpreter 把 HTML 写入文件再读取，直接把 HTML 传给本工具即可。"
+        "【技能模式 - 仅在使用技能时可选】如果正在使用技能（skill），可以用模板模式："
+        "{\"template_path\": \"技能名/templates/模板.html\", \"data\": {\"KEY\": \"值\"}, \"title\": \"标题\"}。"
+        "也可以用文件模式：{\"file_path\": \"/path/to/report.html\"}"
     )
     async def html_interpreter(
         html: str = "",
@@ -1367,15 +1399,16 @@ print(json.dumps(summary, ensure_ascii=False))
         template_path: str = "",
         data: dict | str = None,
     ) -> str:
-        """Accept HTML content and return it for rendering.
-
-        Preferred usage: pass `template_path` (relative to skills dir) plus
-        a `data` dict whose keys match {{PLACEHOLDER}} tokens in the template.
-        The backend reads the template and performs all replacements.
-
-        Fallback modes:
-        - `html`: pass a complete HTML string directly.
-        - `file_path`: read HTML from a file on disk.
+        """Render HTML as an interactive web report.
+        
+        Default usage: pass a complete HTML string via the `html` parameter.
+        The HTML can be arbitrarily long — no length limit, no chunking needed.
+        
+        Skill template mode (optional): pass `template_path` (relative to skills
+        dir) plus a `data` dict whose keys match {{PLACEHOLDER}} tokens in the
+        template. The backend reads the template and performs all replacements.
+        
+        Legacy fallback: `file_path` reads HTML from a file on disk.
         """
         import re
         from dbgpt.configs.model_config import STATIC_MESSAGE_IMG_PATH
@@ -1431,6 +1464,16 @@ print(json.dumps(summary, ensure_ascii=False))
                 # LLM's data overwrites ratio_data if keys overlap
                 merged = {**ratio_data, **replacements}
                 replacements = merged
+
+            # Auto-resolve CHART_* placeholders from generated images.
+            # image_url_map: {"financial_overview": "/images/abc_financial_overview.png"}
+            # Template uses: {{CHART_FINANCIAL_OVERVIEW}} -> /images/abc_financial_overview.png
+            image_url_map = react_state.get("image_url_map", {})
+            if isinstance(image_url_map, dict):
+                for stem, url in image_url_map.items():
+                    chart_key = f"CHART_{stem.upper()}"
+                    if chart_key not in replacements:
+                        replacements[chart_key] = url
 
             def _replace_placeholder(m):
                 key = m.group(1)
@@ -1822,20 +1865,20 @@ Action Input: {{"skill_name": "financial-report-analyzer", "script_file_name": "
    - 生成的代码必须语法正确，确保所有字符串、f-string、括号、引号都正确闭合。不要截断代码。
    - **代码长度限制（极其重要）**: 每次调用 code_interpreter 的代码**不得超过 80 行**。如果任务复杂，**必须拆分为多次调用**，每次完成一个子任务。违反此规则会导致代码被截断产生语法错误。
    - 如果需要用到之前步骤的分析结果，必须在当前代码中重新加载数据并重新计算。
-   - **禁止用 code_interpreter 直接生成最终HTML报告给用户**。如需生成网页报告，必须用 code_interpreter 将 HTML 写入文件（如 `os.path.join(PLOT_DIR, 'report.html')`），然后**必须**调用 `html_interpreter(file_path=...)` 渲染，否则用户无法看到网页。
+   - **禁止在 code_interpreter 中 print() HTML 内容**，用户看不到。生成网页报告时，直接调用 `html_interpreter` 工具，把完整 HTML 传给 `html` 参数即可。
    - **分步执行流程（推荐）**: 对于复杂分析任务，建议按以下顺序分步执行：
      ① **数据处理**：先加载数据，进行清洗、计算关键指标，用 print() 输出摘要
      ② **生成图表**：基于上一步的结果，生成可视化图表，保存到 PLOT_DIR
-     ③ **生成HTML文件**：用 `code_interpreter` 将完整 HTML 写入文件（如 `os.path.join(PLOT_DIR, 'report.html')`）
-     ④ **渲染HTML（必须）**：调用 `html_interpreter(file_path=...)` 渲染上一步写入的文件，**此步骤不可省略**
+     ③ **生成网页报告（必须）**：直接调用 `html_interpreter`，把你生成的完整 HTML 字符串传给 `html` 参数，如 `Action: html_interpreter`，`Action Input: {{"html": "<!DOCTYPE html><html>...</html>", "title": "报告标题"}}`
    - **图片URL**: 执行后系统会在 Observation 中返回生成的图片URL（如 `/images/xxxx_chart.png`）。在后续生成 HTML 报告时，必须使用这些实际URL来嵌入图片。
-7. **html_interpreter**: 将 HTML 渲染为网页报告。支持三种模式：
-   **模式A - 模板填充（技能报告推荐）**：传入模板路径和数据字典，后端自动读取模板并替换占位符：
-   参数: {{"template_path": "技能名/templates/模板.html", "data": {{"KEY": "值", ...}}, "title": "报告标题"}}
-   **模式B - 文件渲染（自定义HTML）**：先用 `code_interpreter` 将完整 HTML 写入文件，然后调用：
-   参数: {{"file_path": "/path/to/report.html"}}
-   **模式C - 内联HTML（仅限短内容）**：直接传入 html 字符串：
-   参数: {{"html": "短HTML内容", "title": "报告标题"}}
+7. **html_interpreter**: 将 HTML 渲染为可交互的网页报告，这是向用户展示网页报告的**唯一方式**。
+   **默认用法 - 直接传 HTML（推荐）**：你自己生成完整的 HTML 代码，然后直接传给 html 参数：
+   参数: {{"html": "<!DOCTYPE html><html><head>...</head><body>...</body></html>", "title": "报告标题"}}
+   - HTML 可以很长，没有长度限制，不需要分段传入
+   - 你需要自己在 HTML 中用 `<img src="/images/xxxx_chart.png">` 嵌入之前生成的图表
+   - **不要**用 code_interpreter 写 HTML 再 print，**不要**用 code_interpreter 把 HTML 写入文件再读取，直接把 HTML 传给本工具即可
+   **技能模式（仅在使用技能时可选）**：传入模板路径和数据字典：
+   参数: {{"template_path": "技能名/templates/模板.html", "data": {{"KEY": "值"}}, "title": "报告标题"}}
    **HTML 生成规范**:
    - **精简至上**: 使用简洁的内联 style 属性，**禁止**写大段 `<style>` 块或 CSS 类定义。直接在元素上写 `style="..."`。
    - **图片嵌入与说明（重要）**: 之前 code_interpreter 的 Observation 中返回了图片URL（格式 `/images/xxxx_chart.png`），**必须使用这些完整的实际URL**。用 `<img src="/images/xxxx_chart.png" style="max-width:100%;height:auto">` 嵌入。**绝对不要**猜测或编造图片路径。
@@ -1846,11 +1889,10 @@ Action Input: {{"skill_name": "financial-report-analyzer", "script_file_name": "
 
 ## ⚠️ 网页报告生成的强制流程（违反将导致用户看不到报告）
 当用户要求生成「网页报告」「交互式报告」「HTML报告」「可视化报告」时，**必须**执行以下流程：
-1. 用 `code_interpreter` 分析数据、生成图表（可多次调用）
-2. 用 `code_interpreter` 将最终 HTML 写入文件（**不超过80行，如需更多内容分多次写入同一文件**）
-3. **必须调用** `html_interpreter` 的 file_path 模式渲染该文件：`Action: html_interpreter`，`Action Input: {{"file_path": "/path/to/report.html"}}`
-4. 确认渲染成功后，调用 `terminate` 返回结果
-**绝对禁止**：在 code_interpreter 中 print() HTML 内容后直接 terminate，这样用户无法看到网页报告。
+1. 用 `code_interpreter` 分析数据、生成图表（可多次调用，保存图表到 PLOT_DIR）
+2. **直接调用 `html_interpreter`**，将完整 HTML 传给 `html` 参数：`Action: html_interpreter`，`Action Input: {{"html": "<!DOCTYPE html><html>...包含 <img src='/images/xxx.png'> 引用之前生成的图表...</html>", "title": "报告标题"}}`
+3. 确认渲染成功后，调用 `terminate` 返回结果
+**绝对禁止**：在 code_interpreter 中 print() HTML 内容后直接 terminate，用户无法看到网页。也不需要先用 code_interpreter 把 HTML 写入文件再用 html_interpreter(file_path=...) 读取，直接传 html 参数即可。
 
 ## 业务工具（可直接执行）
 {file_context}

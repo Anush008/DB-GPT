@@ -36,26 +36,39 @@ CHART_DPI = 150
 # Font setup for Chinese characters
 # ---------------------------------------------------------------------------
 def setup_chinese_font():
-    """Try several common Chinese fonts; fall back to DejaVu Sans."""
+    """Configure matplotlib to render Chinese characters correctly.
+
+    Tries a priority-ordered list of CJK fonts commonly available on
+    macOS, Linux, and Windows.  Falls back to DejaVu Sans.
+    """
     candidates = [
+        # macOS
+        "Heiti TC",
+        "Hiragino Sans GB",
         "PingFang SC",
+        "PingFang HK",
+        "STHeiti",
+        "Songti SC",
+        "Arial Unicode MS",
+        # Linux
+        "Noto Sans CJK SC",
+        "Noto Sans SC",
+        "WenQuanYi Micro Hei",
+        "WenQuanYi Zen Hei",
+        "Droid Sans Fallback",
+        # Windows
         "Microsoft YaHei",
         "SimHei",
-        "STHeiti",
-        "WenQuanYi Micro Hei",
-        "Noto Sans CJK SC",
-        "Arial Unicode MS",
+        "SimSun",
     ]
+
+    available = {f.name for f in fm.fontManager.ttflist}
     for font_name in candidates:
-        try:
-            font_path = fm.findfont(fm.FontProperties(family=font_name))
-            if font_path and "LastResort" not in font_path:
-                plt.rcParams["font.sans-serif"] = [font_name]
-                plt.rcParams["axes.unicode_minus"] = False
-                return
-        except Exception:
-            continue
-    # Fallback
+        if font_name in available:
+            plt.rcParams["font.sans-serif"] = [font_name, "sans-serif"]
+            plt.rcParams["font.family"] = "sans-serif"
+            plt.rcParams["axes.unicode_minus"] = False
+            return
     plt.rcParams["font.sans-serif"] = ["DejaVu Sans"]
     plt.rcParams["axes.unicode_minus"] = False
 
@@ -219,13 +232,13 @@ def chart_financial_overview(data, output_dir):
 
     plt.tight_layout()
     path = os.path.join(output_dir, "financial_overview.png")
-    fig.savefig(path, dpi=CHART_DPI, facecolor="white")
+    fig.savefig(path, dpi=CHART_DPI, facecolor="white", bbox_inches="tight")
     plt.close(fig)
     return path
 
 
 # ---------------------------------------------------------------------------
-# Chart 2 – 盈利能力指标 (profitability_radar.png)
+# Chart 2 – 盈利能力指标 (profitability.png)
 # ---------------------------------------------------------------------------
 def chart_profitability(data, output_dir):
     """Bar chart of profitability / efficiency ratios (%)."""
@@ -298,8 +311,8 @@ def chart_profitability(data, output_dir):
     ax.set_xlim(0, max_val * 1.2 if max_val > 0 else 100)
 
     plt.tight_layout()
-    path = os.path.join(output_dir, "profitability_radar.png")
-    fig.savefig(path, dpi=CHART_DPI, facecolor="white")
+    path = os.path.join(output_dir, "profitability.png")
+    fig.savefig(path, dpi=CHART_DPI, facecolor="white", bbox_inches="tight")
     plt.close(fig)
     return path
 
@@ -386,7 +399,7 @@ def chart_asset_structure(data, output_dir):
     ax.axis("equal")
     plt.tight_layout()
     path = os.path.join(output_dir, "asset_structure.png")
-    fig.savefig(path, dpi=CHART_DPI, facecolor="white")
+    fig.savefig(path, dpi=CHART_DPI, facecolor="white", bbox_inches="tight")
     plt.close(fig)
     return path
 

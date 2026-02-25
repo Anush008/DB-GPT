@@ -27,7 +27,7 @@ def generate_time_series_trend(data_path, output_dir, selected_stores=[1, 4, 20]
     plt.tight_layout()
     
     output_path = os.path.join(output_dir, 'time_series_trend.png')
-    plt.savefig(output_path)
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close()
 
 if __name__ == "__main__":
