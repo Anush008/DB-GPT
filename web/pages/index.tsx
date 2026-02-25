@@ -309,6 +309,7 @@ const convertToManusFormat = (
   // Determine step type from title
   const getStepType = (title?: string): StepType => {
     const lower = (title || '').toLowerCase();
+    if (lower.includes('load_skill') || lower.includes('load skill')) return 'skill';
     if (lower.includes('read') || lower.includes('load')) return 'read';
     if (lower.includes('edit')) return 'edit';
     if (lower.includes('write') || lower.includes('save')) return 'write';

@@ -487,6 +487,61 @@ const parseSkillScriptDetail = (
   }
 };
 
+// Parse load_skill detail text to extract skill name and description
+// Handles both agent-selected (Action: load_skill) and pre-loaded (Pre-loaded skill from user selection) formats
+// Also searches outputs for the "Skill: name — description" line when not found in detail
+const parseLoadSkillDetail = (
+  detail?: string,
+  title?: string,
+  outputs?: Array<{ output_type: string; content: any }>,
+): { skillName: string; description: string } | null => {
+  if (!detail && !title) return null;
+  try {
+    let skillName = '';
+    let description = '';
+    const inputMatch = detail?.match(/Action Input:\s*({[\s\S]*?})(?:\n|$)/);
+    if (inputMatch) {
+      try {
+        const input = JSON.parse(inputMatch[1]);
+        skillName = input.skill_name || '';
+      } catch {
+        // ignore parse error
+      }
+    }
+
+    // Extract from "Skill: <name> <separator> <description>" observation line in detail
+    // Support various separators: " - " (hyphen), " \u2014 " (em-dash), " \u2013 " (en-dash)
+    const skillLineRegex = /Skill:\s*([\w-]+)\s+(?:-|\u2014|\u2013)\s+(.+)/;
+    const obsMatch = detail?.match(skillLineRegex);
+    if (obsMatch) {
+      if (!skillName) skillName = obsMatch[1].trim();
+      description = obsMatch[2].trim();
+    }
+
+    // Also search in outputs for the Skill line (it may come as step.chunk, not in detail)
+    if (!description && outputs) {
+      for (const output of outputs) {
+        const content = typeof output.content === 'string' ? output.content.trim() : '';
+        const outputMatch = content.match(skillLineRegex);
+        if (outputMatch) {
+          if (!skillName) skillName = outputMatch[1].trim();
+          description = outputMatch[2].trim();
+          break;
+        }
+      }
+    }
+    // Fallback: extract skill name from step title like "Load Skill: walmart-sales-analyzer"
+    if (!skillName && title) {
+      const titleMatch = title.match(/Load\s+Skill:\s*(.+)/i);
+      if (titleMatch) skillName = titleMatch[1].trim();
+    }
+    if (!skillName && !description) return null;
+    return { skillName, description };
+  } catch {
+    return null;
+  }
+};
+
 /** Extract /images/ URLs from text */
 const extractImageUrls = (text: string): string[] => {
   if (!text) return [];
@@ -1230,6 +1285,19 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
                         );
                       }
                       return null;
+                    })() || activeStep.type === 'skill' && !activeStep.detail.includes('Action: get_skill_resource') && !activeStep.detail.includes('Action: execute_skill_script_file') && (() => {
+                      const parsed = parseLoadSkillDetail(activeStep.detail, activeStep.title, visibleOutputs);
+                      if (parsed) {
+                        return (
+                          <div className='rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-[#1a1b1e]'>
+                            <div className='px-4 py-3'>
+                              <span className='inline-block text-[11px] font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 rounded px-1.5 py-0.5 mb-3'>YAML</span>
+                              <pre className='text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-mono leading-relaxed m-0'>{`name: ${parsed.skillName}${parsed.description ? `\ndescription: ${parsed.description}` : ''}`}</pre>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
                     })() || (
                       <div className='text-xs text-gray-500 dark:text-gray-400 font-mono whitespace-pre-wrap bg-gray-50 dark:bg-[#161719] rounded-lg px-3 py-2'>
                         {activeStep.detail}
@@ -1245,15 +1313,21 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
               <>
                 <div className='border-t border-gray-100 dark:border-gray-800 shrink-0' />
                 <div className='flex-1 min-h-0 p-4 flex flex-col space-y-3 overflow-y-auto'>
-                  {outputGroups.map((group, gIdx) =>
-                    group.type === 'code-execution' ? (
+                  {outputGroups.map((group, gIdx) => {
+                    // For skill-type steps, skip the "Skill: name — description" text output (shown in YAML card above)
+                    if (activeStep?.type === 'skill' && group.type === 'single') {
+                      const c = group.output.content;
+                      const text = typeof c === 'string' ? c.trim() : '';
+                      if (/^Skill:\s*[\w-]+\s+(?:-|\u2014|\u2013)\s+/.test(text)) return null;
+                    }
+                    return group.type === 'code-execution' ? (
                       <CodeExecutionRenderer key={`group-${gIdx}`} group={group} />
                     ) : group.type === 'html-tabbed' ? (
                       <HtmlTabbedRenderer key={`html-tabbed-${gIdx}`} code={group.code} html={group.html} />
                     ) : (
                       <OutputRenderer key={`output-${gIdx}`} output={group.output} index={gIdx} />
-                    ),
-                  )}
+                    );
+                  })}
                 </div>
               </>
             )}

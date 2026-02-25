@@ -165,6 +165,8 @@ export function getToolIconName(tool: string): IconName {
       return 'window-cursor';
     case 'question':
       return 'bubble-5';
+    case 'skill':
+      return 'brain';
     default:
       return 'mcp';
   }
@@ -186,6 +188,7 @@ export const STATUS_TEXT_MAP: Record<string, string> = {
   bash: 'Running commands...',
   reasoning: 'Thinking...',
   text: 'Gathering thoughts...',
+  skill: 'Loading skill...',
 };
 
 export function getStatusText(tool: string): string {

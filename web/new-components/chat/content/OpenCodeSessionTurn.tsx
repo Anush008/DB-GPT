@@ -223,6 +223,40 @@ const ToolPartDisplay: React.FC<ToolPartDisplayProps> = ({ part, defaultOpen = f
     return match ? parseInt(match[1], 10) : undefined;
   }, [title]);
 
+  // Parse skill output into name and description for card display
+  const skillInfo = useMemo(() => {
+    if (part.tool !== 'skill' || !part.state.output) return null;
+    const output = part.state.output;
+    // Try "Skill: <name> - <description>" format on first line
+    const firstLine = output.split('\n')[0];
+    const match = firstLine.match(/^Skill:\s*(.+?)\s+-\s+(.+)$/);
+    if (match) {
+      return { name: match[1].trim(), description: match[2].trim() };
+    }
+    // Try frontmatter format
+    const fmMatch = output.match(/^---\n([\s\S]*?)\n---/);
+    if (fmMatch) {
+      const nameMatch = fmMatch[1].match(/^name:\s*(.+)$/m);
+      const descMatch = fmMatch[1].match(/^description:\s*(.+)$/m);
+      if (nameMatch) {
+        return {
+          name: nameMatch[1].trim(),
+          description: descMatch ? descMatch[1].trim() : '',
+        };
+      }
+    }
+    // Fallback: first heading + first paragraph
+    const headingMatch = output.match(/^#\s+(.+)$/m);
+    const paraMatch = output.match(/^(?!#|---|\s*$)(.+)/m);
+    if (headingMatch) {
+      return {
+        name: headingMatch[1].trim(),
+        description: paraMatch ? paraMatch[1].trim() : '',
+      };
+    }
+    return null;
+  }, [part.tool, part.state.output]);
+
   return (
     <BasicTool
       icon={iconName}
@@ -246,7 +280,24 @@ const ToolPartDisplay: React.FC<ToolPartDisplayProps> = ({ part, defaultOpen = f
           {hasError && part.state.error && <ErrorDisplay error={part.state.error} toolName={title} className='mb-2' />}
           {hasOutput && (
             <div className='relative'>
-              {isReActOutput ? (
+              {skillInfo ? (
+                <div className='rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-[#1a1b1e]'>
+                  <div className='px-5 py-4'>
+                    <div className='flex items-center gap-2.5 mb-2'>
+                      <div className='flex-shrink-0 w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center'>
+                        <ToolIcon name='brain' size='medium' className='text-indigo-500' />
+                      </div>
+                      <div className='min-w-0 flex-1'>
+                        <div className='text-sm font-semibold text-gray-800 dark:text-gray-200 truncate'>{skillInfo.name}</div>
+                        <div className='text-[11px] text-gray-400 dark:text-gray-500'>Skill</div>
+                      </div>
+                    </div>
+                    {skillInfo.description && (
+                      <p className='text-sm text-gray-600 dark:text-gray-400 leading-relaxed mt-2'>{skillInfo.description}</p>
+                    )}
+                  </div>
+                </div>
+              ) : isReActOutput ? (
                 <ReActThinking content={part.state.output || ''} round={roundNumber} compact={true} />
               ) : (
                 <div className='group'>
