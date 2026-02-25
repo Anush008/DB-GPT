@@ -155,6 +155,7 @@ interface ChatMessage {
   thinking?: boolean;
   attachedFile?: FileAttachment;
   attachedKnowledge?: KnowledgeSpace;
+  attachedSkill?: { name: string; id: string };
 }
 
 interface ExecutionStep {
@@ -458,6 +459,7 @@ const EXAMPLE_CARDS = [
     color: 'from-violet-500/10 to-purple-500/10',
     borderColor: 'border-violet-200/60 dark:border-violet-800/40',
     iconBg: 'bg-violet-100 dark:bg-violet-900/40',
+    skillName: 'financial-report-analyzer',
   },
 ];
 
@@ -1205,8 +1207,9 @@ const Playground: NextPage = () => {
     return deduped;
   };
 
-  const handleStart = async (inputQuery = query, overrideFile?: File | null) => {
+  const handleStart = async (inputQuery = query, overrideFile?: File | null, overrideSkill?: Skill | null) => {
     const effectiveFile = overrideFile !== undefined ? overrideFile : uploadedFile;
+    const effectiveSkill = overrideSkill !== undefined ? overrideSkill : selectedSkill;
     if ((!inputQuery.trim() && !effectiveFile) || loading) return;
 
     let finalQuery = inputQuery;
@@ -1299,6 +1302,7 @@ const Playground: NextPage = () => {
             }
           : undefined,
         attachedKnowledge: selectedKnowledge ?? undefined,
+        attachedSkill: effectiveSkill ? { name: effectiveSkill.name, id: effectiveSkill.id } : undefined,
       },
       {
         id: responseId,
@@ -1344,7 +1348,7 @@ const Playground: NextPage = () => {
           select_param: appCode === 'chat_normal' ? '' : appCode,
           ext_info: {
             ...(currentUploadedFilePath ? { file_path: currentUploadedFilePath } : {}),
-            ...(selectedSkill ? { skill_id: selectedSkill.id, skill_name: selectedSkill.name } : {}),
+            ...(effectiveSkill ? { skill_id: effectiveSkill.id, skill_name: effectiveSkill.name } : {}),
             ...(selectedDb ? { database_name: selectedDb.db_name, database_type: selectedDb.db_type } : {}),
             ...(selectedKnowledge
               ? { knowledge_space_name: selectedKnowledge.name, knowledge_space_id: selectedKnowledge.id }
@@ -1376,7 +1380,15 @@ const Playground: NextPage = () => {
           const id = payload.id || `${payload.step}`;
           if (terminatedStepIdsRef.current.has(id)) return;
           setExecutionMap(prev => {
-            const current = prev[responseId] || { steps: [], outputs: {}, activeStepId: null, collapsed: false };
+            const current = prev[responseId] || {
+              steps: [],
+              outputs: {},
+              activeStepId: null,
+              collapsed: false,
+              stepThoughts: {},
+            };
+            const existingThoughts = current.stepThoughts || {};
+            const nextThoughts = existingThoughts;
             const nextSteps = [
               ...current.steps.map(item => (item.status === 'running' ? { ...item, status: 'done' } : item)),
               { id, step: payload.step, title: payload.title, detail: payload.detail, status: 'running' as const },
@@ -1387,6 +1399,7 @@ const Playground: NextPage = () => {
                 ...current,
                 steps: nextSteps,
                 outputs: { ...current.outputs, [id]: current.outputs[id] || [] },
+                stepThoughts: nextThoughts,
                 activeStepId: id,
               },
             };
@@ -1416,12 +1429,16 @@ const Playground: NextPage = () => {
               if (item.id !== payload.id) return item;
               const parts = [] as string[];
               if (payload.action) {
-                const actionText = payload.action_input
-                  ? `${payload.action} | ${payload.action_input}`
-                  : payload.action;
-                parts.push(`Action: ${actionText}`);
+                parts.push(`Action: ${payload.action}`);
+                if (payload.action !== 'code_interpreter' && payload.action_input) {
+                  parts.push(`Action Input: ${payload.action_input}`);
+                }
               }
-              return { ...item, detail: parts.join('\n') || item.detail };
+              return {
+                ...item,
+                title: payload.title || item.title,
+                detail: parts.join('\n') || item.detail,
+              };
             });
             // Route thought to stepThoughts map for subtle display
             const nextThoughts = payload.thought
@@ -1484,13 +1501,12 @@ const Playground: NextPage = () => {
             return { ...prev, [responseId]: { ...current, steps: nextSteps } };
           });
         } else if (payload.type === 'step.thought') {
-          // Associate thinking content with a specific step (or "initial")
-          const targetId = payload.id || 'initial';
           const content = payload.content || '';
           if (content) {
             setExecutionMap(prev => {
               const current = prev[responseId];
               if (!current) return prev;
+              const targetId = payload.id || current.activeStepId || 'initial';
               return {
                 ...prev,
                 [responseId]: {
@@ -1547,7 +1563,17 @@ const Playground: NextPage = () => {
 
                   setArtifacts(prev => {
                     const filtered = prev.filter(a => a.messageId !== responseId);
-                    return [...filtered, ...deduped];
+                    const newArtifacts = [...filtered, ...deduped];
+
+                    // Auto-select the first HTML artifact for preview
+                    const htmlArtifact = deduped.find(a => a.type === 'html');
+                    if (htmlArtifact) {
+                      setPreviewArtifact(htmlArtifact as Artifact);
+                      setRightPanelView('html-preview');
+                      setRightPanelCollapsed(false);
+                    }
+
+                    return newArtifacts;
                   });
 
                   return currentExecMap;
@@ -1585,7 +1611,7 @@ const Playground: NextPage = () => {
     }
   };
 
-  const handleExampleClick = async (example: (typeof EXAMPLE_CARDS)[0]) => {
+  const handleExampleClick = async (example: (typeof EXAMPLE_CARDS)[number]) => {
     if (loading) return;
 
     try {
@@ -1606,7 +1632,17 @@ const Playground: NextPage = () => {
         });
         setUploadedFile(fakeFile);
 
-        handleStart(example.query, fakeFile);
+        // Auto-select skill if example specifies one
+        let exampleSkill: Skill | null = null;
+        if (example.skillName && skillsList) {
+          const matched = skillsList.find(s => s.name === example.skillName);
+          if (matched) {
+            exampleSkill = matched;
+            setSelectedSkill(matched);
+          }
+        }
+
+        handleStart(example.query, fakeFile, exampleSkill);
       } else {
         const errMsg = res?.err_msg || 'Unknown error';
         message.error('加载示例失败: ' + errMsg);
@@ -1843,9 +1879,9 @@ const Playground: NextPage = () => {
 
           {/* Chat Messages or Hero Section */}
           {messages.length > 0 ? (
-            <div className='flex-1 flex overflow-hidden'>
+            <div className='flex-1 flex overflow-hidden justify-center'>
               <div
-                className={`${rightPanelCollapsed ? 'w-full' : 'w-[40%] min-w-[400px]'} flex flex-col overflow-hidden border-r border-gray-200/80 dark:border-gray-800 bg-white dark:bg-[#111217] transition-all duration-300 relative`}
+                className={`${rightPanelCollapsed ? 'max-w-[800px] w-full border-r-0' : 'w-[40%] min-w-[400px] border-r border-gray-200/80 dark:border-gray-800'} flex flex-col overflow-hidden bg-white dark:bg-[#111217] transition-all duration-300 relative`}
               >
                 <div className='flex-1 overflow-y-auto'>
                   {rounds.map((round, roundIndex) => {
@@ -1891,6 +1927,7 @@ const Playground: NextPage = () => {
                         userQuery={round.humanMsg?.context}
                         attachedFile={round.humanMsg?.attachedFile}
                         attachedKnowledge={round.humanMsg?.attachedKnowledge}
+                        attachedSkill={round.humanMsg?.attachedSkill}
                         assistantText={roundAssistantText}
                         modelName={round.viewMsg?.model_name || model}
                         stepThoughts={stepThoughts}

@@ -146,6 +146,7 @@ nltk_data
 pilot/data/
 pilot/nltk_data
 pilot/mock_datas/db-gpt-test.db.wal
+pilot/tmp/
 
 logswebserver.log.*
 .history/*

@@ -93,6 +93,10 @@ export interface ManusLeftPanelProps {
     desc?: string;
     owner?: string;
   };
+  attachedSkill?: {
+    name: string;
+    id: string;
+  };
 }
 
 // Get step icon based on type and status
@@ -351,6 +355,7 @@ const StepCard: React.FC<{
   onClick: () => void;
 }> = memo(({ step, isActive, onClick }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const detailLine = step.detail ? step.detail.split('\n')[0] : '';
 
   React.useEffect(() => {
     const timer = setTimeout(() => setIsVisible(true), 50);
@@ -403,7 +408,12 @@ const StepCard: React.FC<{
         {getTypeLabel(step.type)}
       </span>
 
-      <span className='text-sm font-medium text-gray-800 dark:text-gray-200 truncate flex-1'>{step.title}</span>
+      <div className='flex flex-col min-w-0 flex-1'>
+        <span className='text-sm font-medium text-gray-800 dark:text-gray-200 truncate'>{step.title}</span>
+        {detailLine && (
+          <span className='text-[11px] text-gray-500 dark:text-gray-400 truncate'>{detailLine}</span>
+        )}
+      </div>
 
       <div className='flex-shrink-0'>
         {step.status === 'pending' && <ClockCircleOutlined className='text-xs text-gray-400' />}
@@ -416,6 +426,104 @@ const StepCard: React.FC<{
 });
 
 StepCard.displayName = 'StepCard';
+
+// Parse get_skill_resource step description to extract skill name, resource path, and content
+const parseSkillResourceDescription = (
+  description?: string,
+): { skillName: string; resourcePath: string; content: string } | null => {
+  if (!description) return null;
+  try {
+    // Extract Action Input JSON
+    const inputMatch = description.match(/Action Input:\s*({[\s\S]*?})(?:\n|$)/);
+    if (!inputMatch) return null;
+    const input = JSON.parse(inputMatch[1]);
+    const skillName = input.skill_name || '';
+    const resourcePath = input.resource_path || '';
+
+    // Extract the observation/output JSON that contains the file content
+    const afterInput = description.slice(description.indexOf(inputMatch[0]) + inputMatch[0].length);
+    let content = '';
+    // Try to find JSON output with content field
+    const jsonMatch = afterInput.match(/{[\s\S]*}/);
+    if (jsonMatch) {
+      try {
+        const output = JSON.parse(jsonMatch[0]);
+        content = output.content || '';
+      } catch {
+        content = afterInput.trim();
+      }
+    }
+
+    if (!skillName && !resourcePath) return null;
+    return { skillName, resourcePath, content };
+  } catch {
+    return null;
+  }
+};
+
+// Component to render get_skill_resource step with skill name, resource name, and markdown content
+const SkillResourceCard: React.FC<{
+  step: ExecutionStep;
+  isActive: boolean;
+  onClick: () => void;
+}> = memo(({ step, isActive, onClick }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const [contentExpanded, setContentExpanded] = useState(false);
+  const parsed = useMemo(() => parseSkillResourceDescription(step.description), [step.description]);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => setIsVisible(true), 50);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!parsed) {
+    return <StepCard step={step} isActive={isActive} onClick={onClick} />;
+  }
+
+  const resourceName = parsed.resourcePath.split('/').pop() || parsed.resourcePath;
+  const hasContent = parsed.content.length > 0;
+
+  return (
+    <div
+      className={classNames(
+        'rounded-lg border bg-white dark:bg-[#1a1b1e] transition-all duration-200 overflow-hidden',
+        'transform',
+        {
+          'opacity-0 translate-y-1': !isVisible,
+          'opacity-100 translate-y-0': isVisible,
+          'border-blue-300 dark:border-blue-700 shadow-sm ring-1 ring-blue-200/50 dark:ring-blue-800/50': isActive,
+          'border-gray-200 dark:border-gray-700/50 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm': !isActive,
+          'border-l-[3px] border-l-blue-500': step.status === 'running',
+          'border-l-[3px] border-l-emerald-500': step.status === 'completed' && isActive,
+          'border-l-[3px] border-l-red-500': step.status === 'error',
+        },
+      )}
+      style={{ transition: 'opacity 0.2s ease-out, transform 0.2s ease-out' }}
+    >
+      {/* Header row - clickable for right panel */}
+      <div className='flex items-center gap-2.5 px-3 py-2 cursor-pointer' onClick={onClick}>
+        <div className={classNames('flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center', getIconBgClass(step.type))}>
+          {getStepIcon(step.type, step.status)}
+        </div>
+        <span className='text-[10px] font-medium tracking-wide flex-shrink-0 text-indigo-600 dark:text-indigo-400'>
+          {getTypeLabel(step.type)}
+        </span>
+        <div className='flex flex-col min-w-0 flex-1'>
+          <span className='text-sm font-medium text-gray-800 dark:text-gray-200 truncate'>{resourceName}</span>
+          <span className='text-[11px] text-gray-400 dark:text-gray-500 truncate'>{parsed.skillName}</span>
+        </div>
+        <div className='flex-shrink-0'>
+          {step.status === 'running' && <LoadingOutlined spin className='text-xs text-blue-500' />}
+          {step.status === 'completed' && <CheckCircleOutlined className='text-xs text-emerald-500' />}
+          {step.status === 'error' && <ExclamationCircleOutlined className='text-xs text-red-500' />}
+        </div>
+      </div>
+
+    </div>
+  );
+});
+
+SkillResourceCard.displayName = 'SkillResourceCard';
 
 const ThoughtBubble: React.FC<{ text: string }> = memo(({ text }) => {
   const [expanded, setExpanded] = useState(false);
@@ -507,21 +615,16 @@ const SectionBlock: React.FC<{
             <ThoughtBubble text={stepThoughts['initial']} />
           )}
 
-          {hasObservations &&
-            section.steps.map(step => {
-              if (!step.description?.includes('Observation:')) return null;
-              return <ObservationFormatter key={`obs-${step.id}`} observation={step.description} />;
-            })}
-
-          {section.steps.map((step) => (
+          {section.steps.map(step => (
             <React.Fragment key={step.id}>
-              <StepCard
-                step={step}
-                isActive={step.id === activeStepId}
-                onClick={() => onStepClick(step.id)}
-              />
-              {stepThoughts?.[step.id] && (
-                <ThoughtBubble text={stepThoughts[step.id]} />
+              {stepThoughts?.[step.id] && <ThoughtBubble text={stepThoughts[step.id]} />}
+              {step.description?.includes('Action: get_skill_resource') ? (
+                <SkillResourceCard step={step} isActive={step.id === activeStepId} onClick={() => onStepClick(step.id)} />
+              ) : (
+                <StepCard step={step} isActive={step.id === activeStepId} onClick={() => onStepClick(step.id)} />
+              )}
+              {step.description?.includes('Observation:') && (
+                <ObservationFormatter observation={step.description} />
               )}
             </React.Fragment>
           ))}
@@ -551,6 +654,7 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
   onExpand,
   attachedFile,
   attachedKnowledge,
+  attachedSkill,
 }) => {
   const handleStepClick = useCallback(
     (stepId: string, sectionId: string) => {
@@ -625,6 +729,17 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
                   </div>
                 </div>
               )}
+              {attachedSkill && (
+                <div className='flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700/60 bg-white dark:bg-[#1a1b1e] shadow-sm'>
+                  <div className='w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0'>
+                    <PlayCircleOutlined className='text-indigo-500 text-base' />
+                  </div>
+                  <div className='min-w-0 flex-1'>
+                    <div className='text-sm font-medium text-gray-800 dark:text-gray-200 truncate'>{attachedSkill.name}</div>
+                    <div className='text-[11px] text-gray-400 dark:text-gray-500'>技能</div>
+                  </div>
+                </div>
+              )}
               <div className='rounded-2xl bg-gray-100 dark:bg-[#2a2b2f] px-4 py-3 text-sm text-gray-800 dark:text-gray-200 leading-relaxed'>
                 {userQuery}
               </div>
@@ -646,22 +761,30 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
             ))}
           </div>
         ) : (
-          <div className='flex items-center gap-2 px-4 py-6 text-gray-400'>
+          <div className='px-4 py-6 text-gray-400 space-y-2'>
             {isWorking ? (
-              <>
+              <div className='flex items-center gap-2'>
                 <LoadingOutlined spin className='text-blue-500' />
                 <span className='text-sm text-blue-600 dark:text-blue-400'>DB-GPT 正在思考 ···</span>
-              </>
+              </div>
             ) : (
               <span className='text-sm'>等待开始...</span>
+            )}
+            {isWorking && stepThoughts?.[activeStepId || 'initial'] && (
+              <ThoughtBubble text={stepThoughts[activeStepId || 'initial']} />
             )}
           </div>
         )}
 
         {isWorking && sections.length > 0 && (
-          <div className='flex items-center gap-2 px-4 py-3 mt-2 rounded-lg bg-blue-50/50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800'>
-            <LoadingOutlined spin className='text-blue-500' />
-            <span className='text-sm text-blue-600 dark:text-blue-400'>DB-GPT 正在思考 ···</span>
+          <div className='px-4 py-3 mt-2 rounded-lg bg-blue-50/50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 space-y-2'>
+            <div className='flex items-center gap-2'>
+              <LoadingOutlined spin className='text-blue-500' />
+              <span className='text-sm text-blue-600 dark:text-blue-400'>DB-GPT 正在思考 ···</span>
+            </div>
+            {stepThoughts?.[activeStepId || 'initial'] && (
+              <ThoughtBubble text={stepThoughts[activeStepId || 'initial']} />
+            )}
           </div>
         )}
 

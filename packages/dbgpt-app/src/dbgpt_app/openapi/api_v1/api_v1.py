@@ -74,74 +74,54 @@ async def _execute_skill_script_impl(skill_name: str, script_name: str, args: di
     return result
 
 
-# Tool definition at module level
-@tool(
-    description="获取指定技能中定义的脚本列表或脚本代码。"
-    "当需要执行技能中的 Python 脚本时使用此工具。"
-    "参数: {\"skill_name\": \"技能名称\", \"script_name\": \"脚本文件名(可选，不传则返回脚本列表)\"}"
-)
-def get_skill_scripts(skill_name: str, script_name: Optional[str] = None) -> str:
-    """Get the list of scripts defined in a skill or the code of a specific script.
-
-    Args:
-        skill_name: The name of the skill.
-        script_name: Optional. The name of the script. If provided, returns the script code.
-                    If not provided, returns the list of all scripts.
-    """
-    skill_manager = get_skill_manager(CFG.SYSTEM_APP)
-    scripts = skill_manager.get_skill_scripts(skill_name)
-
-    if not scripts:
-        return json.dumps({
-            "chunks": [{"output_type": "text", "content": f"No scripts found for skill {skill_name}"}]
-        }, ensure_ascii=False)
-
-    # If script_name is provided, return the code of that specific script
-    if script_name:
-        script = next(
-            (s for s in scripts if s.get("name") == script_name),
-            None,
-        )
-        if not script:
-            return json.dumps({
-                "chunks": [{"output_type": "text", "content": f"Script '{script_name}' not found in skill '{skill_name}'"}]
-            }, ensure_ascii=False)
-
-        code = script.get("code", "")
-        language = script.get("language", "python")
-        description = script.get("description", "")
-
-        if not code:
-            return json.dumps({
-                "chunks": [{"output_type": "text", "content": f"Script '{script_name}' has no code"}]
-            }, ensure_ascii=False)
-
-        return json.dumps({
-            "chunks": [
-                {"output_type": "text", "content": f"Script: {script_name}"},
-                {"output_type": "text", "content": f"Description: {description}"},
-                {"output_type": "text", "content": f"Language: {language}"},
-                {"output_type": "code", "content": code}
-            ]
-        }, ensure_ascii=False)
-
-    # Otherwise, return the list of scripts
-    script_list = "\n".join([f"- {s.get('name')}: {s.get('description', '')}" for s in scripts])
-    return json.dumps({
-        "chunks": [
-            {"output_type": "text", "content": f"Available scripts for {skill_name}:"},
-            {"output_type": "markdown", "content": script_list}
-        ]
-    }, ensure_ascii=False)
-
-
-@tool(
-    description="执行技能中的脚本。"
-    "参数: {\"skill_name\": \"技能名称\", \"script_name\": \"脚本名称\", \"args\": {参数}}"
-)
+@tool(description="执行技能中的脚本。参数: {\"skill_name\": \"技能名称\", \"script_name\": \"脚本名称\", \"args\": {参数}}")
 async def execute_skill_script(skill_name: str, script_name: str, args: dict) -> str:
     """Execute a script from a skill."""
     return await _execute_skill_script_impl(skill_name, script_name, args)
+
+
+@tool(
+    description="获取技能资源文件内容。"
+    "根据路径读取技能中的参考文档、配置文件等非脚本资源。"
+    "参数: {\"skill_name\": \"技能名称\", \"resource_path\": \"资源路径\"}"
+    "\\n示例:"
+    "\\n- 读取参考文档: {\"skill_name\": \"my-skill\", \"resource_path\": \"references/analysis_framework.md\"}"
+    "\\n注意: 执行脚本请使用 execute_skill_script_file 工具"
+)
+async def get_skill_resource(
+    skill_name: str, resource_path: str, args: Optional[dict] = None
+) -> str:
+    from dbgpt.agent.skill.manage import get_skill_manager
+
+    try:
+        sm = get_skill_manager(CFG.SYSTEM_APP)
+        result = await sm.get_skill_resource(skill_name, resource_path, args or {})
+        return result
+    except Exception as e:
+        import json
+        return json.dumps(
+            {"error": True, "message": f"Error: {str(e)}"},
+            ensure_ascii=False,
+        )
+
+
+@tool(description="执行技能scripts目录下的脚本文件。参数: {\"skill_name\": \"技能名称\", \"script_file_name\": \"脚本文件名\", \"args\": {参数}}")
+async def execute_skill_script_file(
+    skill_name: str, script_file_name: str, args: Optional[dict] = None
+) -> str:
+    """Execute a script file from a skill's scripts directory."""
+    from dbgpt.agent.skill.manage import get_skill_manager
+
+    try:
+        sm = get_skill_manager(CFG.SYSTEM_APP)
+        result = await sm.execute_skill_script_file(skill_name, script_file_name, args or {})
+        return result
+    except Exception as e:
+        import json
+        return json.dumps(
+            {"chunks": [{"output_type": "text", "content": f"Error: {str(e)}"}]},
+            ensure_ascii=False,
+        )
 
 
 model_semaphore = None
@@ -546,6 +526,7 @@ async def _react_agent_stream(
         thought: Optional[str],
         action: Optional[str],
         action_input: Optional[str],
+        title: Optional[str] = None,
     ):
         return _sse_event(
             {
@@ -554,6 +535,7 @@ async def _react_agent_stream(
                 "thought": thought,
                 "action": action,
                 "action_input": action_input,
+                "title": title,
             }
         )
 
@@ -590,15 +572,12 @@ async def _react_agent_stream(
                     payload, str
                 ):
                     for chunk in chunk_text(payload, max_len=800):
-                        if output_type in ["text", "markdown"]:
-                            raw_chunks.append(step_output(chunk))
                         raw_chunks.append(step_chunk(step_id, output_type, chunk))
                 else:
                     raw_chunks.append(step_chunk(step_id, output_type, payload))
             return raw_chunks
         if isinstance(content, str) and content:
             for chunk in chunk_text(content, max_len=800):
-                raw_chunks.append(step_output(chunk))
                 raw_chunks.append(step_chunk(step_id, "text", chunk))
         return raw_chunks
 
@@ -1274,24 +1253,249 @@ print(json.dumps(summary, ensure_ascii=False))
 
         return json.dumps({"chunks": chunks}, ensure_ascii=False)
 
+
     @tool(
-        description="Render HTML content as a web report. "
-        "Use this tool when you need to generate a beautiful data analysis report, "
-        "visualization report, or any styled HTML page. "
-        "The HTML should be a complete, self-contained page (with inline CSS/JS). "
-        'Parameters: {"html": "complete HTML string", "title": "report title"}'
+        description="执行技能scripts目录下的脚本文件。参数: "
+        '{"skill_name": "技能名称", "script_file_name": "脚本文件名", "args": {参数}}'
     )
-    async def html_interpreter(html: str, title: str = "Report") -> str:
-        """Accept an HTML string and return it for frontend rendering.
+    async def execute_skill_script_file(
+        skill_name: str, script_file_name: str, args: Optional[dict] = None
+    ) -> str:
+        """Execute a script file from a skill's scripts directory.
 
-        The LLM should generate a complete, self-contained HTML page with
-        inline styles and scripts. The frontend will render it in a
-        sandboxed iframe.
+        After execution, any new image files (.png, .jpg, etc.) generated
+        by the script are automatically copied to the static images directory
+        and their URLs are returned in the output chunks.
         """
-        import re
+        import shutil
+        import uuid
 
+        from dbgpt.agent.skill.manage import get_skill_manager
         from dbgpt.configs.model_config import STATIC_MESSAGE_IMG_PATH
 
+        try:
+            from dbgpt.configs.model_config import PILOT_PATH
+            sm = get_skill_manager(CFG.SYSTEM_APP)
+            cid = react_state.get("conv_id") or "default"
+            out_dir = os.path.join(PILOT_PATH, "tmp", cid)
+            os.makedirs(out_dir, exist_ok=True)
+            # Auto-inject the correct file path from react_state into args.
+            # The LLM sometimes corrupts the uploaded file path (e.g. changing
+            # 'dbgpt-app' to 'dbgpt_app'), so we override any file-path-like
+            # keys in args with the known-good path from react_state.
+            real_file_path = react_state.get("file_path")
+            if real_file_path and args:
+                _FILE_PATH_KEYS = {"input_file", "file_path", "data_path", "csv_path", "excel_path", "data_file"}
+                for key in list(args.keys()):
+                    if key in _FILE_PATH_KEYS:
+                        args[key] = real_file_path
+            result_str = await sm.execute_skill_script_file(
+                skill_name, script_file_name, args or {},
+                output_dir=out_dir,
+            )
+
+            # Post-process: copy image files to static dir and replace
+            # absolute paths with /images/ URLs.
+            try:
+                result_obj = json.loads(result_str)
+                chunks = result_obj.get("chunks", [])
+                os.makedirs(STATIC_MESSAGE_IMG_PATH, exist_ok=True)
+                IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"}
+                for chunk in chunks:
+                    if chunk.get("output_type") == "image":
+                        abs_path = chunk["content"]
+                        if os.path.isabs(abs_path) and os.path.isfile(abs_path):
+                            ext = os.path.splitext(abs_path)[1].lower()
+                            if ext in IMAGE_EXTS:
+                                unique_name = (
+                                    f"{uuid.uuid4().hex[:8]}_{os.path.basename(abs_path)}"
+                                )
+                                dest = os.path.join(
+                                    STATIC_MESSAGE_IMG_PATH, unique_name
+                                )
+                                shutil.copy2(abs_path, dest)
+                                img_url = f"/images/{unique_name}"
+                                chunk["content"] = img_url
+                                react_state.setdefault(
+                                    "generated_images", []
+                                ).append(img_url)
+
+                # Append image URL summary for LLM reference
+                all_images = react_state.get("generated_images", [])
+                if all_images:
+                    img_summary = (
+                        "已生成的图片URL（在生成HTML报告时请使用这些URL）:\n"
+                        + "\n".join(f"  - {url}" for url in all_images)
+                    )
+                    chunks.append(
+                        {"output_type": "text", "content": img_summary}
+                    )
+                # Special handling for calculate_ratios.py output:
+                # Store its output in react_state so html_interpreter can use it automatically
+                # This prevents the LLM from having to echo back 30 keys of data in JSON
+                if script_file_name == "calculate_ratios.py":
+                    for chunk in chunks:
+                        if chunk.get("output_type") == "text":
+                            try:
+                                ratio_data = json.loads(chunk["content"])
+                                react_state["ratio_data"] = ratio_data
+                            except Exception:
+                                pass
+                return json.dumps({"chunks": chunks}, ensure_ascii=False)
+            except (json.JSONDecodeError, KeyError):
+                return result_str
+        except Exception as e:
+            return json.dumps(
+                {"chunks": [{"output_type": "text", "content": f"Error: {str(e)}"}]},
+                ensure_ascii=False,
+            )
+
+    @tool(
+        description="Render HTML content as a web report. "
+        "Supports three modes: "
+        "(1) template_path + data (RECOMMENDED): pass a template file path (relative to skills dir) "
+        "and a data dict whose keys match {{PLACEHOLDER}} tokens in the template. "
+        "The backend reads the template and performs all replacements. "
+        "(2) file_path: pass a path to an .html file on disk. "
+        "(3) html: pass a complete HTML string directly (only for short content). "
+        'Parameters: {"template_path": "skill-name/templates/report.html", "data": {"KEY": "value", ...}, "title": "Report Title"}'
+    )
+    async def html_interpreter(
+        html: str = "",
+        title: str = "Report",
+        file_path: str = "",
+        template_path: str = "",
+        data: dict | str = None,
+    ) -> str:
+        """Accept HTML content and return it for rendering.
+
+        Preferred usage: pass `template_path` (relative to skills dir) plus
+        a `data` dict whose keys match {{PLACEHOLDER}} tokens in the template.
+        The backend reads the template and performs all replacements.
+
+        Fallback modes:
+        - `html`: pass a complete HTML string directly.
+        - `file_path`: read HTML from a file on disk.
+        """
+        import re
+        from dbgpt.configs.model_config import STATIC_MESSAGE_IMG_PATH
+        # ── Mode 1: template_path + data ──────────────────────────────
+        if template_path and template_path.strip():
+            tp = template_path.strip()
+            skills_dir = Path(DEFAULT_SKILLS_DIR).expanduser().resolve()
+            target = (skills_dir / tp).resolve()
+            # Security: must be under skills_dir
+            try:
+                target.relative_to(skills_dir)
+            except ValueError:
+                return json.dumps(
+                    {"chunks": [{"output_type": "text", "content": f"Invalid template_path: {tp}"}]},
+                    ensure_ascii=False,
+                )
+            if not target.is_file():
+                return json.dumps(
+                    {"chunks": [{"output_type": "text", "content": f"Template not found: {tp}"}]},
+                    ensure_ascii=False,
+                )
+            try:
+                raw_template = target.read_text(encoding="utf-8")
+            except Exception as e:
+                return json.dumps(
+                    {"chunks": [{"output_type": "text", "content": f"Error reading template: {e}"}]},
+                    ensure_ascii=False,
+                )
+            # Replace {{KEY}} placeholders with values from data dict
+            # Sometimes the LLM passes data as a JSON string instead of a dict
+            replacements = data
+            if isinstance(replacements, str):
+                try:
+                    replacements = json.loads(replacements)
+                except Exception as e:
+                    logger.warning(f"html_interpreter failed to parse string data as json: {e}")
+                    # Attempt to fix truncated JSON by appending closing braces/quotes
+                    try:
+                        fixed = str(replacements).rstrip()
+                        if not fixed.endswith('}'):
+                            if fixed.endswith('"'):
+                                fixed += '}'
+                            else:
+                                fixed += '"}'
+                        replacements = json.loads(fixed)
+                    except Exception:
+                        replacements = {}
+            if not isinstance(replacements, dict):
+                replacements = {}
+            # Merge LLM replacements with ratio_data from calculate_ratios.py
+            ratio_data = react_state.get("ratio_data", {})
+            if isinstance(ratio_data, dict):
+                # LLM's data overwrites ratio_data if keys overlap
+                merged = {**ratio_data, **replacements}
+                replacements = merged
+
+            def _replace_placeholder(m):
+                key = m.group(1)
+                return str(replacements.get(key, "NA"))
+            html = re.sub(r"\{\{([A-Z_0-9]+)\}\}", _replace_placeholder, raw_template)
+            if not title or title == "Report":
+                title = target.stem
+            logger.info(
+                "html_interpreter: template=%s, %d placeholders replaced, html=%d chars",
+                tp,
+                len(replacements),
+                len(html),
+            )
+
+        # ── Mode 2: file_path ─────────────────────────────────────────
+        elif file_path and file_path.strip():
+            fp = file_path.strip()
+            if not os.path.isfile(fp):
+                cid = react_state.get("conv_id") or "default"
+                from dbgpt.configs.model_config import PILOT_PATH
+                alt = os.path.join(PILOT_PATH, "data", cid, os.path.basename(fp))
+                if os.path.isfile(alt):
+                    fp = alt
+                else:
+                    return json.dumps(
+                        {
+                            "chunks": [
+                                {
+                                    "output_type": "text",
+                                    "content": f"File not found: {file_path}",
+                                }
+                            ]
+                        },
+                        ensure_ascii=False,
+                    )
+            try:
+                with open(fp, "r", encoding="utf-8") as f:
+                    html = f.read()
+                if not title or title == "Report":
+                    title = os.path.splitext(os.path.basename(fp))[0]
+                logger.info(
+                    "html_interpreter: read %d chars from file %s",
+                    len(html),
+                    fp,
+                )
+            except Exception as e:
+                return json.dumps(
+                    {
+                        "chunks": [
+                            {
+                                "output_type": "text",
+                                "content": f"Error reading file: {e}",
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                )
+
+        # ── Mode 3: inline html ──────────────────────────────────────
+        # Unescape literal \n sequences that LLM may produce
+        if html and isinstance(html, str):
+            if "\\n" in html:
+                html = html.replace("\\n", "\n")
+            if "\\t" in html:
+                html = html.replace("\\t", "\t")
         if not html or not html.strip():
             return json.dumps(
                 {
@@ -1483,8 +1687,6 @@ print(json.dumps(summary, ensure_ascii=False))
 2. 你必须严格按照上述技能指令的步骤执行
 3. 阅读技能指令，理解每一步需要调用的工具
 4. 按顺序执行工具调用，完成技能目标
-5. 如果技能包含脚本，可使用 get_skill_scripts 获取脚本列表
-6. 使用 execute_skill_script 执行技能中定义的 Python 脚本
 """
 
     # Build a hint listing all images currently available in STATIC_MESSAGE_IMG_PATH
@@ -1494,7 +1696,73 @@ print(json.dumps(summary, ensure_ascii=False))
     # html_interpreter output dynamically.
     available_images_hint = ""
 
-    workflow_prompt = f"""
+    # Check if skill is pre-selected to use simplified prompt
+    is_skill_mode = pre_matched_skill is not None
+
+    if is_skill_mode:
+        # Simplified prompt for skill mode - only skill-related tools + html_interpreter
+        workflow_prompt = f"""
+你是DB-GPT智能助手，正在执行用户选择的技能任务。
+
+## 自主决策原则
+1. 严格按照已加载技能的指令执行
+2. 每个步骤输出 Thought → Action → Action Input
+3. 等待系统返回 Observation 后，再决定下一步
+4. 如果任务需要生成分析报告，流程为：`execute_skill_script_file` 执行 `extract_financials.py` 提取数据 → `execute_skill_script_file` 执行 `calculate_ratios.py` 计算比率（系统自动记录结果） → `execute_skill_script_file` 执行 `generate_charts.py` 生成图表（系统自动合并图片） → 调用 `html_interpreter(template_path=..., data={{...仅包含你写的分析文本}})` 渲染报告（系统自动合并数据和图片） → `terminate` 返回摘要
+5. 如果任务不需要生成报告，直接调用 terminate 返回最终结果，Action Input 格式必须为 {{"result": "最终回答"}}
+
+{skill_prompt_context}
+{execution_instruction}
+
+## 技能执行规范
+### 资源使用
+- **需要计算/处理数据** → 使用 `execute_skill_script_file` 执行技能 scripts 目录下的脚本
+- **需要了解指标定义/分析框架** → 使用 `get_skill_resource` 并指定 `references/xxx.md` 路径读取参考文档
+- **遇到图片文件** → 如果模型不支持图片输入，会返回错误提示
+- **需要生成报告** → 调用 `html_interpreter`，传入 `template_path`（模板相对路径）和 `data`（仅包含你自己撰写的分析文本，由于后端会自动合并之前工具生成的30个数据指标和图片URL，请绝对不要在 `data` 里写这些数据指标，否则会导致超长截断）。**不要使用 `code_interpreter`，不要使用 `execute_skill_script_file` 生成报告，不需要先用 `get_skill_resource` 读取模板**
+
+## 可用工具说明
+1. **execute_skill_script_file**（推荐用于脚本执行）: 执行技能 scripts 目录下的脚本文件。
+   参数: {{"skill_name": "技能名", "script_file_name": "脚本文件名", "args": {{"参数名": "参数值"}}}}
+   - 示例: {{"skill_name": "{pre_matched_skill.metadata.name if pre_matched_skill else 'skill'}", "script_file_name": "calculate.py", "args": {{"param": "value"}}}}
+2. **get_skill_resource**: 读取技能中的参考文档、配置、模板等非脚本资源文件。
+   参数: {{"skill_name": "技能名", "resource_path": "资源路径"}}
+   - 读取参考文档: {{"skill_name": "{pre_matched_skill.metadata.name if pre_matched_skill else 'skill'}", "resource_path": "references/analysis_framework.md"}}
+   - 注意: 报告模板不需要用此工具读取，直接用 html_interpreter 的 template_path 参数
+   - 注意: 执行脚本请使用 execute_skill_script_file，不要用此工具执行脚本
+3. **execute_skill_script**: 执行技能中定义的内联脚本。参数: {{"skill_name": "技能名", "script_name": "脚本名", "args": {{"参数名": "参数值"}}}}
+
+4. **html_interpreter**: 将 HTML 模板渲染为网页报告。
+   推荐用法: {{"template_path": "技能名/templates/模板文件.html", "data": {{"PLACEHOLDER_KEY": "值", ...}}, "title": "报告标题"}}
+   - 后端会自动把先前的财务数据计算结果合并进模板中。你只需要在 `data` 字典中返回诸如 `PROFITABILITY_ANALYSIS` 等你手写的分析段落即可，无需包含 `COMPANY_NAME` 或 `REVENUE` 等。
+   - 示例: {{"template_path": "financial-report-analyzer/templates/report_template.html", "data": {{"PROFITABILITY_ANALYSIS": "从数据看，盈利能力良好...", "SOLVENCY_ANALYSIS": "..."}}, "title": "财报分析"}}
+   {available_images_hint}
+5. **terminate**: 任务完成时返回最终答案，Action Input 必须为 {{"result": "你的最终回答内容"}}
+
+{file_context}
+{knowledge_context}
+## ReAct 输出格式
+每轮交互必须输出：
+Thought: 分析当前任务状态，思考下一步需要做什么
+Action: 选择的工具名称（必须是上面列出的工具之一）
+Action Input: 工具参数的 JSON 格式
+
+系统会返回 Observation，然后你继续思考下一步。
+""".strip()
+
+        tool_pack = ToolPack(
+            [
+                execute_skill_script,
+                get_skill_resource,
+                execute_skill_script_file,
+                html_interpreter,
+                Terminate(),
+            ]
+            + business_tools
+        )
+    else:
+        # Full prompt with all tools when no skill is pre-selected
+        workflow_prompt = f"""
 你是DB-GPT智能助手，可以根据用户任务自主选择工具来解决问题。
 
 ## 自主决策原则
@@ -1503,33 +1771,88 @@ print(json.dumps(summary, ensure_ascii=False))
 3. 每个步骤输出 Thought → Action → Action Input
 4. 等待系统返回 Observation 后，再决定下一步
 5. 任务完成后调用 terminate 工具返回最终结果，Action Input 格式必须为 {{"result": "最终回答"}}
+6. **【强制规则】当用户要求生成网页、HTML报告、交互式报告时，最终展示步骤必须调用 `html_interpreter` 渲染，禁止仅用 `code_interpreter` 输出 HTML 然后直接 terminate。正确流程：code_interpreter 写入 .html 文件 → html_interpreter(file_path=...) 渲染 → terminate**
 
 ## 可用技能列表（预加载）
 选择合适的技能使用 select_skill 工具：
 {skills_context}
 
+## 技能执行规范（重要）
+当使用技能时，必须遵循以下规则：
+
+### 1. 理解工作流程
+加载技能后，仔细阅读 SKILL.md 中的 **核心工作流程** 部分，按步骤顺序执行，不要跳跃。
+
+### 2. 资源使用时机
+- **需要计算/处理数据** → 使用 `execute_skill_script_file` 执行技能 scripts 目录下的脚本
+- **需要了解指标定义/分析框架** → 使用 `get_skill_resource` 并指定 `references/xxx.md` 路径读取参考文档
+- **遇到图片文件** → 如果模型不支持图片输入，会返回错误提示
+
+### 3. 执行顺序
+每个工作流程步骤完成后，再进入下一步。不要在同一步骤中混合调用多个工具。
+
+### 4. 典型执行模式
+```
+Thought: 需要计算财务比率，先查看指标定义
+Action: get_skill_resource
+Action Input: {{"skill_name": "financial-report-analyzer", "resource_path": "references/financial_metrics.md"}}
+
+Thought: 现在执行脚本计算比率
+Action: execute_skill_script_file
+Action Input: {{"skill_name": "financial-report-analyzer", "script_file_name": "calculate_ratios.py", "args": {{...}}}}
+```
+
 ## 可用工具说明
 1. **load_skill**: 加载指定技能的详细说明，参数: {{"skill_name": "技能名", "file_path": "技能文件路径"}}
 2. **knowledge_retrieve**: 从知识库中检索相关信息，参数: {{"query": "检索问题"}}
-    3. **code_interpreter**: 执行 Python 代码进行数据分析和计算。支持 pandas、numpy、matplotlib 等。已预导入 pandas(pd)、numpy(np)、json、os。如果用户上传了文件，FILE_PATH 变量已预设为文件路径。PLOT_DIR 变量已预设为图片保存目录。参数: {{"code": "python代码"}}
+3. **execute_skill_script**: 执行技能中定义的内联脚本，参数: {{"skill_name": "技能名", "script_name": 
+"脚本名", "args": {{"参数名": "参数值"}}}}
+4. **execute_skill_script_file**（推荐用于脚本执行）: 执行技能 scripts 目录下的脚本文件，参数: {{"skill_name": "技能名", 
+"script_file_name": "脚本文件名如calculate_ratios.py", "args": {{"参数名": "参数值"}}}}
+5. **get_skill_resource**: 读取技能中的参考文档、配置等非脚本资源文件。
+   参数: {{"skill_name": "技能名", "resource_path": "资源路径"}}
+   - 读取参考文档: {{"skill_name": "my-skill", "resource_path": "references/analysis_framework.md"}}
+   - 注意: 执行脚本请使用 execute_skill_script_file，不要用此工具执行脚本
+   - 图片文件会返回错误提示（模型不支持）
+6. **code_interpreter**: 执行 Python 代码进行数据分析和计算。支持 pandas、numpy、matplotlib 等。已预导入 
+   pandas(pd)、numpy(np)、json、os。如果用户上传了文件，FILE_PATH 变量已预设为文件路径。PLOT_DIR 变量已预设为图片保存目录。参数: {{"code": "python代码"}}
    **重要规则**:
    - **每次调用都是独立的**，变量不会在调用之间保留。每次代码都必须是**完整自包含**的：包含所有必要的 import、数据加载（如 `df = pd.read_csv(FILE_PATH)`）和处理逻辑。绝对不要假设 `df` 或其他变量已经存在。
    - 生成图表时，使用 `plt.savefig(os.path.join(PLOT_DIR, 'chart_name.png'), dpi=300)` 保存到 PLOT_DIR。不要自己创建目录，PLOT_DIR 已存在。
    - 生成的代码必须语法正确，确保所有字符串、f-string、括号、引号都正确闭合。不要截断代码。
    - **代码长度限制（极其重要）**: 每次调用 code_interpreter 的代码**不得超过 80 行**。如果任务复杂，**必须拆分为多次调用**，每次完成一个子任务。违反此规则会导致代码被截断产生语法错误。
    - 如果需要用到之前步骤的分析结果，必须在当前代码中重新加载数据并重新计算。
+   - **禁止用 code_interpreter 直接生成最终HTML报告给用户**。如需生成网页报告，必须用 code_interpreter 将 HTML 写入文件（如 `os.path.join(PLOT_DIR, 'report.html')`），然后**必须**调用 `html_interpreter(file_path=...)` 渲染，否则用户无法看到网页。
+   - **分步执行流程（推荐）**: 对于复杂分析任务，建议按以下顺序分步执行：
+     ① **数据处理**：先加载数据，进行清洗、计算关键指标，用 print() 输出摘要
+     ② **生成图表**：基于上一步的结果，生成可视化图表，保存到 PLOT_DIR
+     ③ **生成HTML文件**：用 `code_interpreter` 将完整 HTML 写入文件（如 `os.path.join(PLOT_DIR, 'report.html')`）
+     ④ **渲染HTML（必须）**：调用 `html_interpreter(file_path=...)` 渲染上一步写入的文件，**此步骤不可省略**
    - **图片URL**: 执行后系统会在 Observation 中返回生成的图片URL（如 `/images/xxxx_chart.png`）。在后续生成 HTML 报告时，必须使用这些实际URL来嵌入图片。
-4. **html_interpreter**: 将HTML内容渲染为网页报告。参数: {{"html": "完整HTML内容", "title": "报告标题"}}
-   **HTML 生成规范（必须严格遵守）**:
+7. **html_interpreter**: 将 HTML 渲染为网页报告。支持三种模式：
+   **模式A - 模板填充（技能报告推荐）**：传入模板路径和数据字典，后端自动读取模板并替换占位符：
+   参数: {{"template_path": "技能名/templates/模板.html", "data": {{"KEY": "值", ...}}, "title": "报告标题"}}
+   **模式B - 文件渲染（自定义HTML）**：先用 `code_interpreter` 将完整 HTML 写入文件，然后调用：
+   参数: {{"file_path": "/path/to/report.html"}}
+   **模式C - 内联HTML（仅限短内容）**：直接传入 html 字符串：
+   参数: {{"html": "短HTML内容", "title": "报告标题"}}
+   **HTML 生成规范**:
    - **精简至上**: 使用简洁的内联 style 属性，**禁止**写大段 `<style>` 块或 CSS 类定义。直接在元素上写 `style="..."`。
-   - **避免截断**: HTML 代码必须尽量简短。不要重复的装饰性代码。表格数据只展示关键行（最多10行），其余用文字总结。
-   - **结构**: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>标题</title></head><body style="font-family:system-ui,sans-serif;max-width:1200px;margin:0 auto;padding:20px">...内容...</body></html>`
-   - **图片嵌入**: 之前 code_interpreter 的 Observation 中返回了图片URL（格式 `/images/xxxx_chart.png`），**必须使用这些完整的实际URL**。用 `<img src="/images/xxxx_chart.png" style="max-width:100%;height:auto">` 嵌入。**绝对不要**猜测或编造图片路径。
+   - **图片嵌入与说明（重要）**: 之前 code_interpreter 的 Observation 中返回了图片URL（格式 `/images/xxxx_chart.png`），**必须使用这些完整的实际URL**。用 `<img src="/images/xxxx_chart.png" style="max-width:100%;height:auto">` 嵌入。**绝对不要**猜测或编造图片路径。
+   - **图表说明规范**: 在每个 `<img>` 标签后添加文字说明，说明应包含：1) 图表类型 2) 关键数据发现 3) 业务洞察（1-2句话）
    {available_images_hint}
-5. **terminate**: 任务完成时返回最终答案，Action Input 必须为 {{"result": "你的最终回答内容"}}
+8. **terminate**: 任务完成时返回最终答案，Action Input 必须为 {{"result": "你的最终回答内容"}}
+
+
+## ⚠️ 网页报告生成的强制流程（违反将导致用户看不到报告）
+当用户要求生成「网页报告」「交互式报告」「HTML报告」「可视化报告」时，**必须**执行以下流程：
+1. 用 `code_interpreter` 分析数据、生成图表（可多次调用）
+2. 用 `code_interpreter` 将最终 HTML 写入文件（**不超过80行，如需更多内容分多次写入同一文件**）
+3. **必须调用** `html_interpreter` 的 file_path 模式渲染该文件：`Action: html_interpreter`，`Action Input: {{"file_path": "/path/to/report.html"}}`
+4. 确认渲染成功后，调用 `terminate` 返回结果
+**绝对禁止**：在 code_interpreter 中 print() HTML 内容后直接 terminate，这样用户无法看到网页报告。
 
 ## 业务工具（可直接执行）
-{business_tools_context}
 {file_context}
 {knowledge_context}
 {skill_prompt_context}
@@ -1543,29 +1866,23 @@ Action Input: 工具参数的 JSON 格式
 系统会返回 Observation，然后你继续思考下一步。
 """.strip()
 
-    tool_pack = ToolPack(
-        [
-            load_skill,
-            load_tools,
-            knowledge_retrieve,
-            get_skill_scripts,
-            execute_skill_script,
-            code_interpreter,
-            html_interpreter,
-            Terminate(),
-        ]
-        + business_tools
-    )
+        tool_pack = ToolPack(
+            [
+                load_skill,
+                load_tools,
+                knowledge_retrieve,
+                execute_skill_script,
+                get_skill_resource,
+                execute_skill_script_file,
+                code_interpreter,
+                html_interpreter,
+                Terminate(),
+            ]
+            + business_tools
+        )
 
     # Debug: print all registered tools
     logger.info(f"ToolPack resources: {list(tool_pack._resources.keys())}")
-    if "get_skill_scripts" not in tool_pack._resources:
-        logger.error("get_skill_scripts NOT in ToolPack!")
-        # Check if the function has _tool attribute
-        from dbgpt.agent.resource.tool.base import _is_function_tool
-        logger.error(f"get_skill_scripts is function tool: {_is_function_tool(get_skill_scripts)}")
-        if hasattr(get_skill_scripts, '_tool'):
-            logger.error(f"get_skill_scripts._tool.name: {get_skill_scripts._tool.name}")
     if "execute_skill_script" not in tool_pack._resources:
         logger.error("execute_skill_script NOT in ToolPack!")
 
@@ -1696,15 +2013,24 @@ Action Input: 工具参数的 JSON 格式
 
             chunk = delta_thinking or delta_text
             if chunk:
-                if round_num not in pending_thoughts:
-                    pending_thoughts[round_num] = []
-                pending_thoughts[round_num].append(chunk)
-                target_id = last_completed_step_id or "initial"
-                yield _sse_event({
-                    "type": "step.thought",
-                    "id": target_id,
-                    "content": chunk,
-                })
+                # Clean chunk: remove Action Input JSON to keep thought pure
+                # Split on Action Input pattern and keep only thought part
+                clean_chunk = re.split(r'\n\s*Action\s*Input\s*:\s*\{', chunk, maxsplit=1)[0]
+                # Also remove Action: lines
+                clean_chunk = re.sub(r'\n\s*Action\s*:\s*\w+', '', clean_chunk)
+                # Remove Thought: prefix if present
+                if clean_chunk.startswith("Thought:"):
+                    clean_chunk = clean_chunk[len("Thought:"):].strip()
+                if clean_chunk:
+                    if round_num not in pending_thoughts:
+                        pending_thoughts[round_num] = []
+                    pending_thoughts[round_num].append(clean_chunk)
+                    if round_num not in round_step_map:
+                        pending_step_id, pending_step_event = build_step("思考中", "Thought/Action/Observation")
+                        round_step_map[round_num] = pending_step_id
+                        yield pending_step_event
+                    target_id = round_step_map[round_num]
+                    yield _sse_event({"type": "step.thought", "id": target_id, "content": clean_chunk})
 
         elif event_type == "act":
             # Create step ONLY when action is confirmed
@@ -1714,6 +2040,15 @@ Action Input: 工具参数的 JSON 格式
             thoughts = action_output.get("thoughts")
             action = action_output.get("action")
             action_input = action_output.get("action_input")
+            action_input_data = None
+            if action_input is not None:
+                if isinstance(action_input, str):
+                    try:
+                        action_input_data = json.loads(action_input)
+                    except Exception:
+                        action_input_data = action_input
+                else:
+                    action_input_data = action_input
 
             # Skip step display for terminate action — its output will be
             # sent as a streaming "final" event instead of a step card.
@@ -1743,9 +2078,12 @@ Action Input: 工具参数的 JSON 格式
 
             # Use the actual action name as the step title (Manus-style UI)
             action_title = action or f"ReAct Round {round_num}"
-            react_step_id, react_step_event = build_step(action_title, "Thought/Action/Observation")
-            round_step_map[round_num] = react_step_id
-            yield react_step_event
+            if round_num in round_step_map:
+                react_step_id = round_step_map[round_num]
+            else:
+                react_step_id, react_step_event = build_step(action_title, "Thought/Action/Observation")
+                round_step_map[round_num] = react_step_id
+                yield react_step_event
 
             # --- History: create step record ---
             action_input_str = None
@@ -1765,9 +2103,22 @@ Action Input: 工具参数的 JSON 格式
                 "status": "running",
             }
 
+            # Stream action code to frontend for right panel (code_interpreter)
+            code_payload = None
+            if action == "code_interpreter" and isinstance(action_input_data, dict):
+                code_payload = action_input_data.get("code")
+            if isinstance(code_payload, str) and code_payload.strip():
+                for chunk in chunk_text(code_payload, max_len=800):
+                    yield step_chunk(react_step_id, "code", chunk)
+                if current_history_step is not None:
+                    current_history_step["outputs"].append(
+                        {"output_type": "code", "content": code_payload}
+                    )
+
             # Emit thinking metadata
             if thoughts or action or action_input:
-                yield step_meta(react_step_id, thoughts, action, action_input)
+                step_action_input = None if action == "code_interpreter" else action_input
+                yield step_meta(react_step_id, thoughts, action, step_action_input, action_title)
 
             # Emit observation (action execution result)
             observation_text = action_output.get("observations") or action_output.get(

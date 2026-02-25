@@ -345,20 +345,26 @@ class SkillManager(BaseComponent):
         )
 
         if not script:
-            return json.dumps(
-                {
-                    "chunks": [
-                        {
-                            "output_type": "text",
-                            "content": f"Script '{script_name}' not found in skill '{skill_name}'",
-                        }
-                    ]
-                },
-                ensure_ascii=False,
-            )
-
-        code = script.get("code", "")
-        language = script.get("language", "python")
+            # Try to load script from file
+            script_content = self.get_skill_script_file(skill_name, script_name)
+            if script_content:
+                code = script_content
+                language = "python"
+            else:
+                return json.dumps(
+                    {
+                        "chunks": [
+                            {
+                                "output_type": "text",
+                                "content": f"Script '{script_name}' not found in skill '{skill_name}'",
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                )
+        else:
+            code = script.get("code", "")
+            language = script.get("language", "python")
 
         if not code:
             return json.dumps(
@@ -429,6 +435,481 @@ class SkillManager(BaseComponent):
                         }
                     ]
                 },
+                ensure_ascii=False,
+            )
+
+    def get_skill_script_file(self, skill_name: str, script_file_name: str) -> Optional[str]:
+        """Read a script file from skill's scripts directory.
+
+        Args:
+            skill_name: The name of the skill.
+            script_file_name: The script file name (e.g., 'calculate_ratios.py').
+
+        Returns:
+            The script content or None if not found.
+        """
+        import os
+
+        skill_path = self._get_skill_path(skill_name)
+        if not skill_path:
+            return None
+
+        script_path = os.path.join(skill_path, "scripts", script_file_name)
+        if os.path.exists(script_path):
+            with open(script_path, "r", encoding="utf-8") as f:
+                return f.read()
+
+        return None
+
+    def get_skill_references(self, skill_name: str) -> List[Dict[str, Any]]:
+        import os
+
+        references = []
+
+        skill_path = self._get_skill_path(skill_name)
+        if not skill_path:
+            return []
+
+        refs_dir = os.path.join(skill_path, "references")
+        if os.path.exists(refs_dir):
+            for file_name in os.listdir(refs_dir):
+                if file_name.endswith(".md"):
+                    file_path = os.path.join(refs_dir, file_name)
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    references.append({"name": file_name, "content": content})
+
+        return references
+
+    def get_skill_reference_file(self, skill_name: str, ref_file_name: str) -> Optional[str]:
+        """Read a specific reference file from skill's references directory.
+
+        Args:
+            skill_name: The name of the skill.
+            ref_file_name: The reference file name (e.g., 'overview.md').
+
+        Returns:
+            The file content or None if not found.
+        """
+        import os
+
+        skill_path = self._get_skill_path(skill_name)
+        if not skill_path:
+            return None
+
+        ref_path = os.path.join(skill_path, "references", ref_file_name)
+        if os.path.exists(ref_path):
+            with open(ref_path, "r", encoding="utf-8") as f:
+                return f.read()
+
+        return None
+
+    def _get_skill_path(self, skill_name: str) -> Optional[str]:
+        import os
+        from pathlib import Path
+
+        skill = self.get_skill(name=skill_name)
+        if skill and hasattr(skill, "metadata") and skill.metadata:
+            metadata = skill.metadata
+            if hasattr(metadata, "path"):
+                return metadata.path
+
+        skills_dir = os.environ.get("DBGPT_SKILLS_DIR")
+        if not skills_dir:
+            from dbgpt.configs.model_config import resolve_root_path
+
+            skills_dir = resolve_root_path("skills")
+
+        if not skills_dir:
+            skills_dir = "skills"
+
+        return os.path.join(skills_dir, skill_name)
+
+    async def get_skill_resource(
+        self,
+        skill_name: str,
+        resource_path: str,
+        args: Optional[Dict[str, Any]] = None,
+    ) -> str:
+        """Get a resource from a skill by path.
+
+        This unified method handles both file reading and script execution:
+        - If path starts with "scripts/" and ends with .py/.sh, execute the script
+        - If path is an image file, return error (model doesn't support images)
+        - Otherwise, read and return the file content
+
+        Args:
+            skill_name: The name of the skill.
+            resource_path: The relative path to the resource (e.g., "references/analysis.md",
+                          "scripts/calculate.py", "data/config.json").
+            args: Optional arguments for script execution (only used for scripts).
+
+        Returns:
+            JSON string with the result:
+            - For scripts: {"chunks": [{"output_type": "text/code", "content": "..."}]}
+            - For files: {"type": "file", "path": "...", "content": "..."}
+            - For errors: {"error": true, "message": "..."}
+        """
+        import os
+
+        # Image file extensions that are not supported
+        IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".svg", ".ico"}
+
+        # Normalize the path
+        resource_path = resource_path.lstrip("/\\")
+
+        # Check if it's an image file
+        _, ext = os.path.splitext(resource_path)
+        if ext.lower() in IMAGE_EXTENSIONS:
+            return json.dumps(
+                {
+                    "error": True,
+                    "message": f'Cannot read "{os.path.basename(resource_path)}" (this model does not support image input). Inform the user.',
+                },
+                ensure_ascii=False,
+            )
+
+        # Get skill path
+        skill_path = self._get_skill_path(skill_name)
+        if not skill_path:
+            return json.dumps(
+                {"error": True, "message": f"Skill '{skill_name}' not found"},
+                ensure_ascii=False,
+            )
+
+        full_path = os.path.join(skill_path, resource_path)
+
+        # Security check: ensure path is within skill directory
+        try:
+            real_path = os.path.realpath(full_path)
+            real_skill_path = os.path.realpath(skill_path)
+            if not real_path.startswith(real_skill_path):
+                return json.dumps(
+                    {"error": True, "message": f"Invalid resource path: {resource_path}"},
+                    ensure_ascii=False,
+                )
+        except Exception as e:
+            return json.dumps(
+                {"error": True, "message": f"Path resolution error: {str(e)}"},
+                ensure_ascii=False,
+            )
+
+        # Check if it's a script that needs execution
+        if resource_path.startswith("scripts/") and ext.lower() in {".py", ".sh"}:
+            return await self._execute_script_from_path(full_path, args or {})
+
+        # Otherwise, read the file content
+        if not os.path.exists(full_path):
+            return json.dumps(
+                {"error": True, "message": f"Resource '{resource_path}' not found in skill '{skill_name}'"},
+                ensure_ascii=False,
+            )
+
+        if os.path.isdir(full_path):
+            return json.dumps(
+                {"error": True, "message": f"'{resource_path}' is a directory, not a file"},
+                ensure_ascii=False,
+            )
+
+        try:
+            with open(full_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            return json.dumps(
+                {
+                    "type": "file",
+                    "path": resource_path,
+                    "content": content,
+                },
+                ensure_ascii=False,
+            )
+        except UnicodeDecodeError:
+            return json.dumps(
+                {"error": True, "message": f"Cannot read '{resource_path}': binary file not supported"},
+                ensure_ascii=False,
+            )
+        except Exception as e:
+            return json.dumps(
+                {"error": True, "message": f"Error reading file: {str(e)}"},
+                ensure_ascii=False,
+            )
+
+    @staticmethod
+    def _adapt_args_for_script(code: str, args: Dict[str, Any]) -> Any:
+        """Adapt args to match the script's main function signature.
+
+        The LLM may pass args in various shapes:
+        - {"data": {"revenue": 100}} — wrapping in the parameter name
+        - {"revenue": 100} — flat dict matching the expected data format
+
+        This method uses AST to find the main function's parameters and adapts
+        the args accordingly so sys.argv[1] contains the right JSON.
+        """
+        import ast
+
+        if not args:
+            return args
+
+        try:
+            tree = ast.parse(code)
+        except SyntaxError:
+            return args
+
+        # Collect all top-level function definitions
+        func_defs: Dict[str, Union[ast.FunctionDef, ast.AsyncFunctionDef]] = {}
+        for node in ast.iter_child_nodes(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                func_defs[node.name] = node
+
+        if not func_defs:
+            return args
+
+        # Try to find the function called in the __main__ block
+        main_func_name: Optional[str] = None
+        for node in ast.iter_child_nodes(tree):
+            if isinstance(node, ast.If):
+                # Match: if __name__ == "__main__":
+                test = node.test
+                is_main_check = False
+                if isinstance(test, ast.Compare):
+                    left = test.left
+                    if (
+                        isinstance(left, ast.Name)
+                        and left.id == "__name__"
+                        and len(test.comparators) == 1
+                    ):
+                        comp = test.comparators[0]
+                        if isinstance(comp, ast.Constant) and comp.value == "__main__":
+                            is_main_check = True
+
+                if is_main_check:
+                    # Walk the __main__ block to find function calls
+                    for sub_node in ast.walk(node):
+                        if isinstance(sub_node, ast.Call):
+                            func = sub_node.func
+                            if isinstance(func, ast.Name) and func.id in func_defs:
+                                main_func_name = func.id
+                                break
+                    break
+
+        # Fall back to the first defined function if no __main__ found
+        if main_func_name is None:
+            main_func_name = next(iter(func_defs))
+
+        func_node = func_defs[main_func_name]
+        # Get parameter names (skip 'self' for methods)
+        param_names = [
+            arg.arg for arg in func_node.args.args if arg.arg != "self"
+        ]
+
+        if len(param_names) == 1:
+            param_name = param_names[0]
+            if param_name in args:
+                # LLM wrapped args in the parameter name,
+                # e.g. {"data": {"revenue": 100}} — unwrap it
+                return args[param_name]
+            else:
+                # LLM passed the flat dict directly,
+                # e.g. {"revenue": 100} — pass as-is, it IS the data
+                return args
+        elif len(param_names) > 1:
+            # Multiple params — check if LLM wrapped in any single param name
+            if len(args) == 1:
+                only_key = next(iter(args))
+                if only_key in param_names and isinstance(args[only_key], dict):
+                    # Unwrap: {"data": {...}} → {...}
+                    return args[only_key]
+            # Otherwise pass as-is — the __main__ block handles multi-param
+            return args
+
+        # No params — pass as-is
+        return args
+
+    async def _execute_script_from_path(
+        self,
+        script_path: str,
+        args: Dict[str, Any],
+    ) -> str:
+        import os
+
+        from dbgpt.util.code.server import get_code_server
+
+        if not os.path.exists(script_path):
+            return json.dumps(
+                {"chunks": [{"output_type": "text", "content": f"Script file not found: {script_path}"}]},
+                ensure_ascii=False,
+            )
+
+        try:
+            with open(script_path, "r", encoding="utf-8") as f:
+                code = f.read()
+        except Exception as e:
+            return json.dumps(
+                {"chunks": [{"output_type": "text", "content": f"Error reading script: {str(e)}"}]},
+                ensure_ascii=False,
+            )
+
+        _, ext = os.path.splitext(script_path)
+        language = "python" if ext == ".py" else "bash"
+
+        if language == "python":
+            adapted_args = self._adapt_args_for_script(code, args)
+            args_repr = repr(adapted_args)
+            wrapper_code = f'''import sys
+import json
+
+sys.argv = ["script", json.dumps({args_repr})]
+__name__ = "__main__"
+
+{code}
+'''
+            exec_code = wrapper_code
+        else:
+            from string import Template
+            template = Template(code)
+            exec_code = template.safe_substitute(**args)
+
+        try:
+            code_server = await get_code_server(self.system_app)
+            result = await code_server.exec(exec_code, language)
+
+            logs = result.logs.decode("utf-8") if isinstance(result.logs, bytes) else str(result.logs or "")
+            exit_code = result.exit_code
+
+            chunks = []
+            if logs:
+                chunks.append({"output_type": "text", "content": logs})
+            if exit_code != 0:
+                chunks.append({"output_type": "text", "content": f"Exit code: {exit_code}"})
+            if not chunks:
+                chunks.append({"output_type": "text", "content": "Script executed successfully (no output)"})
+
+            return json.dumps({"chunks": chunks}, ensure_ascii=False)
+        except Exception as e:
+            return json.dumps(
+                {"chunks": [{"output_type": "text", "content": f"Script execution failed: {str(e)}"}]},
+                ensure_ascii=False,
+            )
+
+    async def execute_skill_script_file(
+        self,
+        skill_name: str,
+        script_file_name: str,
+        args: Optional[Dict[str, Any]] = None,
+        output_dir: Optional[str] = None,
+    ) -> str:
+        import asyncio
+        import os
+
+        args = args or {}
+
+        skill_path = self._get_skill_path(skill_name)
+        if not skill_path:
+            return json.dumps(
+                {"chunks": [{"output_type": "text", "content": f"Skill '{skill_name}' not found"}]},
+                ensure_ascii=False,
+            )
+
+        script_file_name = script_file_name.lstrip("/\\")
+        if script_file_name.startswith("scripts/") or script_file_name.startswith("scripts\\"):
+            script_file_name = script_file_name[8:]
+
+        script_path = os.path.join(skill_path, "scripts", script_file_name)
+        if not os.path.exists(script_path):
+            return json.dumps(
+                {"chunks": [{"output_type": "text", "content": f"Script file '{script_file_name}' not found"}]},
+                ensure_ascii=False,
+            )
+
+        with open(script_path, "r", encoding="utf-8") as f:
+            code = f.read()
+
+        adapted_args = self._adapt_args_for_script(code, args)
+        args_repr = repr(adapted_args)
+        wrapper_code = f'''import sys
+import json
+
+sys.argv = ["script", json.dumps({args_repr})]
+__name__ = "__main__"
+
+{code}
+'''
+
+        try:
+            import sys
+            import tempfile
+            _IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"}
+
+            scripts_dir = os.path.dirname(script_path)
+            # Use output_dir for subprocess cwd + image scanning;
+            # fall back to the scripts directory.
+            work_dir = output_dir or scripts_dir
+            os.makedirs(work_dir, exist_ok=True)
+            # Snapshot existing images BEFORE execution
+            pre_existing_images: set = set()
+            for root, _dirs, files in os.walk(work_dir):
+                for fname in files:
+                    ext = os.path.splitext(fname)[1].lower()
+                    if ext in _IMAGE_EXTS:
+                        pre_existing_images.add(os.path.join(root, fname))
+            tmp_fd, tmp_path = tempfile.mkstemp(
+                suffix=".py", dir=scripts_dir, prefix="_skill_run_"
+            )
+            # Env vars for the subprocess: propagate OUTPUT_DIR
+            env = os.environ.copy()
+            env["OUTPUT_DIR"] = work_dir
+            try:
+                with os.fdopen(tmp_fd, "w", encoding="utf-8") as tmp:
+                    tmp.write(wrapper_code)
+                proc = await asyncio.create_subprocess_exec(
+                    sys.executable,
+                    tmp_path,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    cwd=work_dir,
+                    env=env,
+                )
+                stdout, stderr = await asyncio.wait_for(
+                    proc.communicate(), timeout=120
+                )
+                output_text = stdout.decode("utf-8", errors="replace")
+                error_text = stderr.decode("utf-8", errors="replace")
+                exit_code = proc.returncode or 0
+            finally:
+                # Clean up temp file
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+            chunks = []
+            if output_text.strip():
+                chunks.append({"output_type": "text", "content": output_text.strip()})
+            if exit_code != 0 and error_text.strip():
+                chunks.append({"output_type": "text", "content": f"[ERROR] {error_text.strip()}"})
+            if exit_code != 0:
+                chunks.append({"output_type": "text", "content": f"Exit code: {exit_code}"})
+            if not chunks:
+                chunks.append({"output_type": "text", "content": "Script executed successfully (no output)"})
+            # Scan work_dir for NEW image files generated by this run.
+            # Return their absolute paths so the caller can copy them
+            # to the static serving directory.
+            for root, _dirs, files in os.walk(work_dir):
+                for fname in files:
+                    ext = os.path.splitext(fname)[1].lower()
+                    full_path = os.path.join(root, fname)
+                    if ext in _IMAGE_EXTS and full_path not in pre_existing_images:
+                        chunks.append({
+                            "output_type": "image",
+                            "content": full_path,
+                        })
+            return json.dumps({"chunks": chunks}, ensure_ascii=False)
+        except asyncio.TimeoutError:
+            return json.dumps(
+                {"chunks": [{"output_type": "text", "content": "Script execution timed out (120s limit)"}]},
+                ensure_ascii=False,
+            )
+        except Exception as e:
+            return json.dumps(
+                {"chunks": [{"output_type": "text", "content": f"Script execution failed: {str(e)}"}]},
                 ensure_ascii=False,
             )
 

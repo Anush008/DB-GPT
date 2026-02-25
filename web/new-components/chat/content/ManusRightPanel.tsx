@@ -1,6 +1,7 @@
 import { CodePreview } from '@/components/chat/chat-content/code-preview';
 import markdownComponents, { markdownPlugins, preprocessLaTeX } from '@/components/chat/chat-content/config';
 import AdvancedChart, { createChartConfig } from '@/new-components/charts';
+import MarkDownContext from '@/new-components/common/MarkdownContext';
 import {
   BarChartOutlined,
   CheckCircleFilled,
@@ -431,6 +432,39 @@ const OutputRenderer: React.FC<{ output: ExecutionOutput; index: number }> = mem
 
 OutputRenderer.displayName = 'OutputRenderer';
 
+
+// Parse get_skill_resource detail text to extract skill name, resource path, and content
+const parseSkillResourceDetail = (
+  detail?: string,
+): { skillName: string; resourcePath: string; content: string } | null => {
+  if (!detail) return null;
+  try {
+    // Extract Action Input JSON
+    const inputMatch = detail.match(/Action Input:\s*({[\s\S]*?})(?:\n|$)/);
+    if (!inputMatch) return null;
+    const input = JSON.parse(inputMatch[1]);
+    const skillName = input.skill_name || '';
+    const resourcePath = input.resource_path || '';
+
+    // Extract the observation/output JSON that contains the file content
+    const afterInput = detail.slice(detail.indexOf(inputMatch[0]) + inputMatch[0].length);
+    let content = '';
+    const jsonMatch = afterInput.match(/{[\s\S]*}/);
+    if (jsonMatch) {
+      try {
+        const output = JSON.parse(jsonMatch[0]);
+        content = output.content || '';
+      } catch {
+        content = afterInput.trim();
+      }
+    }
+
+    if (!skillName && !resourcePath) return null;
+    return { skillName, resourcePath, content };
+  } catch {
+    return null;
+  }
+};
 const HtmlTabbedRenderer: React.FC<{ code?: ExecutionOutput; html: ExecutionOutput }> = memo(({ code, html }) => {
   const [activeTab, setActiveTab] = useState<'preview' | 'source'>('preview');
   const htmlContent = html.content;
@@ -528,7 +562,11 @@ const CodeExecutionRenderer: React.FC<{
           代码
         </span>
         <CodePreview
-          code={group.codes.map(c => String(c.content)).join('\n')}
+          code={group.codes
+            .map(c => String(c.content))
+            .join('')
+            .replace(/^\s*```[a-zA-Z]*\s*/m, '')
+            .replace(/```\s*$/m, '')}
           language='python'
           customStyle={{ background: '#0f172a', margin: 0, borderRadius: 0 }}
         />
@@ -864,19 +902,26 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
       <div className={classNames('flex-1 overflow-y-auto flex flex-col min-h-0', panelView === 'html-preview' ? 'p-0' : 'p-5 space-y-4')}>
         {panelView === 'html-preview' && previewArtifact ? (
           <div className='w-full h-full flex flex-col'>
-            <iframe
-              ref={htmlPreviewRef}
-              srcDoc={resolveHtmlImageUrls(
+            {(() => {
+              const srcDoc = resolveHtmlImageUrls(
                 typeof previewArtifact.content === 'string'
                   ? previewArtifact.content
                   : previewArtifact.content?.html ||
                       previewArtifact.content?.content ||
                       String(previewArtifact.content),
-              )}
+              );
+              console.log('[HTML Preview] artifact id:', previewArtifact.id, 'srcDoc length:', srcDoc?.length, 'first 300 chars:', srcDoc?.substring(0, 300));
+              return (
+            <iframe
+              key={previewArtifact.id || 'html-preview'}
+              ref={htmlPreviewRef}
+              srcDoc={srcDoc}
               sandbox='allow-scripts allow-same-origin allow-modals'
               className='w-full flex-1 bg-white'
               style={{ border: 'none', minHeight: 600 }}
             />
+              );
+            })()}
           </div>
         ) : panelView === 'files' ? (
           <div className='space-y-0'>
@@ -984,16 +1029,44 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
                 {/* Expanded detail */}
                 {!inputCollapsed && activeStep.detail && (
                   <div className='px-4 pb-3'>
-                    <div className='text-xs text-gray-500 dark:text-gray-400 font-mono whitespace-pre-wrap bg-gray-50 dark:bg-[#161719] rounded-lg px-3 py-2'>
-                      {activeStep.detail}
-                    </div>
+                    {activeStep.detail.includes('Action: get_skill_resource') && (() => {
+                      const parsed = parseSkillResourceDetail(activeStep.detail);
+                      if (parsed) {
+                        const resourceName = parsed.resourcePath.split('/').pop() || parsed.resourcePath;
+                        return (
+                          <div className='rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-[#161719]'>
+                            {/* Header: skill name + resource name */}
+                            <div className='flex items-center gap-2 px-3 py-2.5 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1a1b1e]'>
+                              <div className='flex items-center gap-1.5'>
+                                <span className='inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800'>
+                                  {parsed.skillName}
+                                </span>
+                              </div>
+                              <span className='text-gray-300 dark:text-gray-600'>·</span>
+                              <span className='text-sm font-medium text-gray-700 dark:text-gray-300 truncate'>{resourceName}</span>
+                            </div>
+                            {/* Markdown content */}
+                            {parsed.content && (
+                              <div className='px-4 py-3 text-sm text-gray-600 dark:text-gray-400 leading-relaxed overflow-auto max-h-[600px] prose prose-sm dark:prose-invert max-w-none'>
+                                <MarkDownContext>{parsed.content}</MarkDownContext>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })() || (
+                      <div className='text-xs text-gray-500 dark:text-gray-400 font-mono whitespace-pre-wrap bg-gray-50 dark:bg-[#161719] rounded-lg px-3 py-2'>
+                        {activeStep.detail}
+                      </div>
+                    )}
                   </div>
                 )}
               </>
             )}
 
-            {/* Divider + Outputs */}
-            {visibleOutputs.length > 0 && (
+            {/* Divider + Outputs (hide for get_skill_resource since content is already shown above) */}
+            {visibleOutputs.length > 0 && !activeStep?.detail?.includes('Action: get_skill_resource') && (
               <>
                 <div className='border-t border-gray-100 dark:border-gray-800 shrink-0' />
                 <div className='flex-1 min-h-0 p-4 flex flex-col space-y-3 overflow-y-auto'>

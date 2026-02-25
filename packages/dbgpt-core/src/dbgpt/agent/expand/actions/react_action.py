@@ -213,41 +213,153 @@ class ReActAction(ToolAction):
         key_positions: list[tuple[str, int]] = []
         for pname in param_names:
             pat = re.compile(
-                r'["\']?' + re.escape(pname) + r'["\']?\s*:\s*"',
+                r'["\']?' + re.escape(pname) + r'["\']?\s*:\s*',
             )
             m = pat.search(raw_str)
             if m:
-                key_positions.append((pname, m.end()))
+                val_start = m.end()
+                if val_start < len(raw_str) and raw_str[val_start] in ["'", '"']:
+                    val_start += 1
+                key_positions.append((pname, val_start))
 
         key_positions.sort(key=lambda x: x[1])
 
         result: Dict[str, Any] = {}
         for idx, (pname, val_start) in enumerate(key_positions):
             if idx + 1 < len(key_positions):
+                next_pname = key_positions[idx + 1][0]
                 next_start = key_positions[idx + 1][1]
                 # Walk backwards from next key to find the boundary:
-                # value ends at the last `"` before `, "next_key"`
-                segment = raw_str[val_start:next_start]
-                # Find last `",` or `" ,` pattern as value end
-                boundary = segment.rfind('",')
-                if boundary == -1:
-                    boundary = segment.rfind('"')
-                if boundary >= 0:
-                    result[pname] = _unescape(segment[:boundary])
+                pat_next = re.compile(r'\s*,\s*["\']?' + re.escape(next_pname) + r'["\']?\s*:')
+                m_next = pat_next.search(raw_str, val_start)
+                if m_next and m_next.start() < next_start:
+                    segment = raw_str[val_start:m_next.start()]
                 else:
-                    result[pname] = _unescape(segment)
+                    segment = raw_str[val_start:next_start]
+                    # Find last `",` or `" ,` pattern as value end
+                    boundary = segment.rfind(',')
+                    if boundary >= 0:
+                        segment = segment[:boundary]
+                        
+                # Strip trailing quotes
+                segment = segment.rstrip()
+                if segment.endswith('"') or segment.endswith("'"):
+                    segment = segment[:-1]
+                
+                result[pname] = _unescape(segment)
             else:
                 # Last param: take everything up to the last `"` before `}`
                 remaining = raw_str[val_start:]
                 # Strip trailing `"}` or `" }` etc.
-                end = remaining.rfind('"')
-                if end >= 0:
-                    result[pname] = _unescape(remaining[:end])
-                else:
-                    result[pname] = _unescape(remaining.rstrip().rstrip('}'))
+                remaining = remaining.rstrip()
+                while remaining.endswith('}') or remaining.endswith('"') or remaining.endswith("'"):
+                    remaining = remaining[:-1]
+                    remaining = remaining.rstrip()
+                
+                result[pname] = _unescape(remaining)
+                
+            # Try to parse the value as JSON if it looks like an object or array
+            if isinstance(result[pname], str):
+                s_val = result[pname].strip()
+                if (s_val.startswith("{") and s_val.endswith("}")) or (s_val.startswith("[") and s_val.endswith("]")):
+                    try:
+                        result[pname] = json.loads(s_val)
+                    except Exception:
+                        pass
 
         if result:
             return result
+        return {}
+
+    @staticmethod
+    def _extract_html_interpreter_args(raw_input: str) -> Dict[str, Any]:
+        """Robust extraction for html_interpreter {"html": ..., "title": ...}.
+
+        HTML content typically contains many double-quotes (class="...",
+        style="...") which break standard JSON parsing. This method uses
+        a reverse-search strategy:
+        1. Find the LAST occurrence of '"title"' followed by ':' (the actual
+           JSON key, not an HTML <title> tag).
+        2. Extract the title value from after that key.
+        3. Everything between the first '"html"' key and the title key is
+           the HTML content.
+        """
+        if not raw_input:
+            return {}
+
+        raw = raw_input.strip()
+
+        # Step 1: Find the last occurrence of a title key pattern
+        # Pattern: "title" : " (with optional quotes and whitespace)
+        title_key_pattern = re.compile(
+            r'["\']?title["\']?\s*:\s*["\']',
+        )
+        # Find ALL matches and use the last one (most likely the actual key)
+        title_matches = list(title_key_pattern.finditer(raw))
+        if not title_matches:
+            # No title key found — treat entire input as html
+            html_val_pattern = re.compile(
+                r'["\']?html["\']?\s*:\s*["\']',
+            )
+            m = html_val_pattern.search(raw)
+            if m:
+                html_start = m.end()
+                # Strip trailing "} patterns
+                html_content = raw[html_start:]
+                html_content = html_content.rstrip()
+                while html_content and html_content[-1] in '"}\' ':
+                    html_content = html_content[:-1]
+                    html_content = html_content.rstrip()
+                if html_content:
+                    return {"html": html_content, "title": "Report"}
+            return {}
+
+        # Use the last title match
+        last_title_match = title_matches[-1]
+        title_val_start = last_title_match.end()
+
+        # Step 2: Extract title value (short string, ends at quote + } )
+        title_content = raw[title_val_start:]
+        title_content = title_content.rstrip()
+        # Strip trailing }"' characters
+        while title_content and title_content[-1] in '"}\' ':
+            title_content = title_content[:-1]
+            title_content = title_content.rstrip()
+        title_value = title_content.strip() or "Report"
+
+        # Step 3: Extract HTML content
+        html_val_pattern = re.compile(
+            r'["\']?html["\']?\s*:\s*["\']',
+        )
+        html_m = html_val_pattern.search(raw)
+        if not html_m:
+            return {}
+
+        html_start = html_m.end()
+        # HTML ends just before the title key boundary
+        # Walk backwards from title key to find the separator: , "title"
+        title_key_start = last_title_match.start()
+        html_end = title_key_start
+
+        # Strip trailing separator: comma, whitespace, quotes
+        html_content = raw[html_start:html_end]
+        html_content = html_content.rstrip()
+        if html_content.endswith(','):
+            html_content = html_content[:-1].rstrip()
+        # Strip trailing quote if present
+        if html_content and html_content[-1] in '"\'':
+            html_content = html_content[:-1]
+
+        # Unescape common JSON escape sequences
+        html_content = (
+            html_content.replace('\\n', '\n')
+            .replace('\\t', '\t')
+            .replace('\\"', '"')
+            .replace('\\\\', '\\')
+        )
+
+        if html_content:
+            return {"html": html_content, "title": title_value}
         return {}
 
     async def _do_run(
@@ -261,6 +373,19 @@ class ReActAction(ToolAction):
         name = parsed_step.action
         action_input = parsed_step.action_input
         action_input_str = action_input
+
+
+        # Diagnostic logging for html_interpreter calls
+        if name == "html_interpreter":
+            input_preview = (
+                str(action_input)[:200] if action_input else "<empty>"
+            )
+            logger.info(
+                "html_interpreter called: action_input type=%s, len=%d, preview=%s",
+                type(action_input).__name__,
+                len(str(action_input)) if action_input else 0,
+                input_preview,
+            )
 
         if not name:
             terminal_content = str(action_input_str if action_input_str else ai_message)
@@ -281,6 +406,21 @@ class ReActAction(ToolAction):
         except (json.JSONDecodeError, ValueError):
             if parsed_step.action == "terminate":
                 tool_args = {"output": action_input}
+            elif name == "html_interpreter" and isinstance(action_input, str):
+                # Special handling for html_interpreter: the HTML content
+                # often contains unescaped quotes that break JSON parsing.
+                # Use a robust extraction: find the last "title" key and
+                # extract the html content between "html": and the title key.
+                tool_args = self._extract_html_interpreter_args(action_input)
+                logger.info(
+                    "html_interpreter fallback extraction: html=%d chars, title=%s",
+                    len(tool_args.get("html", "")) if tool_args else 0,
+                    tool_args.get("title") if tool_args else None,
+                )
+                if not tool_args:
+                    tool_args = self._fallback_parse_args(
+                        name, action_input, self.resource
+                    )
             else:
                 # JSON parsing failed — try to infer args from the tool definition.
                 # If the tool has exactly one required parameter, treat the raw
@@ -290,6 +430,16 @@ class ReActAction(ToolAction):
                 )
             if not tool_args:
                 logger.warning(f"Failed to parse the args: {action_input}")
+        # Log resolved args for html_interpreter before execution
+        if name == "html_interpreter":
+            html_len = len(tool_args.get("html", "")) if isinstance(tool_args, dict) else 0
+            fp = tool_args.get("file_path", "") if isinstance(tool_args, dict) else ""
+            logger.info(
+                "html_interpreter resolved: tool_args keys=%s, html_len=%d, file_path=%s",
+                list(tool_args.keys()) if isinstance(tool_args, dict) else type(tool_args).__name__,
+                html_len,
+                fp or "<none>",
+            )
         act_out = await run_tool(
             name,
             tool_args,

@@ -60,6 +60,11 @@ export const MODEL_ICON_INFO: Record<string, ModelIconInfo> = {
     icon: '/models/vicuna.jpeg',
     patterns: ['vicuna'],
   },
+  'glm-4': {
+    label: 'GLM-4.7',
+    icon: '/models/glm4.png',
+    patterns: ['glm-4'],
+  },
   chatglm: {
     label: 'ChatGLM',
     icon: '/models/chatglm.png',

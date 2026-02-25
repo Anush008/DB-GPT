@@ -157,5 +157,13 @@ register_proxy_model_adapter(
             link="https://api-docs.deepseek.com/news/news250120",
             function_calling=True,
         ),
+        ModelMetadata(
+            model="glm-4-7-251222",
+            context_length=128 * 1024,
+            max_output_length=4 * 1024,
+            description="GLM-4-7 by Zhipu AI (via Volcengine ARK)",
+            link="https://www.volcengine.com/docs/82379/1298454",
+            function_calling=True,
+        ),
     ],
 )
