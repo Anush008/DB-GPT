@@ -1191,23 +1191,41 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
                     })() || activeStep.detail.includes('Action: get_skill_resource') && (() => {
                       const parsed = parseSkillResourceDetail(activeStep.detail);
                       if (parsed) {
-                        const resourceName = parsed.resourcePath.split('/').pop() || parsed.resourcePath;
+                        // Extract frontmatter name/description from SKILL.md content
+                        let skillDisplayName = parsed.skillName;
+                        let skillDescription = '';
+                        if (parsed.content) {
+                          const fmMatch = parsed.content.match(/^---\n([\s\S]*?)\n---/);
+                          if (fmMatch) {
+                            const nameMatch = fmMatch[1].match(/^name:\s*(.+)$/m);
+                            const descMatch = fmMatch[1].match(/^description:\s*(.+)$/m);
+                            if (nameMatch) skillDisplayName = nameMatch[1].trim();
+                            if (descMatch) skillDescription = descMatch[1].trim();
+                          }
+                          // Fallback: use first heading + first paragraph if no frontmatter
+                          if (!skillDescription) {
+                            const headingMatch = parsed.content.match(/^#\s+(.+)$/m);
+                            const paraMatch = parsed.content.match(/^(?!#|---|\s*$)(.+)/m);
+                            if (!skillDisplayName && headingMatch) skillDisplayName = headingMatch[1].trim();
+                            if (paraMatch) skillDescription = paraMatch[1].trim();
+                          }
+                        }
                         return (
-                          <div className='rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-[#161719]'>
-                            <div className='flex items-center gap-2 px-3 py-2.5 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1a1b1e]'>
-                              <div className='flex items-center gap-1.5'>
-                                <span className='inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800'>
-                                  {parsed.skillName}
-                                </span>
+                          <div className='rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-[#1a1b1e]'>
+                            <div className='px-5 py-4'>
+                              <div className='flex items-center gap-2.5 mb-2'>
+                                <div className='flex-shrink-0 w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center'>
+                                  <PlayCircleOutlined className='text-base text-indigo-500' />
+                                </div>
+                                <div className='min-w-0'>
+                                  <div className='text-sm font-semibold text-gray-800 dark:text-gray-200 truncate'>{skillDisplayName}</div>
+                                  <div className='text-[11px] text-gray-400 dark:text-gray-500'>技能</div>
+                                </div>
                               </div>
-                              <span className='text-gray-300 dark:text-gray-600'>{"\u00b7"}</span>
-                              <span className='text-sm font-medium text-gray-700 dark:text-gray-300 truncate'>{resourceName}</span>
+                              {skillDescription && (
+                                <p className='text-sm text-gray-600 dark:text-gray-400 leading-relaxed mt-2'>{skillDescription}</p>
+                              )}
                             </div>
-                            {parsed.content && (
-                              <div className='px-4 py-3 text-sm text-gray-600 dark:text-gray-400 leading-relaxed overflow-auto max-h-[600px] prose prose-sm dark:prose-invert max-w-none'>
-                                <MarkDownContext>{parsed.content}</MarkDownContext>
-                              </div>
-                            )}
                           </div>
                         );
                       }
