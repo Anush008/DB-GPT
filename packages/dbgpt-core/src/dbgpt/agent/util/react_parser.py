@@ -11,6 +11,7 @@ class ReActStep:
     """
 
     thought: Optional[str] = None
+    phase: Optional[str] = None
     action: Optional[str] = None
     action_input: Optional[Any] = None
     observation: Optional[Any] = None
@@ -20,14 +21,15 @@ class ReActStep:
 class ReActOutputParser:
     """
     Parser for ReAct format model outputs with configurable prefixes.
-
     This parser extracts structured information from language model outputs
-    that follow the ReAct pattern: Thought -> Action -> Action Input -> Observation.
+    that follow the ReAct pattern: Thought -> Phase -> Action -> Action Input
+    -> Observation.
     """
 
     def __init__(
         self,
         thought_prefix: str = "Thought:",
+        phase_prefix: str = "Phase:",
         action_prefix: str = "Action:",
         action_input_prefix: str = "Action Input:",
         observation_prefix: str = "Observation:",
@@ -38,6 +40,7 @@ class ReActOutputParser:
 
         Args:
             thought_prefix: Prefix string that indicates the start of a thought.
+            phase_prefix: Prefix string that indicates the start of a phase.
             action_prefix: Prefix string that indicates the start of an action.
             action_input_prefix: Prefix string that indicates the start of action input.
             observation_prefix: Prefix string that indicates the start of an
@@ -45,6 +48,7 @@ class ReActOutputParser:
             terminate_action: String that indicates termination action.
         """
         self.thought_prefix = thought_prefix
+        self.phase_prefix = phase_prefix
         self.action_prefix = action_prefix
         self.action_input_prefix = action_input_prefix
         self.observation_prefix = observation_prefix
@@ -52,6 +56,7 @@ class ReActOutputParser:
 
         # Escape special regex characters in prefixes
         self.thought_prefix_escaped = re.escape(thought_prefix)
+        self.phase_prefix_escaped = re.escape(phase_prefix)
         self.action_prefix_escaped = re.escape(action_prefix)
         self.action_input_prefix_escaped = re.escape(action_input_prefix)
         self.observation_prefix_escaped = re.escape(observation_prefix)
@@ -120,12 +125,23 @@ class ReActOutputParser:
 
         # Extract thought
         thought_match = re.search(
-            rf"{self.thought_prefix_escaped}\s*(.*?)(?={self.action_prefix_escaped}|{self.observation_prefix_escaped}|$)",
+            rf"{self.thought_prefix_escaped}\s*(.*?)(?={self.phase_prefix_escaped}|{self.action_prefix_escaped}|{self.observation_prefix_escaped}|$)",
             step_text,
             re.DOTALL,
         )
         if thought_match:
             thought = thought_match.group(1).strip()
+
+
+        # Extract phase (optional, between thought and action)
+        phase = None
+        phase_match = re.search(
+            rf"{self.phase_prefix_escaped}\s*(.*?)(?={self.action_prefix_escaped}|{self.action_input_prefix_escaped}|{self.observation_prefix_escaped}|$)",
+            step_text,
+            re.DOTALL,
+        )
+        if phase_match:
+            phase = phase_match.group(1).strip() or None
 
         # Extract action
         action_match = re.search(
@@ -185,6 +201,7 @@ class ReActOutputParser:
         if thought or action:
             return ReActStep(
                 thought=thought,
+                phase=phase,
                 action=action,
                 action_input=action_input,
                 observation=observation,

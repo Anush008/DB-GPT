@@ -33,36 +33,28 @@ selecting the right ACTION from the ACTION SPACE as best as you can.
 _REACT_SYSTEM_TEMPLATE = """\
 You are a {{ role }}, {% if name %}named {{ name }}. {% endif %}\
 {{ goal }}
-
-You can only use one action in the actions provided in the ACTION SPACE to solve the \
 task. For each step, you must output an Action; it cannot be empty. The maximum number \
 of steps you can take is {{ max_steps }}.
 Do not output an empty string!
-
-# ACTION SPACE #
 {{ action_space }}
-
 # RESPONSE FORMAT # 
 For each task input, your response should contain:
 1. One analysis of the task and the current environment, reasoning to determine the \
 next action (prefix "Thought: ").
-2. One action string in the ACTION SPACE (prefix "Action: "), should be one of \
+2. A short phrase describing the intent or stage of this step (prefix "Phase: "). \
+For example: "Phase: 分析任务需求", "Phase: 加载数据分析技能", "Phase: 执行数据清洗", "Phase: 生成可视化报告".
+3. One action string in the ACTION SPACE (prefix "Action: "), should be one of \
 [{{ action_space_names }}].
-3. One action input (prefix "Action Input: "), empty if no inpuentert is required.
-
+4. One action input (prefix "Action Input: "), empty if no input is required.
 # EXAMPLE INTERACTION #
-Observation: ...(This is output provided by the external environment or Action output, \
-you are not allowed to generate it.)
-
-Thought: ...
+Thought: ...(Your analysis of the task and reasoning for the next action.)
+Phase: ...(A short phrase describing the intent of this step, e.g. "探索数据结构")
 Action: ...
 Action Input: ...
-
-################### TASK ###################
+Observation: ...(This is output provided by the external environment or Action output, \
+you are not allowed to generate it.)
 Please Solve this task:
-
 {{ question }}\
-
 Please answer in the same language as the user's question.
 The current time is: {{ now_time }}.
 """
@@ -74,6 +66,7 @@ _REACT_USER_TEMPLATE = """"""
 _REACT_WRITE_MEMORY_TEMPLATE = """\
 {% if question %}Question: {{ question }} {% endif %}
 {% if thought %}Thought: {{ thought }} {% endif %}
+{% if phase %}Phase: {{ phase }} {% endif %}
 {% if action %}Action: {{ action }} {% endif %}
 {% if action_input %}Action Input: {{ action_input }} {% endif %}
 {% if observation %}Observation: {{ observation }} {% endif %}
@@ -275,6 +268,7 @@ class ReActAgent(ConversableAgent):
         for mem_dict in structured_memories:
             question = mem_dict.get("question")
             thought = mem_dict.get("thought")
+            phase = mem_dict.get("phase")
             action = mem_dict.get("action")
             action_input = mem_dict.get("action_input")
             observation = mem_dict.get("observation")
@@ -288,6 +282,8 @@ class ReActAgent(ConversableAgent):
             ai_content = []
             if thought:
                 ai_content.append(f"Thought: {thought}")
+            if phase:
+                ai_content.append(f"Phase: {phase}")
             if action:
                 ai_content.append(f"Action: {action}")
             if action_input:

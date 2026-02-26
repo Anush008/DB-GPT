@@ -350,59 +350,32 @@ const convertToManusFormat = (
         title: step.title || `Step ${step.step}`,
         subtitle: cleanDetail?.split('\n')[0]?.slice(0, 80),
         description: cleanDetail || undefined,
+        phase: (step as any).phase,
         status: getStepStatus(step.status),
       };
     });
 
   // Create section(s)
   const sections: ThinkingSection[] = [];
-
-  // Group steps by phase (think, skill, etc.)
-  const thinkSteps = steps.filter(
-    s => s.title?.toLowerCase().includes('think') || s.title?.toLowerCase().includes('plan'),
-  );
-  const skillSteps = steps.filter(s => s.title?.toLowerCase().includes('skill'));
-  const otherSteps = steps.filter(
-    s =>
-      !s.title?.toLowerCase().includes('think') &&
-      !s.title?.toLowerCase().includes('plan') &&
-      !s.title?.toLowerCase().includes('skill'),
-  );
-
-  if (thinkSteps.length > 0) {
-    sections.push({
-      id: 'section-think',
-      title: '分析与规划',
-      isCompleted: thinkSteps.every(s => s.status === 'completed'),
-      steps: thinkSteps,
-    });
+  // Group steps by phase (free-text from model), preserving order of first appearance
+  const phaseOrder: string[] = [];
+  const phaseGroups: Record<string, typeof steps> = {};
+  for (const s of steps) {
+    const key = s.phase || '__default__';
+    if (!phaseGroups[key]) {
+      phaseGroups[key] = [];
+      phaseOrder.push(key);
+    }
+    phaseGroups[key].push(s);
   }
 
-  if (skillSteps.length > 0) {
+  for (const key of phaseOrder) {
+    const group = phaseGroups[key];
     sections.push({
-      id: 'section-skill',
-      title: '技能加载',
-      isCompleted: skillSteps.every(s => s.status === 'completed'),
-      steps: skillSteps,
-    });
-  }
-
-  if (otherSteps.length > 0) {
-    sections.push({
-      id: 'section-execution',
-      title: '数据处理与执行',
-      isCompleted: otherSteps.every(s => s.status === 'completed'),
-      steps: otherSteps,
-    });
-  }
-
-  // If no categorization happened, create a default section
-  if (sections.length === 0 && steps.length > 0) {
-    sections.push({
-      id: 'section-default',
-      title: '执行步骤',
-      isCompleted: steps.every(s => s.status === 'completed'),
-      steps: steps,
+      id: `section-${key}`,
+      title: key === '__default__' ? '执行步骤' : key,
+      isCompleted: group.every(s => s.status === 'completed'),
+      steps: group,
     });
   }
 
@@ -1418,10 +1391,23 @@ const Playground: NextPage = () => {
             };
             const existingThoughts = current.stepThoughts || {};
             const nextThoughts = existingThoughts;
-            const nextSteps = [
-              ...current.steps.map(item => (item.status === 'running' ? { ...item, status: 'done' } : item)),
-              { id, step: payload.step, title: payload.title, detail: payload.detail, status: 'running' as const },
-            ];
+            // Check if step already exists - if so, update it (especially phase) instead of creating duplicate
+            const existingStepIndex = current.steps.findIndex(s => s.id === id);
+            let nextSteps;
+            if (existingStepIndex >= 0) {
+              // Update existing step with new title/phase
+              nextSteps = current.steps.map((step, idx) =>
+                idx === existingStepIndex
+                  ? { ...step, title: payload.title, detail: payload.detail, phase: payload.phase, status: 'running' as const }
+                  : step.status === 'running' ? { ...step, status: 'done' } : step
+              );
+            } else {
+              // New step - mark running steps as done and add new step
+              nextSteps = [
+                ...current.steps.map(item => (item.status === 'running' ? { ...item, status: 'done' } : item)),
+                { id, step: payload.step, title: payload.title, detail: payload.detail, phase: payload.phase, status: 'running' as const },
+              ];
+            }
             return {
               ...prev,
               [responseId]: {

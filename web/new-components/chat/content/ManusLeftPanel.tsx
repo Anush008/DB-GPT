@@ -43,6 +43,7 @@ export interface ExecutionStep {
   title: string;
   subtitle?: string;
   description?: string;
+  phase?: string;
   status: StepStatus;
   output?: any;
 }

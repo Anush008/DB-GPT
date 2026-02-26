@@ -149,6 +149,8 @@ class ReActAction(ToolAction):
             act_out.action = step.action
         if step.thought:
             act_out.thoughts = step.thought
+        if step.phase:
+            act_out.phase = step.phase
         if (
             not act_out.action_input
             and step.action_input
