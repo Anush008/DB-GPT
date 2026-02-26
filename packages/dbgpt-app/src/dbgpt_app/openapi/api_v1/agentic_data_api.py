@@ -466,19 +466,45 @@ async def _react_agent_stream(
         )
         database_name = dialogue.ext_info.get("database_name")
 
-    def build_step(title: str, detail: str):
+    def infer_phase(action: str) -> str:
+        """根据 action 名称推断所属阶段，返回自由文本描述"""
+        if not action:
+            return "执行操作"
+        action_lower = action.lower()
+        if any(kw in action_lower for kw in ["think", "plan", "reason", "analyze"]):
+            return "分析与规划"
+        elif any(kw in action_lower for kw in ["skill", "load_skill"]):
+            return "加载技能"
+        elif any(
+            kw in action_lower
+            for kw in [
+                "sql",
+                "query",
+                "database",
+                "execute",
+                "read",
+                "write",
+                "calculate",
+            ]
+        ):
+            return "执行操作"
+        else:
+            return "执行操作"
+
+    def build_step(title: str, detail: str, phase: str = None):
         nonlocal step
         step += 1
         step_id = f"step-{step}"
-        return step_id, _sse_event(
-            {
-                "type": "step.start",
-                "step": step,
-                "id": step_id,
-                "title": title,
-                "detail": detail,
-            }
-        )
+        event_data = {
+            "type": "step.start",
+            "step": step,
+            "id": step_id,
+            "title": title,
+            "detail": detail,
+        }
+        if phase:
+            event_data["phase"] = phase
+        return step_id, _sse_event(event_data)
 
     def step_output(detail: str):
         return _sse_event({"type": "step.output", "step": step, "detail": detail})
@@ -1917,7 +1943,7 @@ print(json.dumps(summary, ensure_ascii=False))
 
 ## 自主决策原则
 1. 严格按照已加载技能的指令执行
-2. 每个步骤输出 Thought → Action → Action Input
+2. 每个步骤输出 Thought → Phase → Action → Action Input
 3. 等待系统返回 Observation 后，再决定下一步
 4. 如果任务需要生成分析报告，流程为：`execute_skill_script_file` 执行 `extract_financials.py` 提取数据 → `execute_skill_script_file` 执行 `calculate_ratios.py` 计算比率（系统自动记录结果） → `execute_skill_script_file` 执行 `generate_charts.py` 生成图表（系统自动合并图片） → 调用 `html_interpreter(template_path=..., data={{...仅包含你写的分析文本}})` 渲染报告（系统自动合并数据和图片） → `terminate` 返回摘要
 5. 如果任务不需要生成报告，直接调用 terminate 返回最终结果，Action Input 格式必须为 {{"result": "最终回答"}}
@@ -1953,13 +1979,14 @@ print(json.dumps(summary, ensure_ascii=False))
 {file_context}
 {knowledge_context}
 {database_context}
+## Phase（每步必须输出）
+Phase 是一个简短文字描述，表达当前步骤的意图或阶段。例如："加载销售分析技能"、"执行数据提取脚本"、"渲染分析报告"。
 ## ReAct 输出格式
 每轮交互必须输出：
 Thought: 分析当前任务状态，思考下一步需要做什么
+Phase: 用简短文字描述当前步骤的意图（例如："加载销售分析技能"、"执行数据提取脚本"、"渲染分析报告"）
 Action: 选择的工具名称（必须是上面列出的工具之一）
 Action Input: 工具参数的 JSON 格式
-
-系统会返回 Observation，然后你继续思考下一步。
 """.strip()
 
         tool_pack = ToolPack(
@@ -1981,7 +2008,7 @@ Action Input: 工具参数的 JSON 格式
 ## 自主决策原则
 1. 仔细分析用户的任务需求
 2. 根据需求自主选择需要的工具（不要按固定顺序，按需选择）
-3. 每个步骤输出 Thought → Action → Action Input
+3. 每个步骤输出 Thought → Phase → Action → Action Input
 4. 等待系统返回 Observation 后，再决定下一步
 5. 任务完成后调用 terminate 工具返回最终结果，Action Input 格式必须为 {{"result": "最终回答"}}
 6. **【强制规则】当用户要求生成网页、HTML报告、交互式报告时，最终展示步骤必须调用 `html_interpreter` 渲染，禁止仅用 `code_interpreter` 输出 HTML 然后直接 terminate。正确流程：code_interpreter 写入 .html 文件 → html_interpreter(file_path=...) 渲染 → terminate**
@@ -2007,10 +2034,12 @@ Action Input: 工具参数的 JSON 格式
 ### 4. 典型执行模式
 ```
 Thought: 需要计算财务比率，先查看指标定义
+Phase: 查阅财务指标定义
 Action: get_skill_resource
 Action Input: {{"skill_name": "financial-report-analyzer", "resource_path": "references/financial_metrics.md"}}
 
 Thought: 现在执行脚本计算比率
+Phase: 执行比率计算脚本
 Action: execute_skill_script_file
 Action Input: {{"skill_name": "financial-report-analyzer", "script_file_name": "calculate_ratios.py", "args": {{...}}}}
 ```
@@ -2073,13 +2102,14 @@ Action Input: {{"skill_name": "financial-report-analyzer", "script_file_name": "
 {database_context}
 {skill_prompt_context}
 {execution_instruction}
+## Phase（每步必须输出）
+Phase 是一个简短文字描述，表达当前步骤的意图或阶段。例如："加载销售分析技能"、"执行数据提取脚本"、"渲染分析报告"。
 ## ReAct 输出格式
 每轮交互必须输出：
 Thought: 分析当前任务状态，思考下一步需要做什么
+Phase: 用简短文字描述当前步骤的意图（例如："加载销售分析技能"、"执行数据提取脚本"、"渲染分析报告"）
 Action: 选择的工具名称（必须是上面列出的工具之一）
 Action Input: 工具参数的 JSON 格式
-
-系统会返回 Observation，然后你继续思考下一步。
 """.strip()
 
         tool_pack = ToolPack(
@@ -2160,11 +2190,13 @@ Action Input: 工具参数的 JSON 格式
         skill_step_id, skill_step_event = build_step(
             f"Load Skill: {pre_matched_skill.metadata.name}",
             "Pre-loaded skill from user selection",
+            phase="加载技能",
         )
         current_history_step = {
             "id": skill_step_id,
             "title": f"Load Skill: {pre_matched_skill.metadata.name}",
             "detail": "Pre-loaded skill from user selection",
+            "phase": "加载技能",
             "thought": None,
             "action": None,
             "action_input": None,
@@ -2252,7 +2284,8 @@ Action Input: 工具参数的 JSON 格式
                     pending_thoughts[round_num].append(clean_chunk)
                     if round_num not in round_step_map:
                         pending_step_id, pending_step_event = build_step(
-                            "思考中", "Thought/Action/Observation"
+                            "思考中",
+                            "Thought/Action/Observation",
                         )
                         round_step_map[round_num] = pending_step_id
                         yield pending_step_event
@@ -2311,11 +2344,25 @@ Action Input: 工具参数的 JSON 格式
 
             # Use the actual action name as the step title (Manus-style UI)
             action_title = action or f"ReAct Round {round_num}"
+            # Infer phase from action name
+            inferred_phase = action_output.get("phase") or infer_phase(action)
             if round_num in round_step_map:
+                # Step already exists (from thinking) - update title/phase with same id
                 react_step_id = round_step_map[round_num]
+                updated_event = _sse_event({
+                    "type": "step.start",
+                    "step": step,
+                    "id": react_step_id,
+                    "title": action_title,
+                    "detail": "Thought/Action/Observation",
+                    "phase": inferred_phase,
+                })
+                yield updated_event
             else:
                 react_step_id, react_step_event = build_step(
-                    action_title, "Thought/Action/Observation"
+                    action_title,
+                    "Thought/Action/Observation",
+                    phase=inferred_phase,
                 )
                 round_step_map[round_num] = react_step_id
                 yield react_step_event
@@ -2332,6 +2379,7 @@ Action Input: 工具参数的 JSON 格式
                 "id": react_step_id,
                 "title": action_title,
                 "detail": "Thought/Action/Observation",
+                "phase": inferred_phase,
                 "thought": thought_text,
                 "action": action,
                 "action_input": action_input_str,

@@ -73,16 +73,19 @@ of steps you can take is {{ max_steps }}.
 # RESPONSE FORMAT # 
 For each task input, your response should contain:
 1. Thought: Your analysis of the task, planning considerations, and reasoning for the next action
-2. Action: The selected action from the ACTION SPACE
-3. Action Input: Parameters required for the action (can be empty if no input needed)
+2. Phase: A short phrase describing the intent or stage of this step (e.g. "探索数据源结构", "加载数据并初步分析", "执行数据清洗脚本", "生成分析报告")
+3. Action: The selected action from the ACTION SPACE
+4. Action Input: Parameters required for the action (can be empty if no input needed)
 
 # PLANNING EXAMPLE #
 Thought: I need to analyze sales data to identify trends and provide insights. First, I should examine the available data sources to understand the data structure and then create a comprehensive analysis plan.
+Phase: 分析销售数据结构与来源
 Action: examine_data_sources
 Action Input: {}
 
 # EXECUTION EXAMPLE #
 Thought: Now that I understand the data structure, I'll load the sales data and perform initial exploratory analysis to identify patterns and trends.
+Phase: 加载数据并初步分析
 Action: load_data
 Action Input: {"source": "sales_data", "analysis_type": "exploratory"}
 
@@ -98,6 +101,7 @@ The current time is: {{ now_time }}.
 _DATA_AGENT_WRITE_MEMORY_TEMPLATE = """\
 {% if question %}Question: {{ question }} {% endif %}
 {% if thought %}Thought: {{ thought }} {% endif %}
+{% if phase %}Phase: {{ phase }} {% endif %}
 {% if action %}Action: {{ action }} {% endif %}
 {% if action_input %}Action Input: {{ action_input }} {% endif %}
 {% if observation %}Observation: {{ observation }} {% endif %}
