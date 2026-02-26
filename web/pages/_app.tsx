@@ -85,12 +85,12 @@ function LayoutWrapper({ children }: { children: React.ReactNode }) {
     handleAuth();
   }, []);
 
-  if (!isLogin) {
+  if (!isLogin && !router.pathname.startsWith('/share')) {
     return null;
   }
 
   const renderContent = () => {
-    if (router.pathname.includes('mobile')) {
+    if (router.pathname.includes('mobile') || router.pathname.startsWith('/share')) {
       return <>{children}</>;
     }
     return (

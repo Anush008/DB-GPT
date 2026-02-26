@@ -31,6 +31,7 @@ import {
   FileOutlined,
   FilePptOutlined,
   FileTextOutlined,
+  LinkOutlined,
   PieChartOutlined,
   PlusOutlined,
   ReadOutlined,
@@ -1844,6 +1845,25 @@ const Playground: NextPage = () => {
     }
   };
 
+  // Share current conversation — create share link and copy to clipboard
+  const handleShare = async () => {
+    if (!conversationId) {
+      message.warning('请先开始一段对话再分享');
+      return;
+    }
+    try {
+      const res: any = await axios.post('/api/v1/chat/share', { conv_uid: conversationId });
+      const shareUrl = res?.data?.share_url;
+      if (!shareUrl) throw new Error('No share URL returned');
+      const fullUrl = `${window.location.origin}${shareUrl}`;
+      await navigator.clipboard.writeText(fullUrl);
+      message.success('分享链接已复制到剪贴板！');
+    } catch (e) {
+      console.error('Failed to create share link', e);
+      message.error('创建分享链接失败，请稍后重试');
+    }
+  };
+
   const _QuickAction = ({ icon, text, onClick }: { icon: any; text: string; onClick?: () => void }) => (
     <div
       onClick={onClick}
@@ -2270,6 +2290,7 @@ const Playground: NextPage = () => {
                       isRunning={isRunning}
                       onCollapse={() => setRightPanelCollapsed(true)}
                       onRerun={() => {}}
+                      onShare={!loading && !!conversationId ? handleShare : undefined}
                       terminalTitle='DB-GPT 的电脑'
                       artifacts={artifacts.filter(a => a.messageId === activeViewMsg?.id)}
                       onArtifactClick={artifact => {

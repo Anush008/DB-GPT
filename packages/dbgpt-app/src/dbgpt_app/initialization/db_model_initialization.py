@@ -6,6 +6,7 @@ from dbgpt.storage.chat_history.chat_history_db import (
     ChatHistoryMessageEntity,
 )
 from dbgpt_app.openapi.api_v1.feedback.feed_back_db import ChatFeedBackEntity
+from dbgpt_app.share.models import ShareLinkEntity
 from dbgpt_serve.agent.app.recommend_question.recommend_question import (
     RecommendQuestionEntity,
 )
@@ -38,4 +39,5 @@ _MODELS = [
     RecommendQuestionEntity,
     FlowVariableEntity,
     BenchmarkSummaryEntity,
+    ShareLinkEntity,
 ]

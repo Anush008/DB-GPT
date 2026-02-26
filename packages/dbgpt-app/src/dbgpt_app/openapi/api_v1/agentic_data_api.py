@@ -13,6 +13,7 @@ from fastapi import APIRouter, Body, Depends, File, Query, UploadFile
 from fastapi.responses import StreamingResponse
 
 from dbgpt._private.config import Config
+from dbgpt._private.pydantic import BaseModel as _BaseModel
 from dbgpt.agent.resource.tool.base import tool
 from dbgpt.agent.skill.manage import get_skill_manager
 from dbgpt.component import ComponentType
@@ -26,6 +27,7 @@ from dbgpt_app.openapi.api_view_model import (
 from dbgpt_serve.utils.auth import UserRequest, get_user_from_headers
 
 from dbgpt_serve.datasource.manages import ConnectorManager
+
 router = APIRouter()
 CFG = Config()
 logger = logging.getLogger(__name__)
@@ -621,7 +623,7 @@ async def _react_agent_stream(
             database_context = f"""
 ## 数据库信息
 - 数据库名: {database_name}
-- 可用表: {', '.join(table_names)}
+- 可用表: {", ".join(table_names)}
 - 表结构:
 {table_info}
 - 使用 'sql_query' 工具执行 SQL 查询
@@ -632,9 +634,7 @@ async def _react_agent_stream(
                 f"(tables: {', '.join(table_names)})"
             )
         except Exception as e:
-            logger.warning(
-                f"Failed to load database connector: {e}", exc_info=e
-            )
+            logger.warning(f"Failed to load database connector: {e}", exc_info=e)
             database_context = f"""
 ## 数据库
 - 警告: 加载数据库 '{database_name}' 失败。错误: {str(e)}
@@ -1050,7 +1050,7 @@ print(json.dumps(summary, ensure_ascii=False))
     @tool(
         description=(
             "对用户选择的数据库执行 SQL 查询（仅支持 SELECT）。"
-            "参数: {\"sql\": \"SELECT 语句\"}"
+            '参数: {"sql": "SELECT 语句"}'
         )
     )
     def sql_query(sql: str) -> str:
@@ -1071,8 +1071,15 @@ print(json.dumps(summary, ensure_ascii=False))
         sql_stripped = sql.strip().rstrip(";")
         sql_upper = sql_stripped.upper().lstrip()
         forbidden = [
-            "INSERT", "UPDATE", "DELETE", "DROP",
-            "ALTER", "TRUNCATE", "CREATE", "GRANT", "REVOKE",
+            "INSERT",
+            "UPDATE",
+            "DELETE",
+            "DROP",
+            "ALTER",
+            "TRUNCATE",
+            "CREATE",
+            "GRANT",
+            "REVOKE",
         ]
         for kw in forbidden:
             if sql_upper.startswith(kw):
@@ -1102,9 +1109,7 @@ print(json.dumps(summary, ensure_ascii=False))
 
             # result[0] = column names, result[1:] = data rows
             columns = result[0]
-            col_names = [
-                str(c[0]) if isinstance(c, tuple) else str(c) for c in columns
-            ]
+            col_names = [str(c[0]) if isinstance(c, tuple) else str(c) for c in columns]
             rows = result[1:]
 
             # Build markdown table
@@ -1112,21 +1117,13 @@ print(json.dumps(summary, ensure_ascii=False))
             separator = "| " + " | ".join(["---"] * len(col_names)) + " |"
             md_rows = []
             for row in rows[:50]:
-                md_rows.append(
-                    "| "
-                    + " | ".join(str(v) for v in row)
-                    + " |"
-                )
+                md_rows.append("| " + " | ".join(str(v) for v in row) + " |")
             table = "\n".join([header, separator] + md_rows)
             if len(rows) > 50:
                 table += f"\n\n（仅显示前 50 行，共 {len(rows)} 行）"
 
             return json.dumps(
-                {
-                    "chunks": [
-                        {"output_type": "markdown", "content": table}
-                    ]
-                },
+                {"chunks": [{"output_type": "markdown", "content": table}]},
                 ensure_ascii=False,
             )
         except Exception as e:
@@ -2479,6 +2476,119 @@ Action Input: 工具参数的 JSON 格式
 
     yield _sse_event({"type": "final", "content": final_content})
     yield _sse_event({"type": "done"})
+
+
+# ---------------------------------------------------------------------------
+# Share link APIs
+# ---------------------------------------------------------------------------
+
+
+class ShareCreateRequest(_BaseModel):
+    """Request body for creating a share link."""
+
+    conv_uid: str
+
+
+class ShareCreateResponse(_BaseModel):
+    """Response body for share link creation."""
+
+    token: str
+    conv_uid: str
+    share_url: str
+
+
+class ShareConvResponse(_BaseModel):
+    """Public payload returned when viewing a shared conversation."""
+
+    conv_uid: str
+    token: str
+    messages: list  # list[{role, context, order}]
+
+
+def _get_share_dao():
+    """Lazily instantiate the ShareLinkDao (avoids import-time side-effects)."""
+    from dbgpt_app.share.models import ShareLinkDao
+
+    return ShareLinkDao()
+
+
+def _get_conversation_service():
+    """Return the ConversationServe Service component."""
+    from dbgpt_serve.conversation.service.service import Service
+    from dbgpt_serve.conversation.config import SERVE_SERVICE_COMPONENT_NAME
+
+    return CFG.SYSTEM_APP.get_component(SERVE_SERVICE_COMPONENT_NAME, Service)
+
+
+@router.post("/v1/chat/share", response_model=Result)
+async def create_share_link(
+    body: ShareCreateRequest = Body(),
+    user_token: UserRequest = Depends(get_user_from_headers),
+):
+    """Create (or return existing) share link for a conversation.
+
+    The returned ``share_url`` is a relative path that the client should
+    prepend with the current host to form an absolute URL.
+    """
+    dao = _get_share_dao()
+    created_by = user_token.user_id if user_token else None
+    entity = dao.create_share(conv_uid=body.conv_uid, created_by=created_by)
+    if entity is None:
+        return Result.failed(msg="Failed to create share link")
+    return Result.succ(
+        ShareCreateResponse(
+            token=entity.token,
+            conv_uid=entity.conv_uid,
+            share_url=f"/share/{entity.token}",
+        )
+    )
+
+
+@router.get("/v1/chat/share/{token}", response_model=Result)
+async def get_share_conversation(token: str):
+    """Public endpoint — no authentication required.
+
+    Returns the full conversation history for the given share token so that the
+    replay page can reconstruct and animate the session.
+    """
+    dao = _get_share_dao()
+    link = dao.get_by_token(token)
+    if link is None:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail="Share link not found")
+
+    service = _get_conversation_service()
+    from dbgpt_serve.conversation.api.schemas import ServeRequest
+
+    history = service.get_history_messages(ServeRequest(conv_uid=link.conv_uid))
+
+    messages = [
+        {"role": m.role, "context": m.context, "order": m.order}
+        for m in (history or [])
+    ]
+    return Result.succ(
+        ShareConvResponse(
+            conv_uid=link.conv_uid,
+            token=token,
+            messages=messages,
+        )
+    )
+
+
+@router.delete("/v1/chat/share/{token}", response_model=Result)
+async def delete_share_link(
+    token: str,
+    user_token: UserRequest = Depends(get_user_from_headers),
+):
+    """Revoke a share link.  Only the owner (or any authenticated user) may delete."""
+    dao = _get_share_dao()
+    deleted = dao.delete_by_token(token)
+    if not deleted:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail="Share link not found")
+    return Result.succ({"deleted": True, "token": token})
 
 
 @router.post("/v1/chat/react-agent")

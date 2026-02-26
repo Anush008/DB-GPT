@@ -80,6 +80,7 @@ export interface ManusLeftPanelProps {
   onArtifactClick?: (artifact: ArtifactItem) => void;
   onArtifactDownload?: (artifact: ArtifactItem) => void;
   onViewAllFiles?: () => void;
+  onShare?: () => void;
   isCollapsed?: boolean;
   onExpand?: () => void;
   attachedFile?: {
@@ -364,7 +365,7 @@ const StepCard: React.FC<{
   onClick: () => void;
 }> = memo(({ step, isActive, onClick }) => {
   const [isVisible, setIsVisible] = useState(false);
-  const detailLine = step.detail ? step.detail.split('\n')[0] : '';
+  const detailLine = step.description ? step.description.split('\n')[0] : '';
 
   React.useEffect(() => {
     const timer = setTimeout(() => setIsVisible(true), 50);
@@ -680,6 +681,7 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
   onArtifactClick,
   onArtifactDownload,
   onViewAllFiles,
+  onShare,
   isCollapsed,
   onExpand,
   attachedFile,
@@ -839,7 +841,7 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
         )}
 
         {artifacts && artifacts.length > 0 && (
-          <div className='mt-5 px-1'>
+          <div className='mt-5 px-1 pb-8'>
             <div className='flex flex-wrap gap-3'>
               {artifacts
                 .filter(a => a.type === 'file' || a.type === 'html')
@@ -866,7 +868,7 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
               )}
             </div>
 
-            <div className='flex items-center gap-1.5 mt-4'>
+            <div className='flex items-center gap-1.5 mt-5'>
               <CheckOutlined className='text-xs text-emerald-500' />
               <span className='text-sm text-emerald-600 dark:text-emerald-400 font-medium'>任务已完成</span>
             </div>
@@ -877,8 +879,10 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
       {modelName && (
         <div className='px-4 py-2 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50'>
           <div className='flex items-center justify-between text-[10px] text-gray-400'>
-            <span>Model: {modelName}</span>
-            {isWorking && <span className='animate-pulse'>Processing...</span>}
+            <span>{`Model: ${modelName}`}</span>
+            <div className='flex items-center gap-2'>
+              {isWorking && <span className='animate-pulse'>Processing...</span>}
+            </div>
           </div>
         </div>
       )}

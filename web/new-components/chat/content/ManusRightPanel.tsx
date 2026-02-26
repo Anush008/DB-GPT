@@ -23,6 +23,7 @@ import {
   FileTextOutlined,
   FolderOpenOutlined,
   LeftOutlined,
+  LinkOutlined,
   LoadingOutlined,
   PlayCircleOutlined,
   SearchOutlined,
@@ -74,6 +75,7 @@ export interface ManusRightPanelProps {
   outputs: ExecutionOutput[];
   isRunning?: boolean;
   onRerun?: () => void;
+  onShare?: () => void;
   terminalTitle?: string;
   onCollapse?: () => void;
   isCollapsed?: boolean;
@@ -888,6 +890,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
   outputs,
   isRunning,
   onRerun,
+  onShare,
   terminalTitle = 'DB-GPT 的电脑',
   onCollapse,
   artifacts,
@@ -1061,6 +1064,20 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
                 className='text-gray-500 hover:text-blue-500'
               >
                 重新执行
+              </Button>
+            </Tooltip>
+          )}
+
+          {onShare && (
+            <Tooltip title='分享此对话'>
+              <Button
+                type='text'
+                size='small'
+                icon={<LinkOutlined />}
+                onClick={onShare}
+                className='text-blue-500 hover:text-blue-600'
+              >
+                分享
               </Button>
             </Tooltip>
           )}
