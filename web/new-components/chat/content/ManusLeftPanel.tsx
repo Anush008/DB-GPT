@@ -1,4 +1,6 @@
+import MarkdownContext from '@/new-components/common/MarkdownContext';
 import {
+  AppstoreOutlined,
   BarChartOutlined,
   BookOutlined,
   CaretDownOutlined,
@@ -22,20 +24,31 @@ import {
   FileTextOutlined,
   FolderOpenOutlined,
   LoadingOutlined,
-  PieChartOutlined,
   PlayCircleOutlined,
+  PlusOutlined,
   SearchOutlined,
   TableOutlined,
 } from '@ant-design/icons';
-import { Button, Tooltip } from 'antd';
+import { Button, Tooltip, message } from 'antd';
 import classNames from 'classnames';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ObservationFormatter from './ObservationFormatter';
-import MarkdownContext from '@/new-components/common/MarkdownContext';
 
 export type StepStatus = 'pending' | 'running' | 'completed' | 'error';
 
-export type StepType = 'read' | 'edit' | 'write' | 'bash' | 'grep' | 'glob' | 'task' | 'skill' | 'python' | 'html' | 'sql' | 'other';
+export type StepType =
+  | 'read'
+  | 'edit'
+  | 'write'
+  | 'bash'
+  | 'grep'
+  | 'glob'
+  | 'task'
+  | 'skill'
+  | 'python'
+  | 'html'
+  | 'sql'
+  | 'other';
 
 export interface ExecutionStep {
   id: string;
@@ -104,6 +117,9 @@ export interface ManusLeftPanelProps {
     db_name: string;
     db_type: string;
   };
+  createdSkillName?: string;
+  onSkillCardClick?: (skillName: string) => void;
+  onSkillDownload?: (skillName: string) => void;
 }
 
 // Get step icon based on type and status
@@ -185,7 +201,8 @@ const formatFileSize = (bytes: number): string => {
 
 const getFileTypeLabel = (fileName: string, mimeType?: string): string => {
   const ext = fileName.toLowerCase().split('.').pop() || '';
-  if (['xlsx', 'xls'].includes(ext) || mimeType?.includes('spreadsheet') || mimeType?.includes('excel')) return '电子表格';
+  if (['xlsx', 'xls'].includes(ext) || mimeType?.includes('spreadsheet') || mimeType?.includes('excel'))
+    return '电子表格';
   if (ext === 'csv' || mimeType?.includes('csv')) return '电子表格';
   if (ext === 'pdf' || mimeType?.includes('pdf')) return 'PDF';
   if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext) || mimeType?.includes('image')) return '图片';
@@ -196,7 +213,12 @@ const getFileTypeLabel = (fileName: string, mimeType?: string): string => {
 
 const getFileIconElement = (fileName: string, mimeType?: string) => {
   const ext = fileName.toLowerCase().split('.').pop() || '';
-  if (['xlsx', 'xls', 'csv'].includes(ext) || mimeType?.includes('spreadsheet') || mimeType?.includes('excel') || mimeType?.includes('csv')) {
+  if (
+    ['xlsx', 'xls', 'csv'].includes(ext) ||
+    mimeType?.includes('spreadsheet') ||
+    mimeType?.includes('excel') ||
+    mimeType?.includes('csv')
+  ) {
     return <FileExcelOutlined className='text-green-600 text-base' />;
   }
   if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext) || mimeType?.includes('image')) {
@@ -273,7 +295,12 @@ const ArtifactCard: React.FC<{
       onClick={onClick}
       className='group flex items-center gap-3 px-3.5 py-3 rounded-xl border border-gray-200 dark:border-gray-700/60 bg-white dark:bg-[#1a1b1e] cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm transition-all duration-200'
     >
-      <div className={classNames('w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0', getArtifactIconBg(artifact.type))}>
+      <div
+        className={classNames(
+          'w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0',
+          getArtifactIconBg(artifact.type),
+        )}
+      >
         {getArtifactIcon(artifact)}
       </div>
       <div className='min-w-0 flex-1'>
@@ -307,6 +334,60 @@ const ArtifactCard: React.FC<{
 });
 
 ArtifactCard.displayName = 'ArtifactCard';
+
+/** Compact skill card for left panel — shows skill name, download, add-to-skills */
+const SkillCompactCard: React.FC<{
+  skillName: string;
+  onClick?: () => void;
+  onDownload?: () => void;
+}> = memo(({ skillName, onClick, onDownload }) => {
+  const [downloading, setDownloading] = useState(false);
+
+  return (
+    <div
+      onClick={onClick}
+      className='group flex items-center gap-3 px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700/60 bg-white dark:bg-[#1a1b1e] cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm transition-all duration-200 w-full'
+    >
+      <div className='w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0'>
+        <AppstoreOutlined className='text-lg text-gray-500 dark:text-gray-400' />
+      </div>
+      <div className='min-w-0 flex-1'>
+        <div className='flex items-center gap-2'>
+          <span className='text-sm font-semibold text-gray-800 dark:text-gray-200 truncate'>{skillName}</span>
+          <span className='flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-medium'>
+            技能
+          </span>
+        </div>
+      </div>
+      <div className='flex items-center gap-2 flex-shrink-0'>
+        <Tooltip title='下载为 ZIP'>
+          <button
+            className='flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:border-gray-400 dark:hover:border-gray-500 transition-colors'
+            onClick={e => {
+              e.stopPropagation();
+              onDownload?.();
+            }}
+            disabled={downloading}
+          >
+            {downloading ? <LoadingOutlined className='text-sm' /> : <DownloadOutlined className='text-sm' />}
+          </button>
+        </Tooltip>
+        <button
+          className='flex items-center gap-1.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-lg text-xs font-medium px-4 py-2 hover:opacity-90 transition-opacity'
+          onClick={e => {
+            e.stopPropagation();
+            message.success(`技能 "${skillName}" 已添加到我的技能`);
+          }}
+        >
+          <PlusOutlined className='text-[10px]' />
+          添加到我的技能
+        </button>
+      </div>
+    </div>
+  );
+});
+
+SkillCompactCard.displayName = 'SkillCompactCard';
 
 const StreamingText: React.FC<{ text: string }> = memo(({ text }) => {
   const [displayed, setDisplayed] = useState('');
@@ -443,9 +524,7 @@ const StepCard: React.FC<{
       </span>
       <div className='flex flex-col min-w-0 flex-1'>
         <span className='text-sm font-medium text-gray-800 dark:text-gray-200 truncate'>{step.title}</span>
-        {detailLine && (
-          <span className='text-[11px] text-gray-500 dark:text-gray-400 truncate'>{detailLine}</span>
-        )}
+        {detailLine && <span className='text-[11px] text-gray-500 dark:text-gray-400 truncate'>{detailLine}</span>}
       </div>
       <div className='flex-shrink-0'>
         {step.status === 'pending' && <ClockCircleOutlined className='text-xs text-gray-400' />}
@@ -524,7 +603,8 @@ const SkillResourceCard: React.FC<{
           'opacity-0 translate-y-1': !isVisible,
           'opacity-100 translate-y-0': isVisible,
           'border-blue-300 dark:border-blue-700 shadow-sm ring-1 ring-blue-200/50 dark:ring-blue-800/50': isActive,
-          'border-gray-200 dark:border-gray-700/50 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm': !isActive,
+          'border-gray-200 dark:border-gray-700/50 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm':
+            !isActive,
           'border-l-[3px] border-l-blue-500': step.status === 'running',
           'border-l-[3px] border-l-emerald-500': step.status === 'completed' && isActive,
           'border-l-[3px] border-l-red-500': step.status === 'error',
@@ -534,7 +614,12 @@ const SkillResourceCard: React.FC<{
     >
       {/* Header row - clickable for right panel */}
       <div className='flex items-center gap-2.5 px-3 py-2 cursor-pointer' onClick={onClick}>
-        <div className={classNames('flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center', getIconBgClass(step.type))}>
+        <div
+          className={classNames(
+            'flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center',
+            getIconBgClass(step.type),
+          )}
+        >
           {getStepIcon(step.type, step.status)}
         </div>
         <span className='text-[10px] font-medium tracking-wide flex-shrink-0 text-indigo-600 dark:text-indigo-400'>
@@ -550,17 +635,29 @@ const SkillResourceCard: React.FC<{
           {step.status === 'error' && <ExclamationCircleOutlined className='text-xs text-red-500' />}
         </div>
       </div>
-
     </div>
   );
 });
 
 SkillResourceCard.displayName = 'SkillResourceCard';
 
-const ThoughtBubble: React.FC<{ text: string }> = memo(({ text }) => {
+const ThoughtBubble: React.FC<{ text: string | Record<string, unknown> }> = memo(({ text }) => {
   const [expanded, setExpanded] = useState(false);
-  const isLong = text.length > 60;
-  const display = expanded || !isLong ? text : text.slice(0, 60) + '...';
+  const normalized = useMemo(() => {
+    if (typeof text === 'string') return text;
+    if (!text) return '';
+    if (typeof text === 'object' && 'TODO' in text) {
+      const todoValue = (text as Record<string, unknown>).TODO;
+      if (typeof todoValue === 'string') return todoValue;
+    }
+    try {
+      return JSON.stringify(text);
+    } catch {
+      return String(text);
+    }
+  }, [text]);
+  const isLong = normalized.length > 60;
+  const display = expanded || !isLong ? normalized : normalized.slice(0, 60) + '...';
 
   return (
     <div
@@ -570,9 +667,7 @@ const ThoughtBubble: React.FC<{ text: string }> = memo(({ text }) => {
       <span className='text-[10px] text-gray-300 dark:text-gray-600 mt-0.5 flex-shrink-0 select-none'>💭</span>
       <p className='text-[11px] text-gray-400 dark:text-gray-500 leading-relaxed m-0 min-w-0 break-words italic'>
         <StreamingText text={display} />
-        {isLong && !expanded && (
-          <span className='text-[10px] text-gray-300 dark:text-gray-600 ml-1 not-italic'>▸</span>
-        )}
+        {isLong && !expanded && <span className='text-[10px] text-gray-300 dark:text-gray-600 ml-1 not-italic'>▸</span>}
       </p>
     </div>
   );
@@ -643,21 +738,21 @@ const SectionBlock: React.FC<{
       {/* Section Content */}
       {isExpanded && (
         <div className='ml-7 space-y-2 overflow-hidden'>
-           {stepThoughts?.['initial'] && (
-            <ThoughtBubble text={stepThoughts['initial']} />
-          )}
+          {stepThoughts?.['initial'] && <ThoughtBubble text={stepThoughts['initial']} />}
 
           {section.steps.map(step => (
             <React.Fragment key={step.id}>
               {stepThoughts?.[step.id] && <ThoughtBubble text={stepThoughts[step.id]} />}
               {step.description?.includes('Action: get_skill_resource') ? (
-                <SkillResourceCard step={step} isActive={step.id === activeStepId} onClick={() => onStepClick(step.id)} />
+                <SkillResourceCard
+                  step={step}
+                  isActive={step.id === activeStepId}
+                  onClick={() => onStepClick(step.id)}
+                />
               ) : (
                 <StepCard step={step} isActive={step.id === activeStepId} onClick={() => onStepClick(step.id)} />
               )}
-              {step.description?.includes('Observation:') && (
-                <ObservationFormatter observation={step.description} />
-              )}
+              {step.description?.includes('Observation:') && <ObservationFormatter observation={step.description} />}
             </React.Fragment>
           ))}
         </div>
@@ -689,6 +784,9 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
   attachedKnowledge,
   attachedSkill,
   attachedDb,
+  createdSkillName,
+  onSkillCardClick,
+  onSkillDownload,
 }) => {
   const handleStepClick = useCallback(
     (stepId: string, sectionId: string) => {
@@ -717,7 +815,8 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
         {/* Truncated assistant response */}
         {assistantText && (
           <div className='text-sm text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed'>
-            {assistantText.slice(0, 150)}{assistantText.length > 150 ? '...' : ''}
+            {assistantText.slice(0, 150)}
+            {assistantText.length > 150 ? '...' : ''}
           </div>
         )}
         {/* Completed indicator */}
@@ -743,7 +842,9 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
                     {getFileIconElement(attachedFile.name, attachedFile.type)}
                   </div>
                   <div className='min-w-0 flex-1'>
-                    <div className='text-sm font-medium text-gray-800 dark:text-gray-200 truncate'>{attachedFile.name}</div>
+                    <div className='text-sm font-medium text-gray-800 dark:text-gray-200 truncate'>
+                      {attachedFile.name}
+                    </div>
                     <div className='text-[11px] text-gray-400 dark:text-gray-500'>
                       {getFileTypeLabel(attachedFile.name, attachedFile.type)} · {formatFileSize(attachedFile.size)}
                     </div>
@@ -756,7 +857,9 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
                     <BookOutlined className='text-orange-500 text-base' />
                   </div>
                   <div className='min-w-0 flex-1'>
-                    <div className='text-sm font-medium text-gray-800 dark:text-gray-200 truncate'>{attachedKnowledge.name}</div>
+                    <div className='text-sm font-medium text-gray-800 dark:text-gray-200 truncate'>
+                      {attachedKnowledge.name}
+                    </div>
                     <div className='text-[11px] text-gray-400 dark:text-gray-500'>
                       {attachedKnowledge.desc || attachedKnowledge.vector_type}
                     </div>
@@ -769,7 +872,9 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
                     <PlayCircleOutlined className='text-indigo-500 text-base' />
                   </div>
                   <div className='min-w-0 flex-1'>
-                    <div className='text-sm font-medium text-gray-800 dark:text-gray-200 truncate'>{attachedSkill.name}</div>
+                    <div className='text-sm font-medium text-gray-800 dark:text-gray-200 truncate'>
+                      {attachedSkill.name}
+                    </div>
                     <div className='text-[11px] text-gray-400 dark:text-gray-500'>技能</div>
                   </div>
                 </div>
@@ -780,7 +885,9 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
                     <DatabaseOutlined className='text-blue-500 text-base' />
                   </div>
                   <div className='min-w-0 flex-1'>
-                    <div className='text-sm font-medium text-gray-800 dark:text-gray-200 truncate'>{attachedDb.db_name}</div>
+                    <div className='text-sm font-medium text-gray-800 dark:text-gray-200 truncate'>
+                      {attachedDb.db_name}
+                    </div>
                     <div className='text-[11px] text-gray-400 dark:text-gray-500'>{attachedDb.db_type || '数据库'}</div>
                   </div>
                 </div>
@@ -838,6 +945,16 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
             <div className='prose prose-sm dark:prose-invert max-w-none text-gray-800 dark:text-gray-200 leading-relaxed'>
               <MarkdownContext>{assistantText}</MarkdownContext>
             </div>
+          </div>
+        )}
+
+        {createdSkillName && (
+          <div className='mt-5 px-1'>
+            <SkillCompactCard
+              skillName={createdSkillName}
+              onClick={() => onSkillCardClick?.(createdSkillName)}
+              onDownload={() => onSkillDownload?.(createdSkillName)}
+            />
           </div>
         )}
 

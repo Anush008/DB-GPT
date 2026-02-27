@@ -216,11 +216,25 @@ export default memo(ManusStepCard);
 
 export interface ThinkingSectionProps {
   title: string;
-  content: string;
+  content: string | Record<string, unknown>;
   isExpanded?: boolean;
   onToggle?: () => void;
   children?: React.ReactNode;
 }
+
+const normalizeText = (value: unknown): string => {
+  if (typeof value === 'string') return value;
+  if (value && typeof value === 'object') {
+    const todoValue = (value as Record<string, unknown>).TODO;
+    if (typeof todoValue === 'string') return todoValue;
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  return value == null ? '' : String(value);
+};
 
 export const ThinkingSection: React.FC<ThinkingSectionProps> = memo(
   ({ title, content, isExpanded = true, onToggle, children }) => {
@@ -238,7 +252,7 @@ export const ThinkingSection: React.FC<ThinkingSectionProps> = memo(
 
         {isExpanded && (
           <div className='ml-7 space-y-3'>
-            <p className='text-sm text-gray-600 dark:text-gray-400 leading-relaxed'>{content}</p>
+            <p className='text-sm text-gray-600 dark:text-gray-400 leading-relaxed'>{normalizeText(content)}</p>
             {children}
           </div>
         )}

@@ -1392,6 +1392,115 @@ print(json.dumps(summary, ensure_ascii=False))
         return json.dumps({"chunks": chunks}, ensure_ascii=False)
 
     @tool(
+        description="Execute shell/bash commands in a sandboxed environment. "
+        "Use this tool when you need to run shell commands such as ls, cat, "
+        "grep, curl, apt, pip, git, or any other CLI tool. "
+        "The sandbox provides resource limits (256MB memory, 30s timeout) "
+        "and process isolation. "
+        'Parameters: {"code": "shell command(s) to execute"}'
+    )
+    async def shell_interpreter(code: str) -> str:
+        """Execute shell/bash commands in a sandboxed environment.
+
+        Uses dbgpt-sandbox LocalRuntime to run bash scripts with:
+        - Memory limit: 256MB
+        - Timeout: 30 seconds
+        - Process tree management (cleanup on timeout/error)
+        - Security validation (blocks dangerous patterns like rm -rf /)
+        Each call is independent — no state persists between calls.
+        """
+        import uuid
+
+        if not code or not code.strip():
+            return json.dumps(
+                {
+                    "chunks": [
+                        {
+                            "output_type": "text",
+                            "content": "No command provided",
+                        }
+                    ]
+                },
+                ensure_ascii=False,
+            )
+
+        try:
+            from dbgpt_sandbox.sandbox.execution_layer.base import (
+                ExecutionStatus,
+                SessionConfig,
+            )
+            from dbgpt_sandbox.sandbox.execution_layer.local_runtime import (
+                LocalRuntime,
+            )
+        except ImportError:
+            return json.dumps(
+                {
+                    "chunks": [
+                        {"output_type": "code", "content": code.strip()},
+                        {
+                            "output_type": "text",
+                            "content": (
+                                "Error: dbgpt-sandbox package is not installed. "
+                                "Please install it with: pip install dbgpt-sandbox"
+                            ),
+                        },
+                    ]
+                },
+                ensure_ascii=False,
+            )
+
+        session_id = f"bash_{uuid.uuid4().hex[:12]}"
+        runtime = LocalRuntime()
+
+        from dbgpt.configs.model_config import ROOT_PATH
+
+        sandbox_work_dir = ROOT_PATH
+        os.makedirs(sandbox_work_dir, exist_ok=True)
+
+        config = SessionConfig(
+            language="bash",
+            working_dir=sandbox_work_dir,
+            max_memory=256 * 1024 * 1024,  # 256MB
+            timeout=30,
+        )
+
+        output_text = ""
+        try:
+            session = await runtime.create_session(session_id, config)
+            result = await session.execute(code)
+
+            if result.status == ExecutionStatus.SUCCESS:
+                output_text = result.output or ""
+            elif result.status == ExecutionStatus.TIMEOUT:
+                output_text = f"Execution timed out ({config.timeout}s limit)"
+            else:
+                output_text = result.error or "Unknown execution error"
+                if result.output:
+                    output_text = result.output + "\n[ERROR]\n" + output_text
+        except Exception as e:
+            output_text = f"Sandbox execution error: {e}"
+        finally:
+            try:
+                await runtime.destroy_session(session_id)
+            except Exception:
+                pass
+
+        chunks: List[Dict[str, Any]] = [
+            {"output_type": "code", "content": code.strip()},
+        ]
+        if output_text.strip():
+            chunks.append({"output_type": "text", "content": output_text.strip()})
+        else:
+            chunks.append(
+                {
+                    "output_type": "text",
+                    "content": "(no output)",
+                }
+            )
+
+        return json.dumps({"chunks": chunks}, ensure_ascii=False)
+
+    @tool(
         description="执行技能scripts目录下的脚本文件。参数: "
         '{"skill_name": "技能名称", "script_file_name": "脚本文件名", "args": {参数}}'
     )
@@ -1956,22 +2065,26 @@ print(json.dumps(summary, ensure_ascii=False))
 - **需要生成报告** → 调用 `html_interpreter`，传入 `template_path`（模板相对路径）和 `data`（仅包含你自己撰写的分析文本，由于后端会自动合并之前工具生成的30个数据指标和图片URL，请绝对不要在 `data` 里写这些数据指标，否则会导致超长截断）。**不要使用 `code_interpreter`，不要使用 `execute_skill_script_file` 生成报告，不需要先用 `get_skill_resource` 读取模板**
 
 ## 可用工具说明
-1. **execute_skill_script_file**（推荐用于脚本执行）: 执行技能 scripts 目录下的脚本文件。
+1. **execute_skill_script_file**（用于执行技能自身的脚本）: 执行技能 scripts 目录下的脚本文件。
    参数: {{"skill_name": "技能名", "script_file_name": "脚本文件名", "args": {{"参数名": "参数值"}}}}
-   - 示例: {{"skill_name": "{pre_matched_skill.metadata.name if pre_matched_skill else "skill"}", "script_file_name": "calculate.py", "args": {{"param": "value"}}}}
+   - 示例: {{"skill_name": "{pre_matched_skill.metadata.name if pre_matched_skill else 'skill'}", "script_file_name": "calculate.py", "args": {{"param": "value"}}}}
 2. **get_skill_resource**: 读取技能中的参考文档、配置、模板等非脚本资源文件。
    参数: {{"skill_name": "技能名", "resource_path": "资源路径"}}
-   - 读取参考文档: {{"skill_name": "{pre_matched_skill.metadata.name if pre_matched_skill else "skill"}", "resource_path": "references/analysis_framework.md"}}
+   - 读取参考文档: {{"skill_name": "{pre_matched_skill.metadata.name if pre_matched_skill else 'skill'}", "resource_path": "references/analysis_framework.md"}}
    - 注意: 报告模板不需要用此工具读取，直接用 html_interpreter 的 template_path 参数
-   - 注意: 执行脚本请使用 execute_skill_script_file，不要用此工具执行脚本
 3. **execute_skill_script**: 执行技能中定义的内联脚本。参数: {{"skill_name": "技能名", "script_name": "脚本名", "args": {{"参数名": "参数值"}}}}
-
-4. **html_interpreter**: 将 HTML 模板渲染为网页报告。
+4. **shell_interpreter**: 执行 shell/bash 命令。适用于运行系统命令、执行 Python 脚本等场景。
+   参数: {{"code": "shell命令"}}
+   - 示例: {{"code": "python skills/skill-creator/scripts/init_skill.py my-skill --path skills/"}}
+   - 示例: {{"code": "ls -la skills/my-skill/"}}
+   - 每次调用独立，不保留状态。如需多步操作，用 `&&` 或 `;` 串联命令。
+   - **当技能 SKILL.md 指示使用 shell_interpreter 执行脚本时，优先使用此工具**
+5. **html_interpreter**: 将 HTML 模板渲染为网页报告。
    推荐用法: {{"template_path": "技能名/templates/模板文件.html", "data": {{"PLACEHOLDER_KEY": "值", ...}}, "title": "报告标题"}}
    - 后端会自动把先前的财务数据计算结果合并进模板中。你只需要在 `data` 字典中返回诸如 `PROFITABILITY_ANALYSIS` 等你手写的分析段落即可，无需包含 `COMPANY_NAME` 或 `REVENUE` 等。
    - 示例: {{"template_path": "financial-report-analyzer/templates/report_template.html", "data": {{"PROFITABILITY_ANALYSIS": "从数据看，盈利能力良好...", "SOLVENCY_ANALYSIS": "..."}}, "title": "财报分析"}}
    {available_images_hint}
-5. **terminate**: 任务完成时返回最终答案，Action Input 必须为 {{"result": "你的最终回答内容"}}
+6. **terminate**: 任务完成时返回最终答案，Action Input 必须为 {{"result": "你的最终回答内容"}}
 
 {file_context}
 {knowledge_context}
@@ -1991,6 +2104,7 @@ Action Input: 工具参数的 JSON 格式
                 execute_skill_script,
                 get_skill_resource,
                 execute_skill_script_file,
+                shell_interpreter,
                 html_interpreter,
                 sql_query,
                 Terminate(),
@@ -2018,7 +2132,7 @@ Action Input: 工具参数的 JSON 格式
 当使用技能时，必须遵循以下规则：
 
 ### 1. 理解工作流程
-加载技能后，仔细阅读 SKILL.md 中的 **核心工作流程** 部分，按步骤顺序执行，不要跳跃。
+加载技能后，仔细阅读 SKILL.md 中的 **核心工作流程** 部分，按步骤顺序执行。如果某个步骤明确说明了跳过条件（如用户意图已明确时），则直接跳到下一步，不要强制执行每一步。优先快速产出结果，迭代优化在后续步骤完成。
 
 ### 2. 资源使用时机
 - **需要计算/处理数据** → 使用 `execute_skill_script_file` 执行技能 scripts 目录下的脚本
@@ -2067,7 +2181,13 @@ Action Input: {{"skill_name": "financial-report-analyzer", "script_file_name": "
      ② **生成图表**：基于上一步的结果，生成可视化图表，保存到 PLOT_DIR
      ③ **生成网页报告（必须）**：直接调用 `html_interpreter`，把你生成的完整 HTML 字符串传给 `html` 参数，如 `Action: html_interpreter`，`Action Input: {{"html": "<!DOCTYPE html><html>...</html>", "title": "报告标题"}}`
    - **图片URL**: 执行后系统会在 Observation 中返回生成的图片URL（如 `/images/xxxx_chart.png`）。在后续生成 HTML 报告时，必须使用这些实际URL来嵌入图片。
-7. **html_interpreter**: 将 HTML 渲染为可交互的网页报告，这是向用户展示网页报告的**唯一方式**。
+7. **shell_interpreter**: 执行 shell/bash 命令。适用于需要运行系统命令的场景，如 ls、cat、grep、curl、pip、git、echo 等 CLI 工具。
+   在沙箱环境中执行，有资源限制（256MB 内存，30s 超时）和安全校验。工作目录为项目的 pilot/tmp 目录。参数: {{"code": "shell命令"}}
+   - 示例: {{"code": "echo hello world"}}、{{"code": "ls -la"}}、{{"code": "curl -s https://api.example.com/data"}}
+   - 每次调用独立，不保留状态。如需多步操作，用 `&&` 或 `;` 串联命令。
+   - **重要**: 创建文件时**必须使用相对路径**（如 `echo 'content' > poem.txt`），**禁止使用 /tmp 或其他绝对路径**。文件会自动保存在 pilot/tmp 目录下。
+   - **注意**: 与 code_interpreter 不同，shell_interpreter 执行的是 bash 命令，不是 Python 代码。
+8. **html_interpreter**: 将 HTML 渲染为可交互的网页报告，这是向用户展示网页报告的**唯一方式**。
    **默认用法 - 直接传 HTML（推荐）**：你自己生成完整的 HTML 代码，然后直接传给 html 参数：
    参数: {{"html": "<!DOCTYPE html><html><head>...</head><body>...</body></html>", "title": "报告标题"}}
    - HTML 可以很长，没有长度限制，不需要分段传入
@@ -2080,10 +2200,10 @@ Action Input: {{"skill_name": "financial-report-analyzer", "script_file_name": "
    - **图片嵌入与说明（重要）**: 之前 code_interpreter 的 Observation 中返回了图片URL（格式 `/images/xxxx_chart.png`），**必须使用这些完整的实际URL**。用 `<img src="/images/xxxx_chart.png" style="max-width:100%;height:auto">` 嵌入。**绝对不要**猜测或编造图片路径。
    - **图表说明规范**: 在每个 `<img>` 标签后添加文字说明，说明应包含：1) 图表类型 2) 关键数据发现 3) 业务洞察（1-2句话）
    {available_images_hint}
-8. **sql_query**: 对选择的数据库执行 SQL 查询，参数: {{"sql": "SELECT 语句"}}
+9. **sql_query**: 对选择的数据库执行 SQL 查询，参数: {{"sql": "SELECT 语句"}}
    - 仅支持 SELECT 查询，禁止任何修改数据的操作
    - 使用数据库信息部分提供的表结构来编写正确的 SQL
-9. **terminate**: 任务完成时返回最终答案，Action Input 必须为 {{"result": "你的最终回答内容"}}
+10. **terminate**: 任务完成时返回最终答案，Action Input 必须为 {{"result": "你的最终回答内容"}}
 
 
 ## ⚠️ 网页报告生成的强制流程（违反将导致用户看不到报告）
@@ -2118,6 +2238,7 @@ Action Input: 工具参数的 JSON 格式
                 get_skill_resource,
                 execute_skill_script_file,
                 code_interpreter,
+                shell_interpreter,
                 html_interpreter,
                 sql_query,
                 Terminate(),
@@ -2638,6 +2759,95 @@ async def delete_share_link(
         raise HTTPException(status_code=404, detail="Share link not found")
     return Result.succ({"deleted": True, "token": token})
 
+
+@router.get("/v1/agent/files/download")
+async def download_agent_file(
+    file_path: str = Query(..., description="Absolute path to the file to download"),
+):
+    """Download a file created by agent tools (shell_interpreter, code_interpreter).
+
+    Only files under allowed directories (/tmp, PILOT_PATH/tmp/) can be downloaded.
+    This prevents arbitrary file access on the server.
+    """
+    from fastapi import HTTPException
+    from fastapi.responses import FileResponse
+
+    from dbgpt.configs.model_config import PILOT_PATH, ROOT_PATH
+
+    # If path is not absolute, resolve relative to ROOT_PATH (sandbox working dir)
+    if not os.path.isabs(file_path):
+        file_path = os.path.join(ROOT_PATH, file_path)
+
+    # Resolve to absolute path and prevent path traversal
+    try:
+        resolved = os.path.realpath(file_path)
+    except (ValueError, OSError):
+        raise HTTPException(status_code=400, detail="Invalid file path")
+
+    # Allowed base directories for agent-created files
+    allowed_dirs = [
+        os.path.realpath("/tmp"),
+        os.path.realpath(os.path.join(PILOT_PATH, "tmp")),
+        os.path.realpath(ROOT_PATH),
+    ]
+
+    if not any(resolved.startswith(d + os.sep) or resolved == d for d in allowed_dirs):
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: file is not in an allowed directory",
+        )
+
+    if not os.path.isfile(resolved):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    filename = os.path.basename(resolved)
+    return FileResponse(
+        path=resolved,
+        filename=filename,
+        media_type="application/octet-stream",
+    )
+
+
+@router.get("/v1/agent/skills/download")
+async def download_skill_package(
+    skill_name: str = Query(..., description="Skill folder name"),
+    user_token: UserRequest = Depends(get_user_from_headers),
+):
+    """Download a skill folder as a .zip archive."""
+    from fastapi import HTTPException
+
+    if not skill_name:
+        raise HTTPException(status_code=400, detail="skill_name is required")
+
+    skills_dir = Path(DEFAULT_SKILLS_DIR).expanduser().resolve()
+    skill_path = (skills_dir / skill_name).resolve()
+
+    # Security: ensure path is under skills_dir
+    try:
+        skill_path.relative_to(skills_dir)
+    except ValueError:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    if not skill_path.is_dir():
+        raise HTTPException(status_code=404, detail="Skill not found")
+
+    # Build zip in memory
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for root, _dirs, files in os.walk(skill_path):
+            for fname in files:
+                abs_file = os.path.join(root, fname)
+                arc_name = os.path.relpath(abs_file, skill_path)
+                zf.write(abs_file, arcname=os.path.join(skill_name, arc_name))
+    buf.seek(0)
+
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{skill_name}.zip"',
+        },
+    )
 
 @router.post("/v1/chat/react-agent")
 async def chat_react_agent(

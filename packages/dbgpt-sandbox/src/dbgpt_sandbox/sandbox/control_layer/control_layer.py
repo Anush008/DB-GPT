@@ -106,10 +106,12 @@ class ControlLayer:
             return ExecutionResult(status=ExecutionStatus.ERROR, error="会话不存在")
 
         try:
+            # Normalize "shell" language to "bash" for unified execution path.
+            # LocalSandboxSession already supports bash via _create_code_file
+            # and _get_exec_command, so no special-casing is needed.
             if task.language == "shell":
-                result = await session.execute(task.code_content or "", shell=True)
-            else:
-                result = await session.execute(task.code_content or "")
+                task.language = "bash"
+            result = await session.execute(task.code_content or "")
             self.tasks[task.task_id]["status"] = (
                 "finished" if result.status == ExecutionStatus.SUCCESS else "failed"
             )

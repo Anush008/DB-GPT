@@ -176,34 +176,55 @@ class SecurityUtils:
         """验证代码安全性，返回警告列表"""
         warnings = []
 
-        dangerous_patterns = [
-            "import os",
-            "import subprocess",
-            "import sys",
-            "__import__",
-            "eval(",
-            "exec(",
-            "open(",
-            "file(",
-            "input(",
-            "raw_input(",
-            "socket",
-            "urllib",
-            "requests",
-            "rmdir",
-            "remove",
-            "unlink",
-            "delete",
-        ]
+        if language in ("bash", "shell"):
+            # Bash-specific dangerous patterns
+            bash_dangerous_patterns = [
+                ("rm -rf /", "递归删除根目录"),
+                ("rm -rf /*", "递归删除根目录下所有文件"),
+                ("mkfs.", "格式化磁盘"),
+                ("dd if=", "直接磁盘写入"),
+                (":(){ :|:& };:", "fork 炸弹"),
+                ("> /dev/sda", "覆写磁盘设备"),
+                ("chmod -R 777 /", "全局权限修改"),
+                ("curl | bash", "远程脚本执行"),
+                ("wget | bash", "远程脚本执行"),
+                ("curl | sh", "远程脚本执行"),
+                ("wget | sh", "远程脚本执行"),
+            ]
+            code_lower = code.lower()
+            for pattern, desc in bash_dangerous_patterns:
+                if pattern in code_lower:
+                    warnings.append(f"检测到潜在危险操作: {desc} ({pattern})")
+        else:
+            # Python / other language dangerous patterns (original logic)
+            dangerous_patterns = [
+                "import os",
+                "import subprocess",
+                "import sys",
+                "__import__",
+                "eval(",
+                "exec(",
+                "open(",
+                "file(",
+                "input(",
+                "raw_input(",
+                "socket",
+                "urllib",
+                "requests",
+                "rmdir",
+                "remove",
+                "unlink",
+                "delete",
+            ]
 
-        code_lower = code.lower()
-        for pattern in dangerous_patterns:
-            if pattern in code_lower:
-                warnings.append(f"检测到潜在危险操作: {pattern}")
+            code_lower = code.lower()
+            for pattern in dangerous_patterns:
+                if pattern in code_lower:
+                    warnings.append(f"检测到潜在危险操作: {pattern}")
 
-        if language == "python":
-            if "pickle" in code_lower:
-                warnings.append("检测到 pickle 模块使用，可能存在安全风险")
+            if language == "python":
+                if "pickle" in code_lower:
+                    warnings.append("检测到 pickle 模块使用，可能存在安全风险")
 
         return warnings
 

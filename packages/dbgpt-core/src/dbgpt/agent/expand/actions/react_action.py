@@ -59,8 +59,13 @@ class Terminate(Action[None], BaseTool):
         else:
             parser = ReActOutputParser()
         steps = parser.parse(ai_message)
-        if len(steps) != 1:
+        if len(steps) == 0:
             return None
+        if len(steps) > 1:
+            logger.warning(
+                "Terminate.parse_action: Model output contains %d steps, using first.",
+                len(steps),
+            )
         step: ReActStep = steps[0]
         if not step.action:
             return None
@@ -141,8 +146,13 @@ class ReActAction(ToolAction):
         else:
             parser = ReActOutputParser()
         steps = parser.parse(ai_message)
-        if len(steps) != 1:
-            raise ValueError("Only one action is allowed each time.")
+        if len(steps) == 0:
+            raise ValueError("No valid ReAct step found in model output.")
+        if len(steps) > 1:
+            logger.warning(
+                "Model output contains %d steps, only the first will be executed.",
+                len(steps),
+            )
         step = steps[0]
         act_out = await self._do_run(ai_message, step, need_vis_render=need_vis_render)
         if not act_out.action:

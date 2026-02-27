@@ -31,7 +31,6 @@ import {
   FileOutlined,
   FilePptOutlined,
   FileTextOutlined,
-  LinkOutlined,
   PieChartOutlined,
   PlusOutlined,
   ReadOutlined,
@@ -124,8 +123,8 @@ interface DataSource {
   type: string;
   params: Record<string, any>;
   description?: string;
-  db_name: string;  // derived from params.name
-  db_type: string;  // alias for type
+  db_name: string; // derived from params.name
+  db_type: string; // alias for type
   gmt_created?: string;
   gmt_modified?: string;
 }
@@ -166,6 +165,8 @@ interface ExecutionStep {
   title?: string;
   detail: string;
   status: 'running' | 'done' | 'failed';
+  action?: string;
+  actionInput?: string;
 }
 
 interface ExecutionOutput {
@@ -217,6 +218,7 @@ interface Artifact {
   downloadable?: boolean;
   mimeType?: string;
   size?: number;
+  filePath?: string;
   // Chart-specific metadata
   chartType?: ChartType;
   chartConfig?: Partial<ChartConfig>;
@@ -263,15 +265,26 @@ const _convertExecutionToMessageParts = (
       failed: 'error',
     };
 
-    const toolName = step.title?.toLowerCase().includes('skill')
+    const actionLower = (step.action || '').toLowerCase();
+    const isSkill =
+      actionLower.includes('skill') ||
+      actionLower === 'execute_skill_script_file' ||
+      actionLower === 'get_skill_resource' ||
+      actionLower === 'select_skill' ||
+      actionLower === 'load_skill';
+    const toolName = isSkill
       ? 'skill'
-      : step.title?.toLowerCase().includes('read')
-        ? 'read'
-        : step.title?.toLowerCase().includes('write')
-          ? 'write'
-          : step.title?.toLowerCase().includes('code') || step.title?.toLowerCase().includes('execute')
-            ? 'bash'
-            : 'task';
+      : step.title?.toLowerCase().includes('skill')
+        ? 'skill'
+        : step.title?.toLowerCase().includes('read')
+          ? 'read'
+          : step.title?.toLowerCase().includes('write')
+            ? 'write'
+            : step.title?.toLowerCase().includes('code') ||
+                step.title?.toLowerCase().includes('execute') ||
+                actionLower === 'shell_interpreter'
+              ? 'bash'
+              : 'task';
 
     return {
       id: step.id,
@@ -309,9 +322,29 @@ const convertToManusFormat = (
   }
 
   // Determine step type from title
-  const getStepType = (title?: string): StepType => {
+  const getStepType = (title?: string, action?: string): StepType => {
+    // Check action name first — it's the most reliable indicator
+    const actionLower = (action || '').toLowerCase();
+    if (
+      actionLower.includes('skill') ||
+      actionLower === 'execute_skill_script_file' ||
+      actionLower === 'get_skill_resource' ||
+      actionLower === 'select_skill' ||
+      actionLower === 'load_skill'
+    )
+      return 'skill';
+    if (actionLower === 'shell_interpreter') return 'bash';
+    if (actionLower === 'sql_query') return 'sql';
+
     const lower = (title || '').toLowerCase();
-    if (lower.includes('load_skill') || lower.includes('load skill')) return 'skill';
+    if (
+      lower.includes('load_skill') ||
+      lower.includes('load skill') ||
+      lower.includes('execute_skill_script_file') ||
+      lower.includes('get_skill_resource') ||
+      lower.includes('select_skill')
+    )
+      return 'skill';
     if (lower.includes('sql_query') || lower.includes('sql query') || lower.includes('sql查询')) return 'sql';
     if (lower.includes('read') || lower.includes('load')) return 'read';
     if (lower.includes('edit')) return 'edit';
@@ -346,7 +379,7 @@ const convertToManusFormat = (
       const cleanDetail = step.detail?.replace(/^Thought:.*\n?/gm, '').trim();
       return {
         id: step.id,
-        type: getStepType(step.title),
+        type: getStepType(step.title, step.action),
         title: step.title || `Step ${step.step}`,
         subtitle: cleanDetail?.split('\n')[0]?.slice(0, 80),
         description: cleanDetail || undefined,
@@ -387,7 +420,7 @@ const convertToManusFormat = (
       const cleanDetail = step.detail?.replace(/^Thought:.*\n?/gm, '').trim();
       activeStep = {
         id: step.id,
-        type: getStepType(step.title),
+        type: getStepType(step.title, step.action),
         title: step.title || `Step ${step.step}`,
         subtitle: cleanDetail?.split('\n')[0]?.slice(0, 80),
         status: getStepStatus(step.status),
@@ -429,8 +462,7 @@ const EXAMPLE_CARDS = [
     icon: '📋',
     title: '自主分析表格',
     description: '自主分析CSV表格数据，生成可视化网页报告',
-    query:
-      '请自主分析这份表格，理解数据结构、字段含义和基本信息，然后进行深入分析并生成一份精美的可视化网页报告。',
+    query: '请自主分析这份表格，理解数据结构、字段含义和基本信息，然后进行深入分析并生成一份精美的可视化网页报告。',
     fileName: 'Walmart_Sales.csv',
     fileType: 'text/csv',
     fileSize: 363735, // ~355.21 KB
@@ -497,6 +529,7 @@ const Playground: NextPage = () => {
   const lastArtifactKeyRef = useRef<string>('');
 
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
+  const [createdSkillNames, setCreatedSkillNames] = useState<Record<string, string>>({});
   const [_rightPanelTab, setRightPanelTab] = useState<RightPanelTab>('preview');
   const [streamingSummary, setStreamingSummary] = useState<string>('');
   const [_summaryComplete, setSummaryComplete] = useState(false);
@@ -564,6 +597,42 @@ const Playground: NextPage = () => {
     }
   });
 
+  const normalizeText = (value: unknown): string => {
+    if (typeof value === 'string') return value;
+    if (value && typeof value === 'object') {
+      const todoValue = (value as Record<string, unknown>).TODO;
+      if (typeof todoValue === 'string') return todoValue;
+      try {
+        return JSON.stringify(value);
+      } catch {
+        return String(value);
+      }
+    }
+    return value == null ? '' : String(value);
+  };
+
+  /** Extract the actual created skill name from shell_interpreter output.
+   *  Uses priority-based matching to avoid returning 'skill-creator' (the tool path). */
+  const extractCreatedSkillName = (allText: string): string | null => {
+    // Priority 1: Skill 'xxx' initialized/packaged (quoted name from output)
+    const quotedSkill = allText.match(/[Ss]kill\s+['"]([\w-]+)['"]/);
+    if (quotedSkill) return quotedSkill[1];
+
+    // Priority 2: Initializing/Packaging skill: xxx
+    const colonSkill = allText.match(/(?:Initializing|Packaging)\s+skill:\s*(?:skills\/)?([\w-]+)/);
+    if (colonSkill) return colonSkill[1];
+
+    // Priority 3: Created skill directory: .../skills/xxx
+    const createdDir = allText.match(/Created skill directory:.*\/skills\/([\w-]+)/);
+    if (createdDir) return createdDir[1];
+
+    // Priority 4: Last skills/xxx path, filtering out 'skill-creator'
+    const allPaths = [...allText.matchAll(/skills\/([\w-]+)/g)].map(m => m[1]).filter(name => name !== 'skill-creator');
+    if (allPaths.length > 0) return allPaths[allPaths.length - 1];
+
+    return null;
+  };
+
   // Fetch Skills/DBGPTs list
   const { data: skillsList, loading: _loadingSkills } = useRequest(async () => {
     try {
@@ -572,8 +641,8 @@ const Playground: NextPage = () => {
       if (response?.success && Array.isArray(response.data)) {
         return response.data.map((item: any) => ({
           id: String(item.id || item.name),
-          name: item.name,
-          description: item.description || '',
+          name: normalizeText(item.name),
+          description: normalizeText(item.description),
           type: item.type === 'official' ? 'official' : 'personal',
           icon:
             item.skill_type === 'data_analysis'
@@ -937,9 +1006,11 @@ const Playground: NextPage = () => {
     return `${label}_${index}.py`;
   };
 
-  const extractFileReferences = (text: string): Array<{ name: string; downloadable: boolean; size?: number }> => {
-    const refs: Array<{ name: string; downloadable: boolean; size?: number }> = [];
-    const filePattern = /[\w\-./]+\.(?:xlsx|xls|csv|py|json|txt|pdf|png|jpg|jpeg|html|md)/gi;
+  const extractFileReferences = (
+    text: string,
+  ): Array<{ name: string; downloadable: boolean; size?: number; filePath?: string }> => {
+    const refs: Array<{ name: string; downloadable: boolean; size?: number; filePath?: string }> = [];
+    const filePattern = /[/\w\-.:]+\.(?:xlsx|xls|csv|py|json|txt|pdf|png|jpg|jpeg|html|md)/gi;
     const matches = text.match(filePattern) || [];
     const seen = new Set<string>();
     matches.forEach(m => {
@@ -947,7 +1018,9 @@ const Playground: NextPage = () => {
       const lower = name.toLowerCase();
       if (!seen.has(lower)) {
         seen.add(lower);
-        refs.push({ name, downloadable: true });
+        // Preserve full path if it looks like an absolute path
+        const filePath = m.startsWith('/') ? m : undefined;
+        refs.push({ name, downloadable: true, filePath });
       }
     });
     return refs;
@@ -1020,7 +1093,7 @@ const Playground: NextPage = () => {
         break;
       }
       case 'file': {
-        const filePath = artifact.content?.file_path || artifact.content?.path;
+        const filePath = artifact.content?.file_path || artifact.content?.path || (artifact as any).filePath;
         if (filePath && filePath.includes('/images/')) {
           const imgName = filePath.split('/').pop();
           const resolvedUrl = `${process.env.API_BASE_URL || ''}/images/${imgName}`;
@@ -1030,6 +1103,21 @@ const Playground: NextPage = () => {
             triggerBlobDownload(blob, artifact.name || imgName || 'file');
           } catch {
             message.warning('文件暂不可下载');
+          }
+        } else if (filePath) {
+          // Download via backend file download endpoint (for agent-created files)
+          const downloadUrl = `${process.env.API_BASE_URL || ''}/api/v1/agent/files/download?file_path=${encodeURIComponent(filePath)}`;
+          try {
+            const resp = await fetch(downloadUrl);
+            if (!resp.ok) {
+              const errData = await resp.json().catch(() => ({}));
+              message.warning(errData.detail || '文件暂不可下载');
+              break;
+            }
+            const blob = await resp.blob();
+            triggerBlobDownload(blob, artifact.name || filePath.split('/').pop() || 'file');
+          } catch {
+            message.warning('文件下载失败');
           }
         } else {
           message.warning('文件暂不可下载');
@@ -1097,7 +1185,7 @@ const Playground: NextPage = () => {
             const hash = codeStr.slice(0, 200);
             if (codeStr && !seenCodeHashes.has(hash)) {
               seenCodeHashes.add(hash);
-              const fileName = extractCodeFileName(codeStr, (step as any).action || step.id, oIdx);
+              const fileName = extractCodeFileName(codeStr, step.action || step.id, oIdx);
               finalArtifacts.push({
                 id: `${messageId}-code-${step.id}-${oIdx}`,
                 type: 'code',
@@ -1156,6 +1244,59 @@ const Playground: NextPage = () => {
             });
           }
         });
+
+        // For shell_interpreter steps, extract file paths from code/text outputs
+        // and create downloadable file artifacts
+        if (step.action === 'shell_interpreter') {
+          // Match both absolute paths and relative filenames with extensions
+          const absPathPattern = /(?:\/[\w\-.]+)+\.\w{1,10}/g;
+          const relFilePattern = /(?:>|>>|\btee\b|\btouch\b)\s+([\w\-./ ]+\.\w{1,10})/g;
+          const seenFilePaths = new Set<string>();
+          stepOutputs.forEach(output => {
+            if (output.output_type === 'code' || output.output_type === 'text') {
+              const text = String(output.content || '');
+              // Look for file creation patterns
+              const hasFileCreation = /(?:>|>>|\btee\b|\bcat\b.*>|\bcp\b|\bmv\b|\btouch\b|\becho\b.*>)/.test(text);
+              if (hasFileCreation) {
+                const foundPaths: string[] = [];
+                // Extract absolute paths
+                const absMatches = text.match(absPathPattern) || [];
+                foundPaths.push(...absMatches);
+                // Extract relative paths after redirection operators
+                let relMatch;
+                while ((relMatch = relFilePattern.exec(text)) !== null) {
+                  const p = relMatch[1].trim();
+                  if (p && !p.startsWith('/')) foundPaths.push(p);
+                }
+                foundPaths.forEach(fp => {
+                  // Normalize: strip leading ./ if present
+                  const normalized = fp.replace(/^\.\//, '');
+                  const fileName = normalized.split('/').pop() || normalized;
+                  if (!seenFilePaths.has(fileName.toLowerCase())) {
+                    seenFilePaths.add(fileName.toLowerCase());
+                    const alreadyHasFile = finalArtifacts.some(
+                      a => a.type === 'file' && a.name.toLowerCase() === fileName.toLowerCase(),
+                    );
+                    if (!alreadyHasFile) {
+                      // Use the path as-is; backend resolves relative paths against pilot/tmp
+                      finalArtifacts.push({
+                        id: `${messageId}-shellfile-${step.id}-${fileName}`,
+                        type: 'file',
+                        name: fileName,
+                        content: { name: fileName, file_path: normalized },
+                        createdAt: now,
+                        messageId,
+                        stepId: step.id,
+                        downloadable: true,
+                        filePath: normalized,
+                      });
+                    }
+                  }
+                });
+              }
+            }
+          });
+        }
       });
     }
 
@@ -1168,10 +1309,11 @@ const Playground: NextPage = () => {
             id: `${messageId}-fileref-${idx}`,
             type: 'file',
             name: ref.name,
-            content: { name: ref.name },
+            content: { name: ref.name, file_path: ref.filePath },
             createdAt: now,
             messageId,
             downloadable: ref.downloadable,
+            filePath: ref.filePath,
             size: ref.size,
           });
         }
@@ -1398,14 +1540,30 @@ const Playground: NextPage = () => {
               // Update existing step with new title/phase
               nextSteps = current.steps.map((step, idx) =>
                 idx === existingStepIndex
-                  ? { ...step, title: payload.title, detail: payload.detail, phase: payload.phase, status: 'running' as const }
-                  : step.status === 'running' ? { ...step, status: 'done' } : step
+                  ? {
+                      ...step,
+                      title: payload.title,
+                      detail: payload.detail,
+                      phase: payload.phase,
+                      status: 'running' as const,
+                    }
+                  : step.status === 'running'
+                    ? { ...step, status: 'done' }
+                    : step,
               );
             } else {
               // New step - mark running steps as done and add new step
               nextSteps = [
                 ...current.steps.map(item => (item.status === 'running' ? { ...item, status: 'done' } : item)),
-                { id, step: payload.step, title: payload.title, detail: payload.detail, phase: payload.phase, status: 'running' as const },
+                {
+                  id,
+                  step: payload.step,
+                  title: payload.title,
+                  detail: payload.detail,
+                  phase: payload.phase,
+                  status: 'running' as const,
+                  action: payload.action,
+                },
               ];
             }
             return {
@@ -1445,7 +1603,11 @@ const Playground: NextPage = () => {
               const parts = [] as string[];
               if (payload.action) {
                 parts.push(`Action: ${payload.action}`);
-                if (payload.action !== 'code_interpreter' && payload.action_input) {
+                if (
+                  payload.action !== 'code_interpreter' &&
+                  payload.action !== 'shell_interpreter' &&
+                  payload.action_input
+                ) {
                   parts.push(`Action Input: ${payload.action_input}`);
                 }
               }
@@ -1453,6 +1615,8 @@ const Playground: NextPage = () => {
                 ...item,
                 title: payload.title || item.title,
                 detail: parts.join('\n') || item.detail,
+                action: payload.action || item.action,
+                actionInput: payload.action_input || item.actionInput,
               };
             });
             // Route thought to stepThoughts map for subtle display
@@ -1517,7 +1681,22 @@ const Playground: NextPage = () => {
           });
         } else if (payload.type === 'step.thought') {
           const content = payload.content || '';
-          if (content) {
+          let normalizedThought = '';
+          if (typeof content === 'string') {
+            normalizedThought = content;
+          } else if (content && typeof content === 'object') {
+            const todoValue = (content as Record<string, unknown>).TODO;
+            if (typeof todoValue === 'string') {
+              normalizedThought = todoValue;
+            } else {
+              try {
+                normalizedThought = JSON.stringify(content);
+              } catch {
+                normalizedThought = String(content);
+              }
+            }
+          }
+          if (normalizedThought) {
             setExecutionMap(prev => {
               const current = prev[responseId];
               if (!current) return prev;
@@ -1528,7 +1707,7 @@ const Playground: NextPage = () => {
                   ...current,
                   stepThoughts: {
                     ...current.stepThoughts,
-                    [targetId]: (current.stepThoughts?.[targetId] || '') + content,
+                    [targetId]: (current.stepThoughts?.[targetId] || '') + normalizedThought,
                   },
                 },
               };
@@ -1557,43 +1736,75 @@ const Playground: NextPage = () => {
             setRightPanelTab('summary');
 
             const summaryText = cleanFinalContent(payload.content);
-            let index = 0;
             const streamInterval = setInterval(() => {
-              if (index < summaryText.length) {
-                const chunkSize = Math.min(3, summaryText.length - index);
-                setStreamingSummary(prev => prev + summaryText.slice(index, index + chunkSize));
-                index += chunkSize;
-              } else {
-                clearInterval(streamInterval);
-                setSummaryComplete(true);
+              setStreamingSummary(prev => {
+                if (prev.length >= summaryText.length) {
+                  clearInterval(streamInterval);
+                  setSummaryComplete(true);
 
-                setExecutionMap(currentExecMap => {
-                  const execution = currentExecMap[responseId];
-                  const deduped = buildArtifactsFromExecution(
-                    responseId,
-                    execution || { steps: [], outputs: {} },
-                    summaryText,
-                    uploadedFilePath,
-                  );
+                  setExecutionMap(currentExecMap => {
+                    const execution = currentExecMap[responseId];
+                    const deduped = buildArtifactsFromExecution(
+                      responseId,
+                      execution || { steps: [], outputs: {} },
+                      summaryText,
+                      uploadedFilePath,
+                    );
 
-                  setArtifacts(prev => {
-                    const filtered = prev.filter(a => a.messageId !== responseId);
-                    const newArtifacts = [...filtered, ...deduped];
+                    setArtifacts(prevArtifacts => {
+                      const filtered = prevArtifacts.filter(a => a.messageId !== responseId);
+                      const newArtifacts = [...filtered, ...deduped];
 
-                    // Auto-select the first HTML artifact for preview
-                    const htmlArtifact = deduped.find(a => a.type === 'html');
-                    if (htmlArtifact) {
-                      setPreviewArtifact(htmlArtifact as Artifact);
-                      setRightPanelView('html-preview');
-                      setRightPanelCollapsed(false);
+                      // Auto-select the first HTML artifact for preview
+                      const htmlArtifact = deduped.find(a => a.type === 'html');
+                      if (htmlArtifact) {
+                        setPreviewArtifact(htmlArtifact as Artifact);
+                        setRightPanelView('html-preview');
+                        setRightPanelCollapsed(false);
+                      }
+
+                      return newArtifacts;
+                    });
+
+                    // Detect skill creation from shell_interpreter steps
+                    if (execution) {
+                      const isSkillPackageStep = (s: ExecutionStep) => {
+                        if (s.action !== 'shell_interpreter') return false;
+                        // Check detail, actionInput, and outputs for package_skill/init_skill
+                        const detailHas = s.detail?.includes('package_skill') || s.detail?.includes('init_skill');
+                        const inputHas =
+                          s.actionInput?.includes('package_skill') || s.actionInput?.includes('init_skill');
+                        const outputTexts = (execution.outputs[s.id] || []).map(o => String(o.content)).join(' ');
+                        const outputHas =
+                          outputTexts.includes('package_skill') ||
+                          outputTexts.includes('init_skill') ||
+                          outputTexts.includes('Successfully packaged');
+                        return detailHas || inputHas || outputHas;
+                      };
+                      const skillStep = (execution.steps || []).find(isSkillPackageStep);
+                      if (skillStep) {
+                        // Extract skill name from actionInput, detail, or outputs
+                        const allText = [
+                          skillStep.actionInput || '',
+                          skillStep.detail || '',
+                          ...(execution.outputs[skillStep.id] || []).map(o => String(o.content)),
+                        ].join(' ');
+                        const skillName = extractCreatedSkillName(allText);
+                        if (skillName) {
+                          setCreatedSkillNames(prev => ({ ...prev, [responseId]: skillName }));
+                          setRightPanelView('skill-preview');
+                        }
+                      }
                     }
 
-                    return newArtifacts;
+                    return currentExecMap;
                   });
 
-                  return currentExecMap;
-                });
-              }
+                  return prev;
+                }
+                const chunkSize = Math.min(3, summaryText.length - prev.length);
+                return prev + summaryText.slice(prev.length, prev.length + chunkSize);
+              });
             }, 15);
           }
         } else if (payload.type === 'done') {
@@ -1701,6 +1912,7 @@ const Playground: NextPage = () => {
     const newMessages: ChatMessage[] = [];
     const newExecutionMap: typeof executionMap = {};
     const allArtifacts: Artifact[] = [];
+    const restoredSkillNames: Record<string, string> = {};
 
     historyMessages.forEach(msg => {
       if (msg.role === 'human') {
@@ -1721,6 +1933,8 @@ const Playground: NextPage = () => {
             title: s.title || s.action || `Step ${idx + 1}`,
             detail: s.detail || '',
             status: (s.status === 'failed' ? 'failed' : 'done') as 'done' | 'failed',
+            action: s.action,
+            actionInput: s.action_input || undefined,
           }));
 
           const outputs: Record<string, ExecutionOutput[]> = {};
@@ -1734,7 +1948,7 @@ const Playground: NextPage = () => {
                 content: o.content,
               }));
             }
-            if (s.action === 'code_interpreter' && s.action_input) {
+            if ((s.action === 'code_interpreter' || s.action === 'shell_interpreter') && s.action_input) {
               const existingOutputs = outputs[stepId] || [];
               const hasCode = existingOutputs.some((o: ExecutionOutput) => o.output_type === 'code');
               if (!hasCode) {
@@ -1749,7 +1963,20 @@ const Playground: NextPage = () => {
               }
             }
             if (s.thought) {
-              stepThoughts[stepId] = s.thought;
+              if (typeof s.thought === 'string') {
+                stepThoughts[stepId] = s.thought;
+              } else if (typeof s.thought === 'object') {
+                const todoValue = (s.thought as Record<string, unknown>).TODO;
+                if (typeof todoValue === 'string') {
+                  stepThoughts[stepId] = todoValue;
+                } else {
+                  try {
+                    stepThoughts[stepId] = JSON.stringify(s.thought);
+                  } catch {
+                    stepThoughts[stepId] = String(s.thought);
+                  }
+                }
+              }
             }
           });
 
@@ -1765,6 +1992,31 @@ const Playground: NextPage = () => {
 
           const restoredArtifacts = buildArtifactsFromExecution(viewId, { steps, outputs }, finalContent, null);
           allArtifacts.push(...restoredArtifacts);
+
+          // Detect skill creation from restored execution
+          const isSkillPackageStep = (s: ExecutionStep) => {
+            if (s.action !== 'shell_interpreter') return false;
+            const detailHas = s.detail?.includes('package_skill') || s.detail?.includes('init_skill');
+            const inputHas = s.actionInput?.includes('package_skill') || s.actionInput?.includes('init_skill');
+            const outputTexts = (outputs[s.id] || []).map(o => String(o.content)).join(' ');
+            const outputHas =
+              outputTexts.includes('package_skill') ||
+              outputTexts.includes('init_skill') ||
+              outputTexts.includes('Successfully packaged');
+            return detailHas || inputHas || outputHas;
+          };
+          const skillStep = steps.find(isSkillPackageStep);
+          if (skillStep) {
+            const allText = [
+              skillStep.actionInput || '',
+              skillStep.detail || '',
+              ...(outputs[skillStep.id] || []).map(o => String(o.content)),
+            ].join(' ');
+            const skillName = extractCreatedSkillName(allText);
+            if (skillName) {
+              restoredSkillNames[viewId] = skillName;
+            }
+          }
 
           newMessages.push({
             id: viewId,
@@ -1788,6 +2040,9 @@ const Playground: NextPage = () => {
     setMessages(newMessages);
     setExecutionMap(newExecutionMap);
     setArtifacts(allArtifacts);
+    if (Object.keys(restoredSkillNames).length > 0) {
+      setCreatedSkillNames(prev => ({ ...prev, ...restoredSkillNames }));
+    }
 
     const lastView = [...newMessages].reverse().find(m => m.role === 'view');
     if (lastView?.id) {
@@ -1991,6 +2246,9 @@ const Playground: NextPage = () => {
                                 },
                               }));
                             }
+                          } else if (artifact.type === 'file') {
+                            // File artifacts: trigger download on click
+                            downloadArtifact(artifact as Artifact);
                           }
                         }}
                         onArtifactDownload={artifact => downloadArtifact(artifact as Artifact)}
@@ -2002,6 +2260,54 @@ const Playground: NextPage = () => {
                         isCollapsed={isCurrentRoundCollapsed}
                         onExpand={() => {
                           if (round.viewMsg?.id) setActiveViewMsgId(round.viewMsg.id);
+                        }}
+                        createdSkillName={createdSkillNames[round.viewMsg?.id || '']}
+                        onSkillCardClick={_skillName => {
+                          if (round.viewMsg?.id) setActiveViewMsgId(round.viewMsg.id);
+                          setRightPanelCollapsed(false);
+                          setRightPanelView('skill-preview');
+                          // Find the package_skill step and select it so right panel shows SkillCardRenderer
+                          if (execution) {
+                            const skillStep = execution.steps.find((s: ExecutionStep) => {
+                              if (s.action !== 'shell_interpreter') return false;
+                              const detailHas = s.detail?.includes('package_skill') || s.detail?.includes('init_skill');
+                              const inputHas =
+                                s.actionInput?.includes('package_skill') || s.actionInput?.includes('init_skill');
+                              const outputTexts = (execution.outputs[s.id] || []).map(o => String(o.content)).join(' ');
+                              const outputHas =
+                                outputTexts.includes('package_skill') ||
+                                outputTexts.includes('init_skill') ||
+                                outputTexts.includes('Successfully packaged');
+                              return detailHas || inputHas || outputHas;
+                            });
+                            if (skillStep) {
+                              setSelectedStepId(skillStep.id);
+                              setExecutionMap(prev => ({
+                                ...prev,
+                                [round.viewMsg!.id!]: { ...prev[round.viewMsg!.id!], activeStepId: skillStep.id },
+                              }));
+                            }
+                          }
+                        }}
+                        onSkillDownload={async skillName => {
+                          try {
+                            const base = process.env.API_BASE_URL || '';
+                            const res = await fetch(
+                              `${base}/api/v1/agent/skills/download?skill_name=${encodeURIComponent(skillName)}`,
+                            );
+                            if (!res.ok) throw new Error('Download failed');
+                            const blob = await res.blob();
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `${skillName}.zip`;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                          } catch {
+                            // Download failed silently
+                          }
                         }}
                       />
                     );
@@ -2300,6 +2606,7 @@ const Playground: NextPage = () => {
                       panelView={rightPanelView}
                       onPanelViewChange={setRightPanelView}
                       previewArtifact={previewArtifact}
+                      skillName={createdSkillNames[activeViewMsg?.id || ''] || null}
                     />
                   );
                 })()}
@@ -2627,7 +2934,8 @@ const Playground: NextPage = () => {
                                   !dbSearchQuery ||
                                   ds.db_name.toLowerCase().includes(dbSearchQuery.toLowerCase()) ||
                                   ds.type.toLowerCase().includes(dbSearchQuery.toLowerCase()) ||
-                                  (ds.description && ds.description.toLowerCase().includes(dbSearchQuery.toLowerCase())),
+                                  (ds.description &&
+                                    ds.description.toLowerCase().includes(dbSearchQuery.toLowerCase())),
                               ).length === 0 && (
                                 <div className='text-center py-8 text-gray-400'>
                                   <DatabaseOutlined className='text-2xl mb-2 opacity-50' />

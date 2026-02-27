@@ -214,20 +214,16 @@ Follow these steps in order, skipping only if there is a clear reason why they a
 
 ### Step 1: Understanding the Skill with Concrete Examples
 
-Skip this step only when the skill's usage patterns are already clearly understood. It remains valuable even when working with an existing skill.
+**Default: Skip this step and proceed to Step 2** when the user's request already specifies a clear skill topic (e.g., "创建一个Excel分析技能", "Create a PDF processing skill", "生成一个数据可视化技能"). In such cases, you already have enough context to plan the skill — infer reasonable usage patterns yourself and move forward immediately.
 
-To create an effective skill, clearly understand concrete examples of how the skill will be used. This understanding can come from either direct user examples or generated examples that are validated with user feedback.
+**Only pause to ask questions** when the request is genuinely ambiguous and you cannot proceed without clarification — for example, "帮我创建一个技能" with no topic specified, or a domain so specialized that guessing usage patterns would likely be wrong.
 
-For example, when building an image-editor skill, relevant questions include:
+When clarification IS needed, ask at most 1-2 focused questions in a single message, then proceed regardless of the detail level of the user's response. Do NOT enter a multi-turn Q&A loop. Examples of focused questions:
 
-- "What functionality should the image-editor skill support? Editing, rotating, anything else?"
-- "Can you give some examples of how this skill would be used?"
-- "I can imagine users asking for things like 'Remove the red-eye from this image' or 'Rotate this image'. Are there other ways you imagine this skill being used?"
-- "What would a user say that should trigger this skill?"
+- "这个技能主要处理什么类型的数据/文件？"
+- "能给一个典型的使用场景吗？"
 
-To avoid overwhelming users, avoid asking too many questions in a single message. Start with the most important questions and follow up as needed for better effectiveness.
-
-Conclude this step when there is a clear sense of the functionality the skill should support.
+Conclude this step as quickly as possible. The goal is to start building, not to achieve perfect understanding upfront — iteration (Step 6) exists for refinement.
 
 ### Step 2: Planning the Reusable Skill Contents
 
@@ -259,12 +255,15 @@ At this point, it is time to actually create the skill.
 
 Skip this step only if the skill being developed already exists, and iteration or packaging is needed. In this case, continue to the next step.
 
-When creating a new skill from scratch, always run the `init_skill.py` script. The script conveniently generates a new template skill directory that automatically includes everything a skill requires, making the skill creation process much more efficient and reliable.
+When creating a new skill from scratch, always run the `init_skill.py` script using `shell_interpreter`. The script conveniently generates a new template skill directory that automatically includes everything a skill requires, making the skill creation process much more efficient and reliable.
 
-Usage:
+**Important**: All script executions in the skill-creator workflow must use the `shell_interpreter` tool. First, use `get_skill_resource` to find the skill-creator's script path, then execute via `shell_interpreter`.
 
-```bash
-scripts/init_skill.py <skill-name> --path <output-directory>
+Usage (via shell_interpreter):
+
+```
+Action: shell_interpreter
+Action Input: {"code": "python skills/skill-creator/scripts/init_skill.py <skill-name> --path skills/"}
 ```
 
 The script:
@@ -293,7 +292,7 @@ These files contain established best practices for effective skill design.
 
 To begin implementation, start with the reusable resources identified above: `scripts/`, `references/`, and `assets/` files. Note that this step may require user input. For example, when implementing a `brand-guidelines` skill, the user may need to provide brand assets or templates to store in `assets/`, or documentation to store in `references/`.
 
-Added scripts must be tested by actually running them to ensure there are no bugs and that the output matches what is expected. If there are many similar scripts, only a representative sample needs to be tested to ensure confidence that they all work while balancing time to completion.
+Added scripts must be tested by actually running them via `shell_interpreter` to ensure there are no bugs and that the output matches what is expected. For example: `shell_interpreter({"code": "python skills/<new-skill>/scripts/my_script.py --arg value"})`. If there are many similar scripts, only a representative sample needs to be tested to ensure confidence that they all work while balancing time to completion.
 
 Any example files and directories not needed for the skill should be deleted. The initialization script creates example files in `scripts/`, `references/`, and `assets/` to demonstrate structure, but most skills won't need all of them.
 
@@ -319,16 +318,18 @@ Write instructions for using the skill and its bundled resources.
 
 ### Step 5: Packaging a Skill
 
-Once development of the skill is complete, it must be packaged into a distributable .skill file that gets shared with the user. The packaging process automatically validates the skill first to ensure it meets all requirements:
+Once development of the skill is complete, it must be packaged into a distributable .skill file that gets shared with the user. Use `shell_interpreter` to run the packaging script:
 
-```bash
-scripts/package_skill.py <path/to/skill-folder>
+```
+Action: shell_interpreter
+Action Input: {"code": "python skills/skill-creator/scripts/package_skill.py <path/to/skill-folder>"}
 ```
 
 Optional output directory specification:
 
-```bash
-scripts/package_skill.py <path/to/skill-folder> ./dist
+```
+Action: shell_interpreter
+Action Input: {"code": "python skills/skill-creator/scripts/package_skill.py <path/to/skill-folder> ./dist"}
 ```
 
 The packaging script will:

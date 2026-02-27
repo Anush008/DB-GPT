@@ -27,6 +27,7 @@ class LocalSandboxSession(SandboxSession):
     def __init__(self, session_id: str, config: SessionConfig):
         super().__init__(session_id, config)
         self.work_dir = None
+        self._is_custom_work_dir = False
         self.process_pool = []
         self.path_utils = PathUtils()
         self.process_manager = ProcessManager()
@@ -35,10 +36,22 @@ class LocalSandboxSession(SandboxSession):
     async def start(self) -> bool:
         """启动本地沙箱会话"""
         try:
-            # 创建工作目录
-            self.work_dir = self.path_utils.create_temp_dir(
-                f"sandbox_{self.session_id}_"
-            )
+            # Use config.working_dir if it's an explicit real directory
+            # (not the default '/workspace'). Otherwise create a temp dir.
+            custom_dir = self.config.working_dir
+            if (
+                custom_dir
+                and custom_dir != "/workspace"
+                and os.path.isabs(custom_dir)
+            ):
+                os.makedirs(custom_dir, exist_ok=True)
+                self.work_dir = custom_dir
+                self._is_custom_work_dir = True
+            else:
+                self.work_dir = self.path_utils.create_temp_dir(
+                    f"sandbox_{self.session_id}_"
+                )
+                self._is_custom_work_dir = False
 
             # 设置环境变量
             self._setup_environment()
@@ -55,9 +68,10 @@ class LocalSandboxSession(SandboxSession):
         # 设置基本环境变量
         os.environ.update(self.config.environment_vars)
 
-        # 创建必要的子目录
-        os.makedirs(os.path.join(self.work_dir, "input"), exist_ok=True)
-        os.makedirs(os.path.join(self.work_dir, "output"), exist_ok=True)
+        # 创建必要的子目录 (only for temp dirs, not custom working dirs)
+        if not self._is_custom_work_dir:
+            os.makedirs(os.path.join(self.work_dir, "input"), exist_ok=True)
+            os.makedirs(os.path.join(self.work_dir, "output"), exist_ok=True)
 
     async def stop(self) -> bool:
         """停止本地沙箱会话"""
@@ -66,8 +80,12 @@ class LocalSandboxSession(SandboxSession):
             for pid in self.process_pool:
                 self.process_manager.kill_process_tree(pid)
 
-            # 清理工作目录
-            if self.work_dir and os.path.exists(self.work_dir):
+            # 清理工作目录 (only clean up auto-created temp dirs, not custom dirs)
+            if (
+                not self._is_custom_work_dir
+                and self.work_dir
+                and os.path.exists(self.work_dir)
+            ):
                 self.path_utils.cleanup_directory(self.work_dir)
 
             self._is_active = False

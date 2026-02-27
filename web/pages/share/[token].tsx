@@ -7,13 +7,13 @@
 
 import ManusLeftPanel, {
   ArtifactItem,
-  ThinkingSection,
   ExecutionStep as ManusExecutionStep,
   StepType,
+  ThinkingSection,
 } from '@/new-components/chat/content/ManusLeftPanel';
 import ManusRightPanel, {
-  ExecutionOutput as ManusExecutionOutput,
   ActiveStepInfo,
+  ExecutionOutput as ManusExecutionOutput,
   PanelView,
 } from '@/new-components/chat/content/ManusRightPanel';
 import {
@@ -51,7 +51,7 @@ interface RawPayload {
   generated_images?: string[];
 }
 
-interface ParsedMessage {
+interface _ParsedMessage {
   role: 'human' | 'view';
   context: string;
   order: number;
@@ -90,7 +90,12 @@ const getStepType = (title?: string): StepType => {
 };
 
 /** Extract ArtifactItem[] from a round's steps+outputs (mirrors index.tsx buildArtifactsFromExecution) */
-function buildArtifacts(roundId: string, steps: ManusExecutionStep[], outputs: Record<string, ManusExecutionOutput[]>, finalContent: string): ArtifactItem[] {
+function buildArtifacts(
+  roundId: string,
+  steps: ManusExecutionStep[],
+  outputs: Record<string, ManusExecutionOutput[]>,
+  finalContent: string,
+): ArtifactItem[] {
   const artifacts: ArtifactItem[] = [];
   const now = Date.now();
   const seenCodeHashes = new Set<string>();
@@ -123,9 +128,10 @@ function buildArtifacts(roundId: string, steps: ManusExecutionStep[], outputs: R
           size: output.content?.size,
         });
       } else if (output.output_type === 'html') {
-        const htmlContent = typeof output.content === 'string'
-          ? output.content
-          : output.content?.content || output.content?.html || String(output.content);
+        const htmlContent =
+          typeof output.content === 'string'
+            ? output.content
+            : output.content?.content || output.content?.html || String(output.content);
         const htmlTitle = output.content?.title || 'Report';
         artifacts.push({
           id: `${roundId}-html-${step.id}-${oIdx}`,
@@ -136,9 +142,10 @@ function buildArtifacts(roundId: string, steps: ManusExecutionStep[], outputs: R
           downloadable: true,
         });
       } else if (output.output_type === 'image') {
-        const imgUrl = typeof output.content === 'string'
-          ? output.content
-          : output.content?.url || output.content?.src || String(output.content);
+        const imgUrl =
+          typeof output.content === 'string'
+            ? output.content
+            : output.content?.url || output.content?.src || String(output.content);
         const imgName = imgUrl.split('/').pop() || `image_${oIdx}.png`;
         artifacts.push({
           id: `${roundId}-img-${step.id}-${oIdx}`,
@@ -153,7 +160,7 @@ function buildArtifacts(roundId: string, steps: ManusExecutionStep[], outputs: R
   });
 
   // Also scan final_content for file references (e.g. "已保存到 xxx.xlsx")
-  const fileRefRegex = /[\w\u4e00-\u9fa5_\-]+\.(xlsx?|csv|pdf|png|jpg|jpeg|gif|html?|txt|zip|json)/gi;
+  const fileRefRegex = /[\w\u4e00-\u9fa5_-]+\.(xlsx?|csv|pdf|png|jpg|jpeg|gif|html?|txt|zip|json)/gi;
   const matches = finalContent.matchAll(fileRefRegex);
   for (const m of matches) {
     const name = m[0];
@@ -217,7 +224,9 @@ function buildReplayRounds(rawMessages: Array<{ role: string; context: string; o
           try {
             const inp = typeof s.action_input === 'string' ? JSON.parse(s.action_input) : s.action_input;
             if (inp?.code) stepOutputs.push({ output_type: 'code', content: inp.code });
-          } catch { /* ignore */ }
+          } catch {
+            /* ignore */
+          }
         }
         if (Array.isArray(s.outputs)) {
           s.outputs.forEach(o => stepOutputs.push({ output_type: o.output_type as any, content: o.content }));
@@ -246,8 +255,8 @@ function buildReplayRounds(rawMessages: Array<{ role: string; context: string; o
 function buildSections(steps: ManusExecutionStep[]): ThinkingSection[] {
   if (steps.length === 0) return [];
 
-  const thinkSteps = steps.filter(s =>
-    s.title?.toLowerCase().includes('think') || s.title?.toLowerCase().includes('plan'),
+  const thinkSteps = steps.filter(
+    s => s.title?.toLowerCase().includes('think') || s.title?.toLowerCase().includes('plan'),
   );
   const skillSteps = steps.filter(s => s.title?.toLowerCase().includes('skill'));
   const otherSteps = steps.filter(
@@ -258,9 +267,12 @@ function buildSections(steps: ManusExecutionStep[]): ThinkingSection[] {
   );
 
   const sections: ThinkingSection[] = [];
-  if (thinkSteps.length > 0) sections.push({ id: 'section-think', title: '分析与规划', isCompleted: true, steps: thinkSteps });
-  if (skillSteps.length > 0) sections.push({ id: 'section-skill', title: '技能加载', isCompleted: true, steps: skillSteps });
-  if (otherSteps.length > 0) sections.push({ id: 'section-execution', title: '数据处理与执行', isCompleted: true, steps: otherSteps });
+  if (thinkSteps.length > 0)
+    sections.push({ id: 'section-think', title: '分析与规划', isCompleted: true, steps: thinkSteps });
+  if (skillSteps.length > 0)
+    sections.push({ id: 'section-skill', title: '技能加载', isCompleted: true, steps: skillSteps });
+  if (otherSteps.length > 0)
+    sections.push({ id: 'section-execution', title: '数据处理与执行', isCompleted: true, steps: otherSteps });
   if (sections.length === 0) sections.push({ id: 'section-main', title: '执行过程', isCompleted: true, steps });
   return sections;
 }
@@ -278,8 +290,8 @@ const SPEED_OPTIONS = [
 
 /** Delays (ms) per event at 1× speed */
 const BASE_DELAYS = {
-  beforeStep: 600,   // pause before revealing a step
-  afterStep: 400,    // pause after a step appears before showing outputs
+  beforeStep: 600, // pause before revealing a step
+  afterStep: 400, // pause after a step appears before showing outputs
   betweenOutputs: 300,
   beforeFinal: 700,
   betweenRounds: 1000,
@@ -415,21 +427,24 @@ function useReplayEngine(rounds: ReplayRound[], speed: number, autoPlay = false)
     if (autoPlay && rounds.length > 0) {
       setPlaying(true);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /** Jump to a specific round (skips to its end instantly) */
-  const jumpToRound = useCallback((ri: number) => {
-    pause();
-    setState({
-      roundIndex: ri,
-      visibleStepCount: rounds[ri]?.steps.length ?? 0,
-      activeStepId: rounds[ri]?.steps.slice(-1)[0]?.id ?? null,
-      showFinalForRound: true,
-      completedRoundIndex: ri,
-      done: ri === rounds.length - 1,
-    });
-  }, [pause, rounds]);
+  const jumpToRound = useCallback(
+    (ri: number) => {
+      pause();
+      setState({
+        roundIndex: ri,
+        visibleStepCount: rounds[ri]?.steps.length ?? 0,
+        activeStepId: rounds[ri]?.steps.slice(-1)[0]?.id ?? null,
+        showFinalForRound: true,
+        completedRoundIndex: ri,
+        done: ri === rounds.length - 1,
+      });
+    },
+    [pause, rounds],
+  );
 
   /** Restart replay from the beginning */
   const restart = useCallback(() => {
@@ -460,7 +475,12 @@ interface SharePageProps {
   error?: string;
 }
 
-const SharePage: NextPage<SharePageProps> = ({ token, messages: initMessages, firstQuestion, error: initError }) => {
+const SharePage: NextPage<SharePageProps> = ({
+  token: _token,
+  messages: initMessages,
+  firstQuestion,
+  error: initError,
+}) => {
   const [fetchError] = useState<string | null>(initError || null);
   const [speed, setSpeed] = useState(1);
   const [rightPanelView, setRightPanelView] = useState<PanelView>('execution');
@@ -483,15 +503,19 @@ const SharePage: NextPage<SharePageProps> = ({ token, messages: initMessages, fi
     const visibleSteps: ManusExecutionStep[] = isCurrentRound
       ? round.steps.slice(0, state.visibleStepCount).map((s, idx) => ({
           ...s,
-          status: idx < state.visibleStepCount - 1 ? 'completed' : (playing ? 'running' : 'completed'),
+          status: idx < state.visibleStepCount - 1 ? 'completed' : playing ? 'running' : 'completed',
         }))
       : isCompletedRound
-      ? round.steps.map(s => ({ ...s, status: 'completed' as const }))
-      : [];
+        ? round.steps.map(s => ({ ...s, status: 'completed' as const }))
+        : [];
 
     const sections = buildSections(visibleSteps);
     const showFinal = isCompletedRound || (isCurrentRound && state.showFinalForRound);
-    const activeStepId = isCurrentRound ? state.activeStepId : (isCompletedRound ? round.steps.slice(-1)[0]?.id ?? null : null);
+    const activeStepId = isCurrentRound
+      ? state.activeStepId
+      : isCompletedRound
+        ? (round.steps.slice(-1)[0]?.id ?? null)
+        : null;
 
     return { round, visibleSteps, sections, showFinal, activeStepId };
   };
@@ -521,7 +545,8 @@ const SharePage: NextPage<SharePageProps> = ({ token, messages: initMessages, fi
 
   // Progress: total steps across all rounds
   const totalSteps = rounds.reduce((acc, r) => acc + r.steps.length, 0);
-  const completedSteps = rounds.slice(0, state.roundIndex).reduce((acc, r) => acc + r.steps.length, 0) + state.visibleStepCount;
+  const completedSteps =
+    rounds.slice(0, state.roundIndex).reduce((acc, r) => acc + r.steps.length, 0) + state.visibleStepCount;
   const progressPercent = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
 
   const handleCopyLink = async () => {
@@ -551,7 +576,11 @@ const SharePage: NextPage<SharePageProps> = ({ token, messages: initMessages, fi
   return (
     <>
       <Head>
-        <title>{firstQuestion ? `${firstQuestion.slice(0, 60)}${firstQuestion.length > 60 ? '…' : ''} · DB-GPT 回放` : 'DB-GPT 对话回放'}</title>
+        <title>
+          {firstQuestion
+            ? `${firstQuestion.slice(0, 60)}${firstQuestion.length > 60 ? '…' : ''} · DB-GPT 回放`
+            : 'DB-GPT 对话回放'}
+        </title>
       </Head>
 
       <div className='flex flex-col h-screen bg-white dark:bg-[#111217] overflow-hidden'>
@@ -563,7 +592,9 @@ const SharePage: NextPage<SharePageProps> = ({ token, messages: initMessages, fi
             {/* Logo / brand */}
             <span className='font-bold text-base text-gray-800 dark:text-white flex-shrink-0'>DB-GPT</span>
             <div className='w-px h-4 bg-gray-200 dark:bg-gray-700 flex-shrink-0' />
-            <span className='text-xs font-medium text-blue-500 bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded-full flex-shrink-0'>回放</span>
+            <span className='text-xs font-medium text-blue-500 bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded-full flex-shrink-0'>
+              回放
+            </span>
             {firstQuestion && (
               <span className='text-sm text-gray-500 dark:text-gray-400 truncate max-w-[400px]' title={firstQuestion}>
                 {firstQuestion}
@@ -595,25 +626,15 @@ const SharePage: NextPage<SharePageProps> = ({ token, messages: initMessages, fi
 
             {/* Play / Pause */}
             {state.done ? (
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={restart}
-              >
+              <Button icon={<ReloadOutlined />} onClick={restart}>
                 重新回放
               </Button>
             ) : playing ? (
-              <Button
-                icon={<PauseCircleOutlined />}
-                onClick={pause}
-              >
+              <Button icon={<PauseCircleOutlined />} onClick={pause}>
                 暂停
               </Button>
             ) : (
-              <Button
-                type='primary'
-                icon={<PlayCircleOutlined />}
-                onClick={play}
-              >
+              <Button type='primary' icon={<PlayCircleOutlined />} onClick={play}>
                 {completedSteps === 0 ? '开始回放' : '继续'}
               </Button>
             )}
@@ -621,10 +642,7 @@ const SharePage: NextPage<SharePageProps> = ({ token, messages: initMessages, fi
             {/* Skip to end */}
             {!state.done && (
               <Tooltip title='跳到最后一步'>
-                <Button
-                  icon={<StepForwardOutlined />}
-                  onClick={() => jumpToRound(rounds.length - 1)}
-                />
+                <Button icon={<StepForwardOutlined />} onClick={() => jumpToRound(rounds.length - 1)} />
               </Tooltip>
             )}
 
@@ -671,8 +689,8 @@ const SharePage: NextPage<SharePageProps> = ({ token, messages: initMessages, fi
                         ri === state.roundIndex
                           ? 'bg-blue-500 text-white'
                           : ri <= state.completedRoundIndex
-                          ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400'
-                          : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
+                            ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400'
+                            : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
                       }`}
                     >
                       {ri + 1}

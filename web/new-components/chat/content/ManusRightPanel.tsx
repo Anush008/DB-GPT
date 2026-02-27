@@ -3,15 +3,17 @@ import markdownComponents, { markdownPlugins, preprocessLaTeX } from '@/componen
 import AdvancedChart, { createChartConfig } from '@/new-components/charts';
 import MarkDownContext from '@/new-components/common/MarkdownContext';
 import {
+  AppstoreOutlined,
   BarChartOutlined,
   CheckCircleFilled,
   CloseCircleFilled,
   CodeOutlined,
-  CopyOutlined,
   ConsoleSqlOutlined,
-  DesktopOutlined,
+  CopyOutlined,
   DatabaseOutlined,
+  DesktopOutlined,
   DownOutlined,
+  DownloadOutlined,
   EditOutlined,
   ExportOutlined,
   EyeOutlined,
@@ -26,6 +28,8 @@ import {
   LinkOutlined,
   LoadingOutlined,
   PlayCircleOutlined,
+  PlusOutlined,
+  RightOutlined,
   SearchOutlined,
   SyncOutlined,
   TableOutlined,
@@ -34,7 +38,7 @@ import {
 import { GPTVis } from '@antv/gpt-vis';
 import { Button, Table, Tooltip, message } from 'antd';
 import classNames from 'classnames';
-import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArtifactItem, StepStatus, StepType } from './ManusLeftPanel';
 
 /** Resolve image paths like `/images/xxx.png` to full backend URLs in dev mode */
@@ -89,9 +93,11 @@ export interface ManusRightPanelProps {
   previewArtifact?: ArtifactItem | null;
   /** Database type for SQL editor display (e.g. 'sqlite', 'mysql', 'postgres') */
   databaseType?: string;
+  /** Skill name for the skill-preview tab (set when a skill is created/packaged) */
+  skillName?: string | null;
 }
 
-export type PanelView = 'execution' | 'files' | 'html-preview';
+export type PanelView = 'execution' | 'files' | 'html-preview' | 'skill-preview';
 
 // Get icon for step type
 const getStepTypeIcon = (type: StepType) => {
@@ -124,12 +130,17 @@ const getStepTypeIcon = (type: StepType) => {
 const getDbTypeInfo = (dbType?: string): { icon: React.ReactNode; label: string } => {
   if (!dbType) return { icon: <DatabaseOutlined className='text-gray-500 text-sm' />, label: 'Database' };
   const lower = dbType.toLowerCase();
-  if (lower.includes('mysql')) return { icon: <ConsoleSqlOutlined className='text-blue-500 text-sm' />, label: 'MySQL' };
-  if (lower.includes('postgre')) return { icon: <DatabaseOutlined className='text-blue-400 text-sm' />, label: 'PostgreSQL' };
-  if (lower.includes('sqlite')) return { icon: <DatabaseOutlined className='text-amber-500 text-sm' />, label: 'SQLite' };
-  if (lower.includes('mongo')) return { icon: <DatabaseOutlined className='text-green-500 text-sm' />, label: 'MongoDB' };
+  if (lower.includes('mysql'))
+    return { icon: <ConsoleSqlOutlined className='text-blue-500 text-sm' />, label: 'MySQL' };
+  if (lower.includes('postgre'))
+    return { icon: <DatabaseOutlined className='text-blue-400 text-sm' />, label: 'PostgreSQL' };
+  if (lower.includes('sqlite'))
+    return { icon: <DatabaseOutlined className='text-amber-500 text-sm' />, label: 'SQLite' };
+  if (lower.includes('mongo'))
+    return { icon: <DatabaseOutlined className='text-green-500 text-sm' />, label: 'MongoDB' };
   if (lower.includes('oracle')) return { icon: <DatabaseOutlined className='text-red-500 text-sm' />, label: 'Oracle' };
-  if (lower.includes('mssql') || lower.includes('sqlserver')) return { icon: <DatabaseOutlined className='text-indigo-500 text-sm' />, label: 'SQL Server' };
+  if (lower.includes('mssql') || lower.includes('sqlserver'))
+    return { icon: <DatabaseOutlined className='text-indigo-500 text-sm' />, label: 'SQL Server' };
   return { icon: <DatabaseOutlined className='text-gray-500 text-sm' />, label: dbType };
 };
 
@@ -453,7 +464,6 @@ const OutputRenderer: React.FC<{ output: ExecutionOutput; index: number }> = mem
 
 OutputRenderer.displayName = 'OutputRenderer';
 
-
 // Parse get_skill_resource detail text to extract skill name, resource path, and content
 const parseSkillResourceDetail = (
   detail?: string,
@@ -584,13 +594,21 @@ const SkillScriptRenderer: React.FC<{
   // Also extract image URLs from outputText that may not be in outputs
   const inlineImageUrls = extractImageUrls(parsed.outputText);
   // Deduplicate: filter out URLs already in imageOutputs
-  const existingUrls = new Set(imageOutputs.map(o => typeof o.content === 'string' ? o.content : o.content?.url || ''));
+  const existingUrls = new Set(
+    imageOutputs.map(o => (typeof o.content === 'string' ? o.content : o.content?.url || '')),
+  );
   const extraImageUrls = inlineImageUrls.filter(u => !existingUrls.has(u));
-  const cleanTextOutputs = textOutputs.map(o => {
-    const text = String(o.content);
-    const cleaned = text.split('\n').filter(line => !line.match(/^\s*[-\u2013]\s*\/images\//)).join('\n').trim();
-    return { ...o, content: cleaned };
-  }).filter(o => o.content);
+  const cleanTextOutputs = textOutputs
+    .map(o => {
+      const text = String(o.content);
+      const cleaned = text
+        .split('\n')
+        .filter(line => !line.match(/^\s*[-\u2013]\s*\/images\//))
+        .join('\n')
+        .trim();
+      return { ...o, content: cleaned };
+    })
+    .filter(o => o.content);
   const cleanOutputText = parsed.outputText
     .split('\n')
     .filter(line => !line.match(/^\s*[-\u2013]\s*\/images\//) && !line.match(/\u5df2\u751f\u6210\u7684\u56fe\u7247URL/))
@@ -611,9 +629,7 @@ const SkillScriptRenderer: React.FC<{
           </div>
           <div className='flex items-center gap-2'>
             <CodeOutlined className='text-blue-400 text-xs' />
-            <span className='text-sm font-medium text-gray-200 break-all font-mono'>
-              {parsed.scriptFileName}
-            </span>
+            <span className='text-sm font-medium text-gray-200 break-all font-mono'>{parsed.scriptFileName}</span>
           </div>
         </div>
 
@@ -645,11 +661,15 @@ const SkillScriptRenderer: React.FC<{
           </div>
         )}
         {/* Text results */}
-        {cleanTextOutputs.length > 0 && cleanTextOutputs.map((o, idx) => (
-          <div key={`text-${idx}`} className='rounded-lg bg-gray-900 mx-3 mt-2 px-4 py-3 text-sm text-green-400 font-mono whitespace-pre-wrap leading-relaxed overflow-x-auto'>
-            {String(o.content)}
-          </div>
-        ))}
+        {cleanTextOutputs.length > 0 &&
+          cleanTextOutputs.map((o, idx) => (
+            <div
+              key={`text-${idx}`}
+              className='rounded-lg bg-gray-900 mx-3 mt-2 px-4 py-3 text-sm text-green-400 font-mono whitespace-pre-wrap leading-relaxed overflow-x-auto'
+            >
+              {String(o.content)}
+            </div>
+          ))}
         {/* Fallback: if no text outputs but cleanOutputText has content */}
         {cleanTextOutputs.length === 0 && cleanOutputText && !htmlReportMatch && (
           <div className='rounded-lg bg-gray-900 mx-3 mt-2 px-4 py-3 text-sm text-green-400 font-mono whitespace-pre-wrap leading-relaxed overflow-x-auto'>
@@ -661,32 +681,32 @@ const SkillScriptRenderer: React.FC<{
           <div key={`img-${idx}`} className='overflow-hidden bg-gray-50 dark:bg-gray-900'>
             <img
               src={resolveImageUrl(
-                typeof img.content === 'string' ? img.content : img.content?.url || img.content?.src || String(img.content),
+                typeof img.content === 'string'
+                  ? img.content
+                  : img.content?.url || img.content?.src || String(img.content),
               )}
               alt={`Result ${idx + 1}`}
               className='w-full h-auto block'
-
             />
           </div>
         ))}
         {/* Extra images extracted from outputText */}
         {extraImageUrls.map((url, idx) => (
           <div key={`extra-img-${idx}`} className='overflow-hidden bg-gray-50 dark:bg-gray-900'>
-            <img
-              src={resolveImageUrl(url)}
-              alt={`Generated ${idx + 1}`}
-              className='w-full h-auto block'
-
-            />
+            <img src={resolveImageUrl(url)} alt={`Generated ${idx + 1}`} className='w-full h-auto block' />
           </div>
         ))}
         {/* Empty state */}
-        {imageOutputs.length === 0 && extraImageUrls.length === 0 && cleanTextOutputs.length === 0 && !cleanOutputText && !htmlReportMatch && (
-          <div className='flex flex-col items-center justify-center py-8 text-gray-400'>
-            <FileSearchOutlined className='text-2xl mb-2' />
-            <span className='text-xs'>\u7B49\u5F85\u6267\u884C\u7ED3\u679C...</span>
-          </div>
-        )}
+        {imageOutputs.length === 0 &&
+          extraImageUrls.length === 0 &&
+          cleanTextOutputs.length === 0 &&
+          !cleanOutputText &&
+          !htmlReportMatch && (
+            <div className='flex flex-col items-center justify-center py-8 text-gray-400'>
+              <FileSearchOutlined className='text-2xl mb-2' />
+              <span className='text-xs'>\u7B49\u5F85\u6267\u884C\u7ED3\u679C...</span>
+            </div>
+          )}
       </div>
     </div>
   );
@@ -822,7 +842,9 @@ const CodeExecutionRenderer: React.FC<{
         <div key={`img-${imgIdx}`} className='rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700'>
           <img
             src={resolveImageUrl(
-              typeof img.content === 'string' ? img.content : img.content?.url || img.content?.src || String(img.content),
+              typeof img.content === 'string'
+                ? img.content
+                : img.content?.url || img.content?.src || String(img.content),
             )}
             alt='Generated chart'
             className='w-full h-auto object-contain'
@@ -884,6 +906,501 @@ const CodeExecutionRenderer: React.FC<{
 
 CodeExecutionRenderer.displayName = 'CodeExecutionRenderer';
 
+/** Parse shell command from step detail (Action Input JSON) */
+const parseShellCommand = (detail?: string): string => {
+  if (!detail) return '';
+  const inputMatch = detail.match(/Action Input:\s*({[\s\S]*?})(?:\n|$)/);
+  if (!inputMatch) return '';
+  try {
+    const parsed = JSON.parse(inputMatch[1]);
+    return parsed.code || '';
+  } catch {
+    return '';
+  }
+};
+
+/** Terminal-style renderer for shell/bash steps — mimics a real terminal session */
+const TerminalRenderer: React.FC<{
+  activeStep: ActiveStepInfo;
+  outputs: ExecutionOutput[];
+}> = memo(({ activeStep, outputs }) => {
+  const command =
+    parseShellCommand(activeStep.detail) ||
+    outputs
+      .filter(o => o.output_type === 'code')
+      .map(o => String(o.content))
+      .join('');
+  const resultChunks = outputs.filter(o => o.output_type === 'text');
+  const errorChunks = outputs.filter(o => o.output_type === 'error');
+  const resultText = resultChunks.map(r => String(r.content)).join('\n');
+  const errorText = errorChunks.map(e => String(e.content)).join('\n');
+  const isRunning = activeStep.status === 'running';
+  const isError = activeStep.status === 'error' || errorChunks.length > 0;
+
+  const allText = [command ? `$ ${command}` : '', resultText, errorText].filter(Boolean).join('\n');
+
+  return (
+    <div className='flex flex-col flex-1 min-h-0 overflow-hidden rounded-xl border border-gray-700/60'>
+      {/* Terminal title bar */}
+      <div className='flex items-center justify-between px-4 py-2.5 bg-[#1e2030] border-b border-gray-700/50 shrink-0'>
+        <div className='flex items-center gap-3'>
+          <div className='flex items-center gap-1.5'>
+            <div className='w-3 h-3 rounded-full bg-[#ff5f57]' />
+            <div className='w-3 h-3 rounded-full bg-[#febc2e]' />
+            <div className='w-3 h-3 rounded-full bg-[#28c840]' />
+          </div>
+          <div className='flex items-center gap-2'>
+            <ConsoleSqlOutlined className='text-gray-400 text-xs' />
+            <span className='text-xs font-medium text-gray-400'>Terminal</span>
+          </div>
+        </div>
+        <div className='flex items-center gap-2'>
+          <StatusBadge status={activeStep.status} />
+          {allText && (
+            <Tooltip title='复制全部'>
+              <button
+                className='flex items-center gap-1 text-[11px] text-gray-500 hover:text-gray-300 transition-colors px-2 py-1 rounded hover:bg-gray-700/50'
+                onClick={() => copyToClipboard(allText)}
+              >
+                <CopyOutlined className='text-xs' />
+              </button>
+            </Tooltip>
+          )}
+        </div>
+      </div>
+
+      {/* Terminal body */}
+      <div className='flex-1 min-h-0 overflow-auto bg-[#0d1117] px-5 py-4 font-mono text-sm leading-relaxed'>
+        {/* Command line */}
+        {command && (
+          <div className='whitespace-pre-wrap break-all'>
+            <span className='text-[#3fb950] font-semibold'>dbgpt@sandbox</span>
+            <span className='text-[#8b949e]'>:</span>
+            <span className='text-[#58a6ff] font-semibold'>~</span>
+            <span className='text-[#8b949e]'>$ </span>
+            <span className='text-[#e6edf3]'>{command}</span>
+          </div>
+        )}
+
+        {/* Output */}
+        {resultText && <div className='text-[#c9d1d9] whitespace-pre-wrap break-all mt-1'>{resultText}</div>}
+
+        {/* Error output */}
+        {errorText && <div className='text-[#f85149] whitespace-pre-wrap break-all mt-1'>{errorText}</div>}
+
+        {/* Next prompt line / cursor */}
+        {(resultText || errorText || command) && (
+          <div className='mt-1'>
+            <span className='text-[#3fb950] font-semibold'>dbgpt@sandbox</span>
+            <span className='text-[#8b949e]'>:</span>
+            <span className='text-[#58a6ff] font-semibold'>~</span>
+            <span className='text-[#8b949e]'>$ </span>
+            {isRunning && <span className='inline-block w-2 h-4 bg-[#e6edf3] animate-pulse ml-0.5 align-text-bottom' />}
+          </div>
+        )}
+
+        {/* Empty state while running */}
+        {!command && !resultText && !errorText && isRunning && (
+          <div>
+            <span className='text-[#3fb950] font-semibold'>dbgpt@sandbox</span>
+            <span className='text-[#8b949e]'>:</span>
+            <span className='text-[#58a6ff] font-semibold'>~</span>
+            <span className='text-[#8b949e]'>$ </span>
+            <span className='inline-block w-2 h-4 bg-[#e6edf3] animate-pulse ml-0.5 align-text-bottom' />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+
+TerminalRenderer.displayName = 'TerminalRenderer';
+
+/** Parse skill name from skill-creator output (package_skill or init_skill steps) */
+const parseSkillCreatorOutput = (detail?: string, outputs?: ExecutionOutput[]): string | null => {
+  // Collect all text to search
+  const allTexts: string[] = [];
+  if (detail) allTexts.push(detail);
+  if (outputs) {
+    for (const o of outputs) allTexts.push(String(o.content || ''));
+  }
+  const combined = allTexts.join('\n');
+
+  // Priority 1: Explicit skill name patterns from init_skill/package_skill output
+  // "Skill 'xxx' initialized" or "Skill 'xxx' packaged"
+  const quotedSkill = combined.match(/[Ss]kill\s+['"]([\w-]+)['"]/);
+  if (quotedSkill) return quotedSkill[1];
+
+  // "Initializing skill: xxx" or "Packaging skill: xxx"
+  const colonSkill = combined.match(/(?:Initializing|Packaging)\s+skill:\s*(?:skills\/)?([\w-]+)/);
+  if (colonSkill) return colonSkill[1];
+
+  // "Created skill directory: .../skills/xxx"
+  const createdDir = combined.match(/Created skill directory:.*\/skills\/([\w-]+)/);
+  if (createdDir) return createdDir[1];
+
+  // Priority 2: Action Input JSON (for non-shell actions)
+  if (detail) {
+    const inputMatch = detail.match(/Action Input:\s*({[\s\S]*?})(?:\n|$)/);
+    if (inputMatch) {
+      try {
+        const parsed = JSON.parse(inputMatch[1]);
+        if (parsed.skill_name) return parsed.skill_name;
+        if (parsed.name) return parsed.name;
+      } catch { /* ignore */ }
+    }
+  }
+
+  // Priority 3: Last skills/xxx path (skip skill-creator which is the tool, not the created skill)
+  const allPaths = [...combined.matchAll(/skills\/([\w-]+)/g)]
+    .map(m => m[1])
+    .filter(name => name !== 'skill-creator');
+  if (allPaths.length > 0) return allPaths[allPaths.length - 1];
+
+  return null;
+};
+
+/** File tree node from /v1/skills/detail API */
+interface SkillTreeNode {
+  title: string;
+  key: string;
+  children?: SkillTreeNode[];
+}
+
+/** Recursive file tree component */
+const FileTreeItem: React.FC<{
+  node: SkillTreeNode;
+  depth: number;
+  selectedKey: string | null;
+  onSelect: (key: string) => void;
+}> = ({ node, depth, selectedKey, onSelect }) => {
+  const [expanded, setExpanded] = useState(depth < 2);
+  const isDir = !!node.children;
+  const isSelected = selectedKey === node.key;
+
+  return (
+    <div>
+      <div
+        className={classNames(
+          'flex items-center gap-1.5 py-1 px-2 rounded cursor-pointer text-xs transition-colors select-none',
+          isSelected
+            ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium'
+            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800',
+        )}
+        style={{ paddingLeft: `${depth * 14 + 8}px` }}
+        onClick={() => {
+          if (isDir) {
+            setExpanded(prev => !prev);
+          } else {
+            onSelect(node.key);
+          }
+        }}
+      >
+        {isDir ? (
+          expanded ? (
+            <DownOutlined className='text-[9px] text-gray-400' />
+          ) : (
+            <RightOutlined className='text-[9px] text-gray-400' />
+          )
+        ) : (
+          <span className='w-[9px]' />
+        )}
+        {isDir ? (
+          <FolderOpenOutlined className='text-amber-500 text-xs' />
+        ) : node.title.endsWith('.md') ? (
+          <FileTextOutlined className='text-blue-500 text-xs' />
+        ) : node.title.endsWith('.py') ? (
+          <CodeOutlined className='text-green-500 text-xs' />
+        ) : (
+          <FileOutlined className='text-gray-400 text-xs' />
+        )}
+        <span className='truncate'>{node.title}</span>
+      </div>
+      {isDir &&
+        expanded &&
+        node.children?.map(child => (
+          <FileTreeItem key={child.key} node={child} depth={depth + 1} selectedKey={selectedKey} onSelect={onSelect} />
+        ))}
+    </div>
+  );
+};
+
+/** Skill card renderer — shows skill detail with file tree and markdown content */
+const SkillCardRenderer: React.FC<{
+  skillName: string;
+  outputs: ExecutionOutput[];
+}> = memo(({ skillName, outputs }) => {
+  const [detailData, setDetailData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [fileContent, setFileContent] = useState<string>('');
+  const [showDetail, setShowDetail] = useState(true);
+  const [downloading, setDownloading] = useState(false);
+
+  // Fetch skill detail on mount
+  useEffect(() => {
+    const fetchDetail = async () => {
+      try {
+        setLoading(true);
+        const base = process.env.API_BASE_URL || '';
+        const res = await fetch(
+          `${base}/api/v1/skills/detail?skill_name=${encodeURIComponent(skillName)}&file_path=${encodeURIComponent(skillName)}`,
+        );
+        const json = await res.json();
+        if (json.success && json.data) {
+          setDetailData(json.data);
+          setFileContent(json.data.raw_content || json.data.instructions || '');
+        } else {
+          setError(json.err_msg || 'Failed to load skill detail');
+        }
+      } catch (e) {
+        setError('Network error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDetail();
+  }, [skillName]);
+
+  // Fetch individual file content when selected
+  const handleFileSelect = useCallback(
+    async (fileKey: string) => {
+      setSelectedFile(fileKey);
+      if (fileKey === 'SKILL.md' || fileKey === '.') {
+        setFileContent(detailData?.raw_content || '');
+        return;
+      }
+      try {
+        const base = process.env.API_BASE_URL || '';
+        const filePath = `${skillName}/${fileKey}`;
+        const res = await fetch(
+          `${base}/api/v1/skills/detail?skill_name=${encodeURIComponent(skillName)}&file_path=${encodeURIComponent(filePath)}`,
+        );
+        const json = await res.json();
+        if (json.success && json.data) {
+          setFileContent(json.data.raw_content || json.data.instructions || '(Empty file)');
+        }
+      } catch {
+        setFileContent('(Failed to load file)');
+      }
+    },
+    [skillName, detailData],
+  );
+
+  const handleDownload = useCallback(async () => {
+    try {
+      setDownloading(true);
+      const base = process.env.API_BASE_URL || '';
+      const res = await fetch(`${base}/api/v1/agent/skills/download?skill_name=${encodeURIComponent(skillName)}`);
+      if (!res.ok) throw new Error('Download failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${skillName}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      message.success('下载成功');
+    } catch {
+      message.error('下载失败');
+    } finally {
+      setDownloading(false);
+    }
+  }, [skillName]);
+
+  const handleAddToSkills = useCallback(() => {
+    message.success(`技能 "${skillName}" 已添加到我的技能`);
+  }, [skillName]);
+
+  const displayName = detailData?.metadata?.name || detailData?.skill_name || skillName;
+  const description = detailData?.metadata?.description || '';
+
+  if (loading) {
+    return (
+      <div className='flex flex-col items-center justify-center py-16 text-gray-400'>
+        <LoadingOutlined className='text-3xl text-indigo-500 mb-4' />
+        <span className='text-sm'>加载技能详情...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className='flex flex-col items-center justify-center py-16 text-gray-400'>
+        <AppstoreOutlined className='text-3xl mb-4' />
+        <span className='text-sm'>{error}</span>
+      </div>
+    );
+  }
+
+  // Compact card view
+  if (!showDetail) {
+    return (
+      <div className='rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-[#1a1b1e]'>
+        <div className='px-5 py-4'>
+          <div className='flex items-center justify-between'>
+            <div className='flex items-center gap-3 min-w-0 flex-1'>
+              <div className='flex-shrink-0 w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center'>
+                <AppstoreOutlined className='text-lg text-indigo-500' />
+              </div>
+              <div className='min-w-0 flex-1'>
+                <div className='flex items-center gap-2'>
+                  <span className='text-sm font-semibold text-gray-800 dark:text-gray-200 truncate'>{displayName}</span>
+                  <span className='flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-medium'>
+                    技能
+                  </span>
+                </div>
+                {description && (
+                  <p className='text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate'>{description}</p>
+                )}
+              </div>
+            </div>
+            <div className='flex items-center gap-2 flex-shrink-0 ml-3'>
+              <Tooltip title='下载为 ZIP'>
+                <button
+                  className='flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 hover:text-indigo-600 hover:border-indigo-300 dark:hover:border-indigo-500 transition-colors'
+                  onClick={handleDownload}
+                  disabled={downloading}
+                >
+                  {downloading ? <LoadingOutlined className='text-sm' /> : <DownloadOutlined className='text-sm' />}
+                </button>
+              </Tooltip>
+              <Button
+                type='primary'
+                size='small'
+                className='!bg-gray-900 !border-gray-900 dark:!bg-gray-100 dark:!border-gray-100 dark:!text-gray-900 !text-white !rounded-lg !text-xs !font-medium !px-3'
+                icon={<PlusOutlined className='text-[10px]' />}
+                onClick={handleAddToSkills}
+              >
+                添加到我的技能
+              </Button>
+            </div>
+          </div>
+        </div>
+        {/* Clickable area to expand file tree detail */}
+        <div
+          className='border-t border-gray-100 dark:border-gray-800 px-5 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1f2025] transition-colors flex items-center justify-between'
+          onClick={() => setShowDetail(true)}
+        >
+          <div className='flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400'>
+            <FolderOpenOutlined className='text-amber-500' />
+            <span>查看技能文件</span>
+            {detailData?.tree?.children && (
+              <span className='text-gray-400'>({detailData.tree.children.length} 项)</span>
+            )}
+          </div>
+          <RightOutlined className='text-[10px] text-gray-400' />
+        </div>
+      </div>
+    );
+  }
+
+  // Expanded detail view with file tree + content
+  return (
+    <div className='rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-[#1a1b1e] flex-1 flex flex-col min-h-0'>
+      {/* Header */}
+      <div className='flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0'>
+        <div className='flex items-center gap-3 min-w-0 flex-1'>
+          <button
+            className='flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors'
+            onClick={() => setShowDetail(false)}
+          >
+            <LeftOutlined className='text-xs' />
+          </button>
+          <div className='flex-shrink-0 w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center'>
+            <AppstoreOutlined className='text-base text-indigo-500' />
+          </div>
+          <div className='min-w-0'>
+            <div className='flex items-center gap-2'>
+              <span className='text-sm font-semibold text-gray-800 dark:text-gray-200 truncate'>{displayName}</span>
+              <span className='text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-medium'>
+                技能
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className='flex items-center gap-2 flex-shrink-0'>
+          <Tooltip title='下载为 ZIP'>
+            <button
+              className='flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 hover:text-indigo-600 hover:border-indigo-300 transition-colors'
+              onClick={handleDownload}
+              disabled={downloading}
+            >
+              {downloading ? <LoadingOutlined className='text-sm' /> : <DownloadOutlined className='text-sm' />}
+            </button>
+          </Tooltip>
+          <Button
+            type='primary'
+            size='small'
+            className='!bg-gray-900 !border-gray-900 dark:!bg-gray-100 dark:!border-gray-100 dark:!text-gray-900 !text-white !rounded-lg !text-xs !font-medium !px-3'
+            icon={<PlusOutlined className='text-[10px]' />}
+            onClick={handleAddToSkills}
+          >
+            添加到我的技能
+          </Button>
+        </div>
+      </div>
+      {/* Body: file tree + content */}
+      <div className='flex flex-1 min-h-0 overflow-hidden'>
+        {/* File tree sidebar */}
+        <div className='w-[200px] flex-shrink-0 border-r border-gray-200 dark:border-gray-700 overflow-y-auto py-2 bg-gray-50 dark:bg-[#111217]'>
+          {detailData?.tree && (
+            <FileTreeItem node={detailData.tree} depth={0} selectedKey={selectedFile} onSelect={handleFileSelect} />
+          )}
+        </div>
+        {/* Content area */}
+        <div className='flex-1 min-w-0 overflow-auto p-4'>
+          {fileContent ? (
+            <div className='prose prose-sm dark:prose-invert max-w-none'>
+              {fileContent.startsWith('---') ?
+                (() => {
+                  const parts = fileContent.split('---');
+                  if (parts.length >= 3) {
+                    return (
+                      <>
+                        <pre className='text-xs bg-gray-50 dark:bg-[#161719] rounded-lg px-4 py-3 text-gray-600 dark:text-gray-300 font-mono leading-relaxed mb-4 border border-gray-200 dark:border-gray-700'>
+                          {parts[1].trim()}
+                        </pre>
+                        <MarkDownContext>{preprocessLaTeX(parts.slice(2).join('---').trim())}</MarkDownContext>
+                      </>
+                    );
+                  }
+                  return <MarkDownContext>{preprocessLaTeX(fileContent)}</MarkDownContext>;
+                })()
+              : (() => {
+                  const ext = selectedFile?.split('.').pop()?.toLowerCase();
+                  const langMap: Record<string, string> = {
+                    py: 'python', sh: 'bash', bash: 'bash', zsh: 'bash',
+                    js: 'javascript', ts: 'typescript', jsx: 'javascript', tsx: 'typescript',
+                    json: 'json', yaml: 'yaml', yml: 'yaml', toml: 'toml',
+                    sql: 'sql', md: 'markdown', html: 'html', css: 'css',
+                    xml: 'xml', java: 'java', go: 'go', rs: 'rust', rb: 'ruby',
+                    c: 'c', cpp: 'cpp', h: 'c', hpp: 'cpp',
+                  };
+                  const lang = ext ? langMap[ext] : undefined;
+                  if (lang) {
+                    return <CodePreview code={fileContent} language={lang} />;
+                  }
+                  return <MarkDownContext>{preprocessLaTeX(fileContent)}</MarkDownContext>;
+                })()}
+            </div>
+          ) : (
+            <div className='flex flex-col items-center justify-center py-12 text-gray-400'>
+              <FileTextOutlined className='text-2xl mb-2' />
+              <span className='text-xs'>选择文件查看内容</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+SkillCardRenderer.displayName = 'SkillCardRenderer';
+
 // Main Component
 const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
   activeStep,
@@ -899,6 +1416,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
   onPanelViewChange,
   previewArtifact,
   databaseType,
+  skillName,
 }) => {
   const [inputCollapsed, setInputCollapsed] = useState(false);
   const [internalPanelView, setInternalPanelView] = useState<PanelView>('execution');
@@ -1081,12 +1599,11 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
               </Button>
             </Tooltip>
           )}
-
         </div>
       </div>
 
       {/* View Toggle Tabs */}
-      {((artifacts && artifacts.length > 0) || previewArtifact) && (
+      {((artifacts && artifacts.length > 0) || previewArtifact || skillName) && (
         <div className='flex items-center gap-0 px-5 bg-white dark:bg-[#111217] border-b border-gray-200 dark:border-gray-800'>
           <button
             onClick={() => setPanelView('execution')}
@@ -1123,6 +1640,23 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
               )}
             </button>
           )}
+          {skillName && (
+            <button
+              onClick={() => setPanelView('skill-preview')}
+              className={classNames(
+                'px-4 py-2.5 text-xs font-medium transition-colors relative',
+                panelView === 'skill-preview'
+                  ? 'text-gray-900 dark:text-gray-100'
+                  : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300',
+              )}
+            >
+              <AppstoreOutlined className='mr-1.5' />
+              {skillName}
+              {panelView === 'skill-preview' && (
+                <div className='absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900 dark:bg-gray-100 rounded-full' />
+              )}
+            </button>
+          )}
           {previewArtifact && (
             <button
               onClick={() => setPanelView('html-preview')}
@@ -1144,8 +1678,17 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
       )}
 
       {/* Content Area */}
-      <div className={classNames('flex-1 overflow-y-auto flex flex-col min-h-0', panelView === 'html-preview' ? 'p-0' : 'p-5 space-y-4')}>
-        {panelView === 'html-preview' && previewArtifact ? (
+      <div
+        className={classNames(
+          'flex-1 overflow-y-auto flex flex-col min-h-0',
+          panelView === 'html-preview' || panelView === 'skill-preview' ? 'p-0' : 'p-5 space-y-4',
+        )}
+      >
+        {panelView === 'skill-preview' && skillName ? (
+          <div className='w-full h-full flex flex-col p-5 overflow-auto'>
+            <SkillCardRenderer skillName={skillName} outputs={visibleOutputs} />
+          </div>
+        ) : panelView === 'html-preview' && previewArtifact ? (
           <div className='w-full h-full flex flex-col'>
             {(() => {
               const srcDoc = resolveHtmlImageUrls(
@@ -1155,16 +1698,23 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
                       previewArtifact.content?.content ||
                       String(previewArtifact.content),
               );
-              console.log('[HTML Preview] artifact id:', previewArtifact.id, 'srcDoc length:', srcDoc?.length, 'first 300 chars:', srcDoc?.substring(0, 300));
+              console.log(
+                '[HTML Preview] artifact id:',
+                previewArtifact.id,
+                'srcDoc length:',
+                srcDoc?.length,
+                'first 300 chars:',
+                srcDoc?.substring(0, 300),
+              );
               return (
-            <iframe
-              key={previewArtifact.id || 'html-preview'}
-              ref={htmlPreviewRef}
-              srcDoc={srcDoc}
-              sandbox='allow-scripts allow-same-origin allow-modals'
-              className='w-full flex-1 bg-white'
-              style={{ border: 'none', minHeight: 600 }}
-            />
+                <iframe
+                  key={previewArtifact.id || 'html-preview'}
+                  ref={htmlPreviewRef}
+                  srcDoc={srcDoc}
+                  sandbox='allow-scripts allow-same-origin allow-modals'
+                  className='w-full flex-1 bg-white'
+                  style={{ border: 'none', minHeight: 600 }}
+                />
               );
             })()}
           </div>
@@ -1215,6 +1765,8 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
               </div>
             )}
           </div>
+        ) : activeStep?.type === 'bash' ? (
+          <TerminalRenderer activeStep={activeStep} outputs={visibleOutputs} />
         ) : activeStep ? (
           <div className='rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a1b1e] overflow-hidden flex-1 flex flex-col min-h-0'>
             {activeStep.type === 'python' || activeStep.type === 'html' ? (
@@ -1273,196 +1825,242 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
 
                 {/* Expanded detail */}
                 {!inputCollapsed && activeStep.detail && (
-                  <div className={activeStep.detail.includes('Action: execute_skill_script_file') ? 'flex-1 min-h-0 flex flex-col' : 'px-4 pb-3'}>
-                    {activeStep.detail.includes('Action: execute_skill_script_file') && (() => {
-                      const parsed = parseSkillScriptDetail(activeStep.detail);
-                      if (parsed) {
-                        return <SkillScriptRenderer parsed={parsed} outputs={visibleOutputs} />;
-                      }
-                      return null;
-                    })() || activeStep.detail.includes('Action: get_skill_resource') && (() => {
-                      const parsed = parseSkillResourceDetail(activeStep.detail);
-                      if (parsed) {
-                        // Extract frontmatter name/description from SKILL.md content
-                        let skillDisplayName = parsed.skillName;
-                        let skillDescription = '';
-                        if (parsed.content) {
-                          const fmMatch = parsed.content.match(/^---\n([\s\S]*?)\n---/);
-                          if (fmMatch) {
-                            const nameMatch = fmMatch[1].match(/^name:\s*(.+)$/m);
-                            const descMatch = fmMatch[1].match(/^description:\s*(.+)$/m);
-                            if (nameMatch) skillDisplayName = nameMatch[1].trim();
-                            if (descMatch) skillDescription = descMatch[1].trim();
-                          }
-                          // Fallback: use first heading + first paragraph if no frontmatter
-                          if (!skillDescription) {
-                            const headingMatch = parsed.content.match(/^#\s+(.+)$/m);
-                            const paraMatch = parsed.content.match(/^(?!#|---|\s*$)(.+)/m);
-                            if (!skillDisplayName && headingMatch) skillDisplayName = headingMatch[1].trim();
-                            if (paraMatch) skillDescription = paraMatch[1].trim();
-                          }
+                  <div
+                    className={
+                      activeStep.detail.includes('Action: execute_skill_script_file')
+                        ? 'flex-1 min-h-0 flex flex-col'
+                        : 'px-4 pb-3'
+                    }
+                  >
+                    {(activeStep.detail.includes('Action: execute_skill_script_file') &&
+                      (() => {
+                        const parsed = parseSkillScriptDetail(activeStep.detail);
+                        if (parsed) {
+                          return <SkillScriptRenderer parsed={parsed} outputs={visibleOutputs} />;
                         }
-                        return (
-                          <div className='rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-[#1a1b1e]'>
-                            <div className='px-5 py-4'>
-                              <div className='flex items-center gap-2.5 mb-2'>
-                                <div className='flex-shrink-0 w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center'>
-                                  <PlayCircleOutlined className='text-base text-indigo-500' />
-                                </div>
-                                <div className='min-w-0'>
-                                  <div className='text-sm font-semibold text-gray-800 dark:text-gray-200 truncate'>{skillDisplayName}</div>
-                                  <div className='text-[11px] text-gray-400 dark:text-gray-500'>技能</div>
+                        return null;
+                      })()) ||
+                      (activeStep.detail.includes('Action: get_skill_resource') &&
+                        (() => {
+                          const parsed = parseSkillResourceDetail(activeStep.detail);
+                          if (parsed) {
+                            // Extract frontmatter name/description from SKILL.md content
+                            let skillDisplayName = parsed.skillName;
+                            let skillDescription = '';
+                            if (parsed.content) {
+                              const fmMatch = parsed.content.match(/^---\n([\s\S]*?)\n---/);
+                              if (fmMatch) {
+                                const nameMatch = fmMatch[1].match(/^name:\s*(.+)$/m);
+                                const descMatch = fmMatch[1].match(/^description:\s*(.+)$/m);
+                                if (nameMatch) skillDisplayName = nameMatch[1].trim();
+                                if (descMatch) skillDescription = descMatch[1].trim();
+                              }
+                              // Fallback: use first heading + first paragraph if no frontmatter
+                              if (!skillDescription) {
+                                const headingMatch = parsed.content.match(/^#\s+(.+)$/m);
+                                const paraMatch = parsed.content.match(/^(?!#|---|\s*$)(.+)/m);
+                                if (!skillDisplayName && headingMatch) skillDisplayName = headingMatch[1].trim();
+                                if (paraMatch) skillDescription = paraMatch[1].trim();
+                              }
+                            }
+                            return (
+                              <div className='rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-[#1a1b1e]'>
+                                <div className='px-5 py-4'>
+                                  <div className='flex items-center gap-2.5 mb-2'>
+                                    <div className='flex-shrink-0 w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center'>
+                                      <PlayCircleOutlined className='text-base text-indigo-500' />
+                                    </div>
+                                    <div className='min-w-0'>
+                                      <div className='text-sm font-semibold text-gray-800 dark:text-gray-200 truncate'>
+                                        {skillDisplayName}
+                                      </div>
+                                      <div className='text-[11px] text-gray-400 dark:text-gray-500'>技能</div>
+                                    </div>
+                                  </div>
+                                  {skillDescription && (
+                                    <p className='text-sm text-gray-600 dark:text-gray-400 leading-relaxed mt-2'>
+                                      {skillDescription}
+                                    </p>
+                                  )}
                                 </div>
                               </div>
-                              {skillDescription && (
-                                <p className='text-sm text-gray-600 dark:text-gray-400 leading-relaxed mt-2'>{skillDescription}</p>
-                              )}
+                            );
+                          }
+                          return null;
+                        })()) ||
+                      (activeStep.type === 'skill' &&
+                        !activeStep.detail.includes('Action: get_skill_resource') &&
+                        !activeStep.detail.includes('Action: execute_skill_script_file') &&
+                        (() => {
+                          const parsed = parseLoadSkillDetail(activeStep.detail, activeStep.title, visibleOutputs);
+                          if (parsed) {
+                            return (
+                              <div className='rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-[#1a1b1e]'>
+                                <div className='px-4 py-3'>
+                                  <span className='inline-block text-[11px] font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 rounded px-1.5 py-0.5 mb-3'>
+                                    YAML
+                                  </span>
+                                  <pre className='text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-mono leading-relaxed m-0'>{`name: ${parsed.skillName}${parsed.description ? `\ndescription: ${parsed.description}` : ''}`}</pre>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()) ||
+                      (activeStep.type === 'sql' &&
+                        activeStep.detail.includes('Action: sql_query') &&
+                        (() => {
+                          // Parse SQL from Action Input JSON
+                          const inputMatch = activeStep.detail.match(/Action Input:\s*({[\s\S]*?})(?:\n|$)/);
+                          let sql = '';
+                          if (inputMatch) {
+                            try {
+                              const parsed = JSON.parse(inputMatch[1]);
+                              sql = parsed.sql || '';
+                            } catch {
+                              // fallback: extract raw sql string
+                              const rawMatch = inputMatch[1].match(/"sql"\s*:\s*"([\s\S]*?)"/);
+                              if (rawMatch) sql = rawMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+                            }
+                          }
+                          if (!sql) return null;
+
+                          // Simple SQL keyword highlighting
+                          const highlightSQL = (sqlStr: string) => {
+                            const parts: { text: string; type: 'keyword' | 'string' | 'number' | 'plain' }[] = [];
+                            let remaining = sqlStr;
+                            let safetyCounter = 0;
+
+                            while (remaining.length > 0 && safetyCounter < 10000) {
+                              safetyCounter++;
+                              // Check for string literal first
+                              const strMatch = remaining.match(/^('[^']*')/);
+                              if (strMatch) {
+                                parts.push({ text: strMatch[1], type: 'string' });
+                                remaining = remaining.slice(strMatch[1].length);
+                                continue;
+                              }
+                              // Check for keyword
+                              const kwMatch = remaining.match(
+                                /^\b(SELECT|FROM|WHERE|JOIN|LEFT|RIGHT|INNER|OUTER|FULL|CROSS|ON|AND|OR|NOT|IN|EXISTS|BETWEEN|LIKE|IS|NULL|AS|CASE|WHEN|THEN|ELSE|END|GROUP\s+BY|ORDER\s+BY|HAVING|LIMIT|OFFSET|UNION|ALL|DISTINCT|COUNT|SUM|AVG|MIN|MAX|COALESCE|CAST|DESC|ASC)\b/i,
+                              );
+                              if (kwMatch) {
+                                parts.push({ text: kwMatch[1].toUpperCase(), type: 'keyword' });
+                                remaining = remaining.slice(kwMatch[1].length);
+                                continue;
+                              }
+                              // Check for number
+                              const numMatch = remaining.match(/^\b(\d+\.?\d*)\b/);
+                              if (numMatch) {
+                                parts.push({ text: numMatch[1], type: 'number' });
+                                remaining = remaining.slice(numMatch[1].length);
+                                continue;
+                              }
+                              // Plain character
+                              parts.push({ text: remaining[0], type: 'plain' });
+                              remaining = remaining.slice(1);
+                            }
+
+                            return parts.map((p, i) => {
+                              switch (p.type) {
+                                case 'keyword':
+                                  return (
+                                    <span key={i} className='text-[#569cd6] font-semibold'>
+                                      {p.text}
+                                    </span>
+                                  );
+                                case 'string':
+                                  return (
+                                    <span key={i} className='text-[#ce9178]'>
+                                      {p.text}
+                                    </span>
+                                  );
+                                case 'number':
+                                  return (
+                                    <span key={i} className='text-[#b5cea8]'>
+                                      {p.text}
+                                    </span>
+                                  );
+                                default:
+                                  return <span key={i}>{p.text}</span>;
+                              }
+                            });
+                          };
+
+                          return (
+                            <div className='rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-[#1a1b1e]'>
+                              {/* Header bar */}
+                              <div className='flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-[#252629] border-b border-gray-200 dark:border-gray-700'>
+                                <div className='flex items-center gap-2'>
+                                  {getDbTypeInfo(databaseType).icon}
+                                  <span className='text-xs font-semibold text-gray-600 dark:text-gray-300'>
+                                    SQL Query
+                                  </span>
+                                  {databaseType && (
+                                    <span className='text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-medium'>
+                                      {getDbTypeInfo(databaseType).label}
+                                    </span>
+                                  )}
+                                  <span className='text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 font-medium'>
+                                    READ ONLY
+                                  </span>
+                                </div>
+                                <Tooltip title='复制SQL'>
+                                  <button
+                                    className='flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(sql);
+                                      message.success('SQL已复制到剪贴板');
+                                    }}
+                                  >
+                                    <CopyOutlined className='text-xs' />
+                                    <span>Copy</span>
+                                  </button>
+                                </Tooltip>
+                              </div>
+                              {/* SQL code area */}
+                              <div className='bg-[#1e1e2e] dark:bg-[#0d0d11] overflow-x-auto'>
+                                <pre className='text-[13px] leading-6 font-mono text-gray-200 p-4 m-0 whitespace-pre-wrap break-words'>
+                                  <code>{highlightSQL(sql)}</code>
+                                </pre>
+                              </div>
                             </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })() || activeStep.type === 'skill' && !activeStep.detail.includes('Action: get_skill_resource') && !activeStep.detail.includes('Action: execute_skill_script_file') && (() => {
-                      const parsed = parseLoadSkillDetail(activeStep.detail, activeStep.title, visibleOutputs);
-                      if (parsed) {
-                        return (
-                          <div className='rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-[#1a1b1e]'>
-                            <div className='px-4 py-3'>
-                              <span className='inline-block text-[11px] font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 rounded px-1.5 py-0.5 mb-3'>YAML</span>
-                              <pre className='text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-mono leading-relaxed m-0'>{`name: ${parsed.skillName}${parsed.description ? `\ndescription: ${parsed.description}` : ''}`}</pre>
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })() || activeStep.type === 'sql' && activeStep.detail.includes('Action: sql_query') && (() => {
-                      // Parse SQL from Action Input JSON
-                      const inputMatch = activeStep.detail.match(/Action Input:\s*({[\s\S]*?})(?:\n|$)/);
-                      let sql = '';
-                      if (inputMatch) {
-                        try {
-                          const parsed = JSON.parse(inputMatch[1]);
-                          sql = parsed.sql || '';
-                        } catch {
-                          // fallback: extract raw sql string
-                          const rawMatch = inputMatch[1].match(/"sql"\s*:\s*"([\s\S]*?)"/);
-                          if (rawMatch) sql = rawMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
-                        }
-                      }
-                      if (!sql) return null;
-
-                      // Simple SQL keyword highlighting
-                      const highlightSQL = (sqlStr: string) => {
-                        const parts: { text: string; type: 'keyword' | 'string' | 'number' | 'plain' }[] = [];
-                        let remaining = sqlStr;
-                        let safetyCounter = 0;
-
-                        while (remaining.length > 0 && safetyCounter < 10000) {
-                          safetyCounter++;
-                          // Check for string literal first
-                          const strMatch = remaining.match(/^('[^']*')/);
-                          if (strMatch) {
-                            parts.push({ text: strMatch[1], type: 'string' });
-                            remaining = remaining.slice(strMatch[1].length);
-                            continue;
-                          }
-                          // Check for keyword
-                          const kwMatch = remaining.match(/^\b(SELECT|FROM|WHERE|JOIN|LEFT|RIGHT|INNER|OUTER|FULL|CROSS|ON|AND|OR|NOT|IN|EXISTS|BETWEEN|LIKE|IS|NULL|AS|CASE|WHEN|THEN|ELSE|END|GROUP\s+BY|ORDER\s+BY|HAVING|LIMIT|OFFSET|UNION|ALL|DISTINCT|COUNT|SUM|AVG|MIN|MAX|COALESCE|CAST|DESC|ASC)\b/i);
-                          if (kwMatch) {
-                            parts.push({ text: kwMatch[1].toUpperCase(), type: 'keyword' });
-                            remaining = remaining.slice(kwMatch[1].length);
-                            continue;
-                          }
-                          // Check for number
-                          const numMatch = remaining.match(/^\b(\d+\.?\d*)\b/);
-                          if (numMatch) {
-                            parts.push({ text: numMatch[1], type: 'number' });
-                            remaining = remaining.slice(numMatch[1].length);
-                            continue;
-                          }
-                          // Plain character
-                          parts.push({ text: remaining[0], type: 'plain' });
-                          remaining = remaining.slice(1);
-                        }
-
-                        return parts.map((p, i) => {
-                          switch (p.type) {
-                            case 'keyword':
-                              return <span key={i} className='text-[#569cd6] font-semibold'>{p.text}</span>;
-                            case 'string':
-                              return <span key={i} className='text-[#ce9178]'>{p.text}</span>;
-                            case 'number':
-                              return <span key={i} className='text-[#b5cea8]'>{p.text}</span>;
-                            default:
-                              return <span key={i}>{p.text}</span>;
-                          }
-                        });
-                      };
-
-                      return (
-                        <div className='rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-[#1a1b1e]'>
-                          {/* Header bar */}
-                          <div className='flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-[#252629] border-b border-gray-200 dark:border-gray-700'>
-                            <div className='flex items-center gap-2'>
-                              {getDbTypeInfo(databaseType).icon}
-                              <span className='text-xs font-semibold text-gray-600 dark:text-gray-300'>SQL Query</span>
-                              {databaseType && <span className='text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-medium'>{getDbTypeInfo(databaseType).label}</span>}
-                              <span className='text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 font-medium'>READ ONLY</span>
-                            </div>
-                            <Tooltip title='复制SQL'>
-                              <button
-                                className='flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
-                                onClick={() => {
-                                  navigator.clipboard.writeText(sql);
-                                  message.success('SQL已复制到剪贴板');
-                                }}
-                              >
-                                <CopyOutlined className='text-xs' />
-                                <span>Copy</span>
-                              </button>
-                            </Tooltip>
-                          </div>
-                          {/* SQL code area */}
-                          <div className='bg-[#1e1e2e] dark:bg-[#0d0d11] overflow-x-auto'>
-                            <pre className='text-[13px] leading-6 font-mono text-gray-200 p-4 m-0 whitespace-pre-wrap break-words'>
-                              <code>{highlightSQL(sql)}</code>
-                            </pre>
-                          </div>
+                          );
+                        })()) || (
+                        <div className='text-xs text-gray-500 dark:text-gray-400 font-mono whitespace-pre-wrap bg-gray-50 dark:bg-[#161719] rounded-lg px-3 py-2'>
+                          {activeStep.detail}
                         </div>
-                      );
-                    })() || (
-                      <div className='text-xs text-gray-500 dark:text-gray-400 font-mono whitespace-pre-wrap bg-gray-50 dark:bg-[#161719] rounded-lg px-3 py-2'>
-                        {activeStep.detail}
-                      </div>
-                    )}
+                      )}
                   </div>
                 )}
               </>
             )}
 
             {/* Divider + Outputs (hide for get_skill_resource since content is already shown above) */}
-            {visibleOutputs.length > 0 && !activeStep?.detail?.includes('Action: get_skill_resource') && !activeStep?.detail?.includes('Action: execute_skill_script_file') && (
-              <>
-                <div className='border-t border-gray-100 dark:border-gray-800 shrink-0' />
-                <div className='flex-1 min-h-0 p-4 flex flex-col space-y-3 overflow-y-auto'>
-                  {outputGroups.map((group, gIdx) => {
-                    // For skill-type steps, skip the "Skill: name — description" text output (shown in YAML card above)
-                    if (activeStep?.type === 'skill' && group.type === 'single') {
-                      const c = group.output.content;
-                      const text = typeof c === 'string' ? c.trim() : '';
-                      if (/^Skill:\s*[\w-]+\s+(?:-|\u2014|\u2013)\s+/.test(text)) return null;
-                    }
-                    return group.type === 'code-execution' ? (
-                      <CodeExecutionRenderer key={`group-${gIdx}`} group={group} />
-                    ) : group.type === 'html-tabbed' ? (
-                      <HtmlTabbedRenderer key={`html-tabbed-${gIdx}`} code={group.code} html={group.html} />
-                    ) : (
-                      <OutputRenderer key={`output-${gIdx}`} output={group.output} index={gIdx} />
-                    );
-                  })}
-                </div>
-              </>
-            )}
+            {visibleOutputs.length > 0 &&
+              !activeStep?.detail?.includes('Action: get_skill_resource') &&
+              !activeStep?.detail?.includes('Action: execute_skill_script_file') && (
+                <>
+                  <div className='border-t border-gray-100 dark:border-gray-800 shrink-0' />
+                  <div className='flex-1 min-h-0 p-4 flex flex-col space-y-3 overflow-y-auto'>
+                    {outputGroups.map((group, gIdx) => {
+                      // For skill-type steps, skip the "Skill: name — description" text output (shown in YAML card above)
+                      if (activeStep?.type === 'skill' && group.type === 'single') {
+                        const c = group.output.content;
+                        const text = typeof c === 'string' ? c.trim() : '';
+                        if (/^Skill:\s*[\w-]+\s+(?:-|\u2014|\u2013)\s+/.test(text)) return null;
+                      }
+                      return group.type === 'code-execution' ? (
+                        <CodeExecutionRenderer key={`group-${gIdx}`} group={group} />
+                      ) : group.type === 'html-tabbed' ? (
+                        <HtmlTabbedRenderer key={`html-tabbed-${gIdx}`} code={group.code} html={group.html} />
+                      ) : (
+                        <OutputRenderer key={`output-${gIdx}`} output={group.output} index={gIdx} />
+                      );
+                    })}
+                  </div>
+                </>
+              )}
 
             {/* Running / Empty output states */}
             {visibleOutputs.length === 0 && (

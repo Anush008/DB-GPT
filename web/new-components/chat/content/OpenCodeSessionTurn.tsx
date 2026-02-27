@@ -224,9 +224,23 @@ const ToolPartDisplay: React.FC<ToolPartDisplayProps> = ({ part, defaultOpen = f
   }, [title]);
 
   // Parse skill output into name and description for card display
+  const normalizeText = (value: unknown): string => {
+    if (typeof value === 'string') return value;
+    if (value && typeof value === 'object') {
+      const todoValue = (value as Record<string, unknown>).TODO;
+      if (typeof todoValue === 'string') return todoValue;
+      try {
+        return JSON.stringify(value);
+      } catch {
+        return String(value);
+      }
+    }
+    return value == null ? '' : String(value);
+  };
+
   const skillInfo = useMemo(() => {
     if (part.tool !== 'skill' || !part.state.output) return null;
-    const output = part.state.output;
+    const output = normalizeText(part.state.output);
     // Try "Skill: <name> - <description>" format on first line
     const firstLine = output.split('\n')[0];
     const match = firstLine.match(/^Skill:\s*(.+?)\s+-\s+(.+)$/);
@@ -298,14 +312,14 @@ const ToolPartDisplay: React.FC<ToolPartDisplayProps> = ({ part, defaultOpen = f
                   </div>
                 </div>
               ) : isReActOutput ? (
-                <ReActThinking content={part.state.output || ''} round={roundNumber} compact={true} />
+                <ReActThinking content={normalizeText(part.state.output)} round={roundNumber} compact={true} />
               ) : (
                 <div className='group'>
                   <pre className='text-xs text-gray-600 dark:text-gray-400 whitespace-pre-wrap break-words max-h-60 overflow-auto bg-gray-50 dark:bg-gray-800 p-2 rounded'>
-                    {part.state.output}
+                    {normalizeText(part.state.output)}
                   </pre>
                   <div className='absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity'>
-                    <CopyButton text={part.state.output || ''} />
+                    <CopyButton text={normalizeText(part.state.output)} />
                   </div>
                 </div>
               )}
