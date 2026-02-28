@@ -685,6 +685,21 @@ const Playground: NextPage = () => {
     const convId = router.query.id as string | undefined;
     if (convId && convId !== conversationId) {
       loadConversation(convId);
+    } else if (!convId && conversationId) {
+      // URL 中 id 消失（如点击 new_task / 探索广场），清空当前会话状态
+      setMessages([]);
+      setConversationId(null);
+      setQuery('');
+      setExecutionMap({});
+      setActiveMessageId(null);
+      setActiveViewMsgId(null);
+      setUploadedFilePath(null);
+      setFilePreview(null);
+      setFilePreviewError(null);
+      setArtifacts([]);
+      setRightPanelTab('preview');
+      setStreamingSummary('');
+      setSummaryComplete(false);
     }
   }, [router.query.id]);
 
