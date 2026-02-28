@@ -1865,6 +1865,8 @@ const Playground: NextPage = () => {
   };
 
   const handleExampleClick = async (example: (typeof EXAMPLE_CARDS)[number]) => {
+    const translatedQuery = (t(`example_${example.id}_query`) || example.query) as string;
+
     if (loading) return;
 
     try {
@@ -1906,7 +1908,7 @@ const Playground: NextPage = () => {
         }
       }
 
-      handleStart(example.query, fakeFile, exampleSkill);
+      handleStart(translatedQuery, fakeFile, exampleSkill);
     } catch (err: unknown) {
       message.destroy('example-loading');
       console.error('Example click error:', err);

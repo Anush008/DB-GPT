@@ -30,4 +30,22 @@ export const ChatEn = {
   code_preview_download: 'Download',
   code_preview_run: 'Run',
   code_preview_close: 'Close',
+  ask_data_question: 'Ask a question about your database, upload a CSV, or generate a report...',
+  recommend_examples: 'Recommended Examples',
+  example_walmart_sales_title: 'Walmart Sales Data Analysis',
+  example_walmart_sales_desc: 'Analyze Walmart sales CSV data, generate visual web report',
+  example_walmart_sales_query:
+    'Please comprehensively analyze this Walmart sales data, including sales trends across stores, holiday impacts, and the effects of temperature and fuel prices on sales, and generate a beautifully interactive web analysis report.',
+  example_csv_visual_title: 'Autonomous Table Analysis',
+  example_csv_visual_desc: 'Autonomously analyze CSV table data, generate visual web report',
+  example_csv_visual_query:
+    'Please autonomously analyze this table, understand its data structure, field meanings, and basic information, then conduct an in-depth analysis and generate a beautifully visual web report.',
+  example_fin_report_title: 'Financial Report In-depth Analysis',
+  example_fin_report_desc: 'Analyze Zhejiang Haixiang Pharmaceutical annual report, generate data visualization report',
+  example_fin_report_query:
+    'Please deeply analyze this Zhejiang Haixiang Pharmaceutical 2019 annual report, including revenue and profit trends, asset and liability structure, cash flow analysis, and key financial indicators, and generate a professional interactive web analysis report.',
+  example_create_sql_skill_title: 'Create SQL Analysis Skill',
+  example_create_sql_skill_desc: 'Use skill-creator to create a practical SQL data analysis skill',
+  example_create_sql_skill_query:
+    'Please use skill-creator to help me create a practical SQL data analysis skill, including core functions like connecting to a database, executing SQL queries, and data visualization.',
 };
