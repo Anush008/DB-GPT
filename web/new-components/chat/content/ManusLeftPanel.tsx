@@ -342,7 +342,7 @@ const SkillCompactCard: React.FC<{
   onDownload?: () => void;
 }> = memo(({ skillName, onClick, onDownload }) => {
   const [downloading, setDownloading] = useState(false);
-
+  const [isAdded, setIsAdded] = useState(false);
   return (
     <div
       onClick={onClick}
@@ -373,14 +373,30 @@ const SkillCompactCard: React.FC<{
           </button>
         </Tooltip>
         <button
-          className='flex items-center gap-1.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-lg text-xs font-medium px-4 py-2 hover:opacity-90 transition-opacity'
+          className={`flex items-center gap-1.5 rounded-lg text-xs font-medium px-4 py-2 transition-all duration-200 ${
+            isAdded
+              ? 'bg-green-50 text-green-600 border border-green-200 dark:bg-green-900/20 dark:text-green-500 dark:border-green-800'
+              : 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:opacity-90'
+          }`}
           onClick={e => {
             e.stopPropagation();
-            message.success(`技能 "${skillName}" 已添加到我的技能`);
+            if (!isAdded) {
+              setIsAdded(true);
+              message.success(`技能 "${skillName}" 已添加到我的技能`);
+            }
           }}
         >
-          <PlusOutlined className='text-[10px]' />
-          添加到我的技能
+          {isAdded ? (
+            <>
+              <CheckOutlined className='text-[10px]' />
+              已添加
+            </>
+          ) : (
+            <>
+              <PlusOutlined className='text-[10px]' />
+              添加
+            </>
+          )}
         </button>
       </div>
     </div>

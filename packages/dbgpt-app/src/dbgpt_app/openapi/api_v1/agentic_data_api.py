@@ -65,7 +65,7 @@ async def execute_skill_script(skill_name: str, script_name: str, args: dict) ->
     "\\n示例:"
     '\\n- 读取参考文档: {"skill_name": "my-skill", '
     '"resource_path": "references/analysis_framework.md"}'
-    "\\n注意: 执行脚本请使用 execute_skill_script_file 工具"
+    "\n注意: 执行脚本请使用 shell_interpreter 工具"
 )
 async def get_skill_resource(
     skill_name: str, resource_path: str, args: Optional[dict] = None
@@ -1498,6 +1498,113 @@ print(json.dumps(summary, ensure_ascii=False))
                 }
             )
 
+        # ── Safety-net post-processing for skill script execution ──
+        # If the LLM used shell_interpreter to run a skill script despite
+        # the prompt requesting execute_skill_script_file, we still capture
+        # critical side-effects (ratio_data, images) into react_state.
+        _code_lower = code.strip().lower()
+        _is_skill_script = "skills/" in _code_lower and ".py" in _code_lower
+        if _is_skill_script and output_text.strip():
+            import shutil
+
+            from dbgpt.configs.model_config import STATIC_MESSAGE_IMG_PATH
+
+            # 1) Capture calculate_ratios.py output as ratio_data
+            if "calculate_ratios" in _code_lower:
+                try:
+                    ratio_data = json.loads(output_text.strip())
+                    if isinstance(ratio_data, dict):
+                        react_state["ratio_data"] = ratio_data
+                        logger.info(
+                            "shell_interpreter: captured %d ratio_data keys",
+                            len(ratio_data),
+                        )
+                except Exception:
+                    pass
+
+            # 2) Capture generate_charts.py output — look for image paths
+            #    and copy them to static dir, same as execute_skill_script_file
+            if "generate_charts" in _code_lower:
+                try:
+                    os.makedirs(STATIC_MESSAGE_IMG_PATH, exist_ok=True)
+                    IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"}
+                    # Try to parse JSON output for image paths
+                    try:
+                        chart_output = json.loads(output_text.strip())
+                        if isinstance(chart_output, dict):
+                            # Might be {"charts": {...}} or flat dict
+                            chart_map = chart_output.get("charts", chart_output)
+                            for name, abs_path in chart_map.items():
+                                if isinstance(abs_path, str) and os.path.isfile(abs_path):
+                                    ext = os.path.splitext(abs_path)[1].lower()
+                                    if ext in IMAGE_EXTS:
+                                        unique_name = (
+                                            f"{uuid.uuid4().hex[:8]}_"
+                                            f"{os.path.basename(abs_path)}"
+                                        )
+                                        dest = os.path.join(
+                                            STATIC_MESSAGE_IMG_PATH, unique_name
+                                        )
+                                        shutil.copy2(abs_path, dest)
+                                        img_url = f"/images/{unique_name}"
+                                        react_state.setdefault(
+                                            "generated_images", []
+                                        ).append(img_url)
+                                        orig_stem = os.path.splitext(
+                                            os.path.basename(abs_path)
+                                        )[0].lower()
+                                        react_state.setdefault(
+                                            "image_url_map", {}
+                                        )[orig_stem] = img_url
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+                    # Also scan the output dir for any new .png files
+                    cid = react_state.get("conv_id") or "default"
+                    from dbgpt.configs.model_config import PILOT_PATH
+
+                    out_dir = os.path.join(PILOT_PATH, "tmp", cid)
+                    if os.path.isdir(out_dir):
+                        for fname in os.listdir(out_dir):
+                            ext = os.path.splitext(fname)[1].lower()
+                            if ext in IMAGE_EXTS:
+                                abs_path = os.path.join(out_dir, fname)
+                                orig_stem = os.path.splitext(fname)[0].lower()
+                                if orig_stem not in react_state.get(
+                                    "image_url_map", {}
+                                ):
+                                    unique_name = (
+                                        f"{uuid.uuid4().hex[:8]}_{fname}"
+                                    )
+                                    dest = os.path.join(
+                                        STATIC_MESSAGE_IMG_PATH, unique_name
+                                    )
+                                    shutil.copy2(abs_path, dest)
+                                    img_url = f"/images/{unique_name}"
+                                    react_state.setdefault(
+                                        "generated_images", []
+                                    ).append(img_url)
+                                    react_state.setdefault(
+                                        "image_url_map", {}
+                                    )[orig_stem] = img_url
+                    # Append image URL summary for LLM reference
+                    all_images = react_state.get("generated_images", [])
+                    if all_images:
+                        img_summary = (
+                            "\u5df2\u751f\u6210\u7684\u56fe\u7247URL\uff08\u5728\u751f\u6210HTML\u62a5\u544a\u65f6\u8bf7\u4f7f\u7528\u8fd9\u4e9bURL\uff09:\n"
+                            + "\n".join(f"  - {url}" for url in all_images)
+                        )
+                        chunks.append(
+                            {"output_type": "text", "content": img_summary}
+                        )
+                    logger.info(
+                        "shell_interpreter: captured %d images for skill script",
+                        len(react_state.get("image_url_map", {})),
+                    )
+                except Exception as e:
+                    logger.warning(
+                        "shell_interpreter: image post-processing failed: %s", e
+                    )
+
         return json.dumps({"chunks": chunks}, ensure_ascii=False)
 
     @tool(
@@ -2051,7 +2158,7 @@ print(json.dumps(summary, ensure_ascii=False))
 1. 严格按照已加载技能的指令执行
 2. 每个步骤输出 Thought → Phase → Action → Action Input
 3. 等待系统返回 Observation 后，再决定下一步
-4. 如果任务需要生成分析报告，流程为：`execute_skill_script_file` 执行 `extract_financials.py` 提取数据 → `execute_skill_script_file` 执行 `calculate_ratios.py` 计算比率（系统自动记录结果） → `execute_skill_script_file` 执行 `generate_charts.py` 生成图表（系统自动合并图片） → 调用 `html_interpreter(template_path=..., data={{...仅包含你写的分析文本}})` 渲染报告（系统自动合并数据和图片） → `terminate` 返回摘要
+4. 如果任务需要生成分析报告，流程为：`execute_skill_script_file` 执行 extract_financials.py 提取数据 → `execute_skill_script_file` 执行 calculate_ratios.py 计算比率（系统自动记录结果） → `execute_skill_script_file` 执行 generate_charts.py 生成图表（系统自动合并图片） → 调用 `html_interpreter(template_path=..., data={{...仅包含你写的分析文本}})` 渲染报告（系统自动合并数据和图片） → `terminate` 返回摘要
 5. 如果任务不需要生成报告，直接调用 terminate 返回最终结果，Action Input 格式必须为 {{"result": "最终回答"}}
 
 {skill_prompt_context}
@@ -2059,26 +2166,25 @@ print(json.dumps(summary, ensure_ascii=False))
 
 ## 技能执行规范
 ### 资源使用
-- **需要计算/处理数据** → 使用 `execute_skill_script_file` 执行技能 scripts 目录下的脚本
+- **需要执行技能脚本** → 使用 `execute_skill_script_file`，参数为 {{"skill_name": "技能名", "script_file_name": "脚本文件名", "args": {{参数}}}}。此工具会自动处理图片复制和数据记录。
 - **需要了解指标定义/分析框架** → 使用 `get_skill_resource` 并指定 `references/xxx.md` 路径读取参考文档
 - **遇到图片文件** → 如果模型不支持图片输入，会返回错误提示
-- **需要生成报告** → 调用 `html_interpreter`，传入 `template_path`（模板相对路径）和 `data`（仅包含你自己撰写的分析文本，由于后端会自动合并之前工具生成的30个数据指标和图片URL，请绝对不要在 `data` 里写这些数据指标，否则会导致超长截断）。**不要使用 `code_interpreter`，不要使用 `execute_skill_script_file` 生成报告，不需要先用 `get_skill_resource` 读取模板**
+- **需要生成报告** → 调用 `html_interpreter`，传入 `template_path`（模板相对路径）和 `data`（仅包含你自己撰写的分析文本，由于后端会自动合并之前工具生成的30个数据指标和图片URL，请绝对不要在 `data` 里写这些数据指标，否则会导致超长截断）。**不要使用 `code_interpreter` 生成报告，不需要先用 `get_skill_resource` 读取模板**
 
 ## 可用工具说明
-1. **execute_skill_script_file**（用于执行技能自身的脚本）: 执行技能 scripts 目录下的脚本文件。
-   参数: {{"skill_name": "技能名", "script_file_name": "脚本文件名", "args": {{"参数名": "参数值"}}}}
-   - 示例: {{"skill_name": "{pre_matched_skill.metadata.name if pre_matched_skill else 'skill'}", "script_file_name": "calculate.py", "args": {{"param": "value"}}}}
+1. **execute_skill_script_file**（推荐用于执行技能脚本）: 执行技能 scripts 目录下的脚本文件，自动处理图片复制到静态目录、记录计算结果等后处理。
+   参数: {{"skill_name": "技能名", "script_file_name": "脚本文件名", "args": {{参数}}}}
+   - 示例: {{"skill_name": "{pre_matched_skill.metadata.name if pre_matched_skill else 'skill'}", "script_file_name": "calculate_ratios.py", "args": {{"input_data": "..."}}}}
+   - **执行技能脚本时，必须使用此工具**，不要使用 shell_interpreter
 2. **get_skill_resource**: 读取技能中的参考文档、配置、模板等非脚本资源文件。
    参数: {{"skill_name": "技能名", "resource_path": "资源路径"}}
    - 读取参考文档: {{"skill_name": "{pre_matched_skill.metadata.name if pre_matched_skill else 'skill'}", "resource_path": "references/analysis_framework.md"}}
    - 注意: 报告模板不需要用此工具读取，直接用 html_interpreter 的 template_path 参数
-3. **execute_skill_script**: 执行技能中定义的内联脚本。参数: {{"skill_name": "技能名", "script_name": "脚本名", "args": {{"参数名": "参数值"}}}}
-4. **shell_interpreter**: 执行 shell/bash 命令。适用于运行系统命令、执行 Python 脚本等场景。
+3. **execute_skill_script**: 执行技能中定义的内联脚本（备用）。参数: {{"skill_name": "技能名", "script_name": "脚本名", "args": {{"参数名": "参数值"}}}}
+4. **shell_interpreter**: 执行 shell/bash 命令（仅用于非技能脚本的系统命令，如 ls、cat 等）。
    参数: {{"code": "shell命令"}}
-   - 示例: {{"code": "python skills/skill-creator/scripts/init_skill.py my-skill --path skills/"}}
-   - 示例: {{"code": "ls -la skills/my-skill/"}}
    - 每次调用独立，不保留状态。如需多步操作，用 `&&` 或 `;` 串联命令。
-   - **当技能 SKILL.md 指示使用 shell_interpreter 执行脚本时，优先使用此工具**
+   - **注意：不要用此工具执行技能脚本**，因为它不会自动处理图片和数据记录
 5. **html_interpreter**: 将 HTML 模板渲染为网页报告。
    推荐用法: {{"template_path": "技能名/templates/模板文件.html", "data": {{"PLACEHOLDER_KEY": "值", ...}}, "title": "报告标题"}}
    - 后端会自动把先前的财务数据计算结果合并进模板中。你只需要在 `data` 字典中返回诸如 `PROFITABILITY_ANALYSIS` 等你手写的分析段落即可，无需包含 `COMPANY_NAME` 或 `REVENUE` 等。
@@ -2135,7 +2241,7 @@ Action Input: 工具参数的 JSON 格式
 加载技能后，仔细阅读 SKILL.md 中的 **核心工作流程** 部分，按步骤顺序执行。如果某个步骤明确说明了跳过条件（如用户意图已明确时），则直接跳到下一步，不要强制执行每一步。优先快速产出结果，迭代优化在后续步骤完成。
 
 ### 2. 资源使用时机
-- **需要计算/处理数据** → 使用 `execute_skill_script_file` 执行技能 scripts 目录下的脚本
+- **需要计算/处理数据** → 使用 `execute_skill_script_file` 执行技能 scripts 目录下的脚本（此工具会自动处理图片和数据记录），参数为 {{"skill_name": "技能名", "script_file_name": "脚本.py", "args": {{参数}}}}
 - **需要了解指标定义/分析框架** → 使用 `get_skill_resource` 并指定 `references/xxx.md` 路径读取参考文档
 - **遇到图片文件** → 如果模型不支持图片输入，会返回错误提示
 
@@ -2152,20 +2258,19 @@ Action Input: {{"skill_name": "financial-report-analyzer", "resource_path": "ref
 Thought: 现在执行脚本计算比率
 Phase: 执行比率计算脚本
 Action: execute_skill_script_file
-Action Input: {{"skill_name": "financial-report-analyzer", "script_file_name": "calculate_ratios.py", "args": {{...}}}}
+Action Input: {{"skill_name": "financial-report-analyzer", "script_file_name": "calculate_ratios.py", "args": {{"input_data": "..."}}}}
 ```
 
 ## 可用工具说明
 1. **load_skill**: 加载指定技能的详细说明，参数: {{"skill_name": "技能名", "file_path": "技能文件路径"}}
 2. **knowledge_retrieve**: 从知识库中检索相关信息，参数: {{"query": "检索问题"}}
-3. **execute_skill_script**: 执行技能中定义的内联脚本，参数: {{"skill_name": "技能名", "script_name": \
+3. **execute_skill_script**: 执行技能中定义的内联脚本（备用），参数: {{"skill_name": "技能名", "script_name": \
 "脚本名", "args": {{"参数名": "参数值"}}}}
-4. **execute_skill_script_file**（推荐用于脚本执行）: 执行技能 scripts 目录下的脚本文件，参数: {{"skill_name": "技能名", \
-"script_file_name": "脚本文件名如calculate_ratios.py", "args": {{"参数名": "参数值"}}}}
+4. **execute_skill_script_file**（推荐用于执行技能脚本）: 执行技能 scripts 目录下的脚本文件，自动处理图片复制和数据记录。参数: {{"skill_name": "技能名", "script_file_name": "脚本文件名", "args": {{参数}}}}
 5. **get_skill_resource**: 读取技能中的参考文档、配置等非脚本资源文件。
    参数: {{"skill_name": "技能名", "resource_path": "资源路径"}}
    - 读取参考文档: {{"skill_name": "my-skill", "resource_path": "references/analysis_framework.md"}}
-   - 注意: 执行脚本请使用 execute_skill_script_file，不要用此工具执行脚本
+   - 注意: 执行脚本请使用 execute_skill_script_file（不是 shell_interpreter），不要用此工具执行脚本
    - 图片文件会返回错误提示（模型不支持）
 6. **code_interpreter**: 执行 Python 代码进行数据分析和计算。支持 pandas、numpy、matplotlib 等。已预导入 \
    pandas(pd)、numpy(np)、json、os。如果用户上传了文件，FILE_PATH 变量已预设为文件路径。PLOT_DIR 变量已预设为图片保存目录。参数: {{"code": "python代码"}}

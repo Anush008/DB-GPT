@@ -6,6 +6,7 @@ import {
   AppstoreOutlined,
   BarChartOutlined,
   CheckCircleFilled,
+  CheckOutlined,
   CloseCircleFilled,
   CodeOutlined,
   ConsoleSqlOutlined,
@@ -1047,14 +1048,14 @@ const parseSkillCreatorOutput = (detail?: string, outputs?: ExecutionOutput[]): 
         const parsed = JSON.parse(inputMatch[1]);
         if (parsed.skill_name) return parsed.skill_name;
         if (parsed.name) return parsed.name;
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
   }
 
   // Priority 3: Last skills/xxx path (skip skill-creator which is the tool, not the created skill)
-  const allPaths = [...combined.matchAll(/skills\/([\w-]+)/g)]
-    .map(m => m[1])
-    .filter(name => name !== 'skill-creator');
+  const allPaths = [...combined.matchAll(/skills\/([\w-]+)/g)].map(m => m[1]).filter(name => name !== 'skill-creator');
   if (allPaths.length > 0) return allPaths[allPaths.length - 1];
 
   return null;
@@ -1137,7 +1138,7 @@ const SkillCardRenderer: React.FC<{
   const [fileContent, setFileContent] = useState<string>('');
   const [showDetail, setShowDetail] = useState(true);
   const [downloading, setDownloading] = useState(false);
-
+  const [isAdded, setIsAdded] = useState(false);
   // Fetch skill detail on mount
   useEffect(() => {
     const fetchDetail = async () => {
@@ -1212,8 +1213,11 @@ const SkillCardRenderer: React.FC<{
   }, [skillName]);
 
   const handleAddToSkills = useCallback(() => {
-    message.success(`技能 "${skillName}" 已添加到我的技能`);
-  }, [skillName]);
+    if (!isAdded) {
+      setIsAdded(true);
+      message.success(`技能 "${skillName}" 已添加到我的技能`);
+    }
+  }, [skillName, isAdded]);
 
   const displayName = detailData?.metadata?.name || detailData?.skill_name || skillName;
   const description = detailData?.metadata?.description || '';
@@ -1271,11 +1275,15 @@ const SkillCardRenderer: React.FC<{
               <Button
                 type='primary'
                 size='small'
-                className='!bg-gray-900 !border-gray-900 dark:!bg-gray-100 dark:!border-gray-100 dark:!text-gray-900 !text-white !rounded-lg !text-xs !font-medium !px-3'
-                icon={<PlusOutlined className='text-[10px]' />}
+                className={`!rounded-lg !text-xs !font-medium !px-3 ${
+                  isAdded
+                    ? '!bg-green-50 !text-green-600 !border-green-200 dark:!bg-green-900/20 dark:!text-green-500 dark:!border-green-800'
+                    : '!bg-gray-900 !border-gray-900 dark:!bg-gray-100 dark:!border-gray-100 dark:!text-gray-900 !text-white'
+                }`}
+                icon={isAdded ? <CheckOutlined className='text-[10px]' /> : <PlusOutlined className='text-[10px]' />}
                 onClick={handleAddToSkills}
               >
-                添加到我的技能
+                {isAdded ? '已添加' : '添加到我的技能'}
               </Button>
             </div>
           </div>
@@ -1335,11 +1343,15 @@ const SkillCardRenderer: React.FC<{
           <Button
             type='primary'
             size='small'
-            className='!bg-gray-900 !border-gray-900 dark:!bg-gray-100 dark:!border-gray-100 dark:!text-gray-900 !text-white !rounded-lg !text-xs !font-medium !px-3'
-            icon={<PlusOutlined className='text-[10px]' />}
+            className={`!rounded-lg !text-xs !font-medium !px-3 ${
+              isAdded
+                ? '!bg-green-50 !text-green-600 !border-green-200 dark:!bg-green-900/20 dark:!text-green-500 dark:!border-green-800'
+                : '!bg-gray-900 !border-gray-900 dark:!bg-gray-100 dark:!border-gray-100 dark:!text-gray-900 !text-white'
+            }`}
+            icon={isAdded ? <CheckOutlined className='text-[10px]' /> : <PlusOutlined className='text-[10px]' />}
             onClick={handleAddToSkills}
           >
-            添加到我的技能
+            {isAdded ? '已添加' : '添加到我的技能'}
           </Button>
         </div>
       </div>
@@ -1355,37 +1367,56 @@ const SkillCardRenderer: React.FC<{
         <div className='flex-1 min-w-0 overflow-auto p-4'>
           {fileContent ? (
             <div className='prose prose-sm dark:prose-invert max-w-none'>
-              {fileContent.startsWith('---') ?
-                (() => {
-                  const parts = fileContent.split('---');
-                  if (parts.length >= 3) {
-                    return (
-                      <>
-                        <pre className='text-xs bg-gray-50 dark:bg-[#161719] rounded-lg px-4 py-3 text-gray-600 dark:text-gray-300 font-mono leading-relaxed mb-4 border border-gray-200 dark:border-gray-700'>
-                          {parts[1].trim()}
-                        </pre>
-                        <MarkDownContext>{preprocessLaTeX(parts.slice(2).join('---').trim())}</MarkDownContext>
-                      </>
-                    );
-                  }
-                  return <MarkDownContext>{preprocessLaTeX(fileContent)}</MarkDownContext>;
-                })()
-              : (() => {
-                  const ext = selectedFile?.split('.').pop()?.toLowerCase();
-                  const langMap: Record<string, string> = {
-                    py: 'python', sh: 'bash', bash: 'bash', zsh: 'bash',
-                    js: 'javascript', ts: 'typescript', jsx: 'javascript', tsx: 'typescript',
-                    json: 'json', yaml: 'yaml', yml: 'yaml', toml: 'toml',
-                    sql: 'sql', md: 'markdown', html: 'html', css: 'css',
-                    xml: 'xml', java: 'java', go: 'go', rs: 'rust', rb: 'ruby',
-                    c: 'c', cpp: 'cpp', h: 'c', hpp: 'cpp',
-                  };
-                  const lang = ext ? langMap[ext] : undefined;
-                  if (lang) {
-                    return <CodePreview code={fileContent} language={lang} />;
-                  }
-                  return <MarkDownContext>{preprocessLaTeX(fileContent)}</MarkDownContext>;
-                })()}
+              {fileContent.startsWith('---')
+                ? (() => {
+                    const parts = fileContent.split('---');
+                    if (parts.length >= 3) {
+                      return (
+                        <>
+                          <pre className='text-xs bg-gray-50 dark:bg-[#161719] rounded-lg px-4 py-3 text-gray-600 dark:text-gray-300 font-mono leading-relaxed mb-4 border border-gray-200 dark:border-gray-700'>
+                            {parts[1].trim()}
+                          </pre>
+                          <MarkDownContext>{preprocessLaTeX(parts.slice(2).join('---').trim())}</MarkDownContext>
+                        </>
+                      );
+                    }
+                    return <MarkDownContext>{preprocessLaTeX(fileContent)}</MarkDownContext>;
+                  })()
+                : (() => {
+                    const ext = selectedFile?.split('.').pop()?.toLowerCase();
+                    const langMap: Record<string, string> = {
+                      py: 'python',
+                      sh: 'bash',
+                      bash: 'bash',
+                      zsh: 'bash',
+                      js: 'javascript',
+                      ts: 'typescript',
+                      jsx: 'javascript',
+                      tsx: 'typescript',
+                      json: 'json',
+                      yaml: 'yaml',
+                      yml: 'yaml',
+                      toml: 'toml',
+                      sql: 'sql',
+                      md: 'markdown',
+                      html: 'html',
+                      css: 'css',
+                      xml: 'xml',
+                      java: 'java',
+                      go: 'go',
+                      rs: 'rust',
+                      rb: 'ruby',
+                      c: 'c',
+                      cpp: 'cpp',
+                      h: 'c',
+                      hpp: 'cpp',
+                    };
+                    const lang = ext ? langMap[ext] : undefined;
+                    if (lang) {
+                      return <CodePreview code={fileContent} language={lang} />;
+                    }
+                    return <MarkDownContext>{preprocessLaTeX(fileContent)}</MarkDownContext>;
+                  })()}
             </div>
           ) : (
             <div className='flex flex-col items-center justify-center py-12 text-gray-400'>

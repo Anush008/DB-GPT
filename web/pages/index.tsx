@@ -485,6 +485,18 @@ const EXAMPLE_CARDS = [
     iconBg: 'bg-violet-100 dark:bg-violet-900/40',
     skillName: 'financial-report-analyzer',
   },
+  {
+    id: 'create_sql_skill',
+    icon: '🛠️',
+    title: '创建SQL分析技能',
+    description: '使用skill-creator创建一个实用的SQL数据分析技能',
+    query:
+      '请使用 skill-creator 帮我创建一个实用的SQL数据分析技能，包含连接数据库、执行SQL查询和数据可视化等核心功能。',
+    color: 'from-amber-500/10 to-orange-500/10',
+    borderColor: 'border-amber-200/60 dark:border-amber-800/40',
+    iconBg: 'bg-amber-100 dark:bg-amber-900/40',
+    skillName: 'skill-creator',
+  },
 ];
 
 const Playground: NextPage = () => {
@@ -1843,36 +1855,43 @@ const Playground: NextPage = () => {
     try {
       message.loading({ content: '正在加载示例...', key: 'example-loading', duration: 0 });
 
-      const res = await axios.post(`${process.env.API_BASE_URL ?? ''}/api/v1/examples/use`, {
-        example_id: example.id,
-      });
+      let filePath: string | null = null;
+      let fakeFile: File | null = null;
+
+      // If example has a file, request it from backend
+      if (example.fileName) {
+        const res = await axios.post(`${process.env.API_BASE_URL ?? ''}/api/v1/examples/use`, {
+          example_id: example.id,
+        });
+
+        if (res?.success && res?.data) {
+          filePath = res.data;
+          preloadedFilePathRef.current = filePath;
+          fakeFile = new File([new ArrayBuffer(example.fileSize || 0)], example.fileName, {
+            type: example.fileType,
+          });
+          setUploadedFile(fakeFile);
+        } else {
+          message.destroy('example-loading');
+          const errMsg = res?.err_msg || 'Unknown error';
+          message.error('加载示例失败: ' + errMsg);
+          return;
+        }
+      }
 
       message.destroy('example-loading');
 
-      if (res?.success && res?.data) {
-        const filePath = res.data;
-        preloadedFilePathRef.current = filePath;
-
-        const fakeFile = new File([new ArrayBuffer(example.fileSize || 0)], example.fileName, {
-          type: example.fileType,
-        });
-        setUploadedFile(fakeFile);
-
-        // Auto-select skill if example specifies one
-        let exampleSkill: Skill | null = null;
-        if (example.skillName && skillsList) {
-          const matched = skillsList.find(s => s.name === example.skillName);
-          if (matched) {
-            exampleSkill = matched;
-            setSelectedSkill(matched);
-          }
+      // Auto-select skill if example specifies one
+      let exampleSkill: Skill | null = null;
+      if (example.skillName && skillsList) {
+        const matched = skillsList.find(s => s.name === example.skillName);
+        if (matched) {
+          exampleSkill = matched;
+          setSelectedSkill(matched);
         }
-
-        handleStart(example.query, fakeFile, exampleSkill);
-      } else {
-        const errMsg = res?.err_msg || 'Unknown error';
-        message.error('加载示例失败: ' + errMsg);
       }
+
+      handleStart(example.query, fakeFile, exampleSkill);
     } catch (err: unknown) {
       message.destroy('example-loading');
       console.error('Example click error:', err);

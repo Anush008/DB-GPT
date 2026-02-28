@@ -302,12 +302,16 @@ const ToolPartDisplay: React.FC<ToolPartDisplayProps> = ({ part, defaultOpen = f
                         <ToolIcon name='brain' size='medium' className='text-indigo-500' />
                       </div>
                       <div className='min-w-0 flex-1'>
-                        <div className='text-sm font-semibold text-gray-800 dark:text-gray-200 truncate'>{skillInfo.name}</div>
+                        <div className='text-sm font-semibold text-gray-800 dark:text-gray-200 truncate'>
+                          {skillInfo.name}
+                        </div>
                         <div className='text-[11px] text-gray-400 dark:text-gray-500'>Skill</div>
                       </div>
                     </div>
                     {skillInfo.description && (
-                      <p className='text-sm text-gray-600 dark:text-gray-400 leading-relaxed mt-2'>{skillInfo.description}</p>
+                      <p className='text-sm text-gray-600 dark:text-gray-400 leading-relaxed mt-2'>
+                        {skillInfo.description}
+                      </p>
                     )}
                   </div>
                 </div>

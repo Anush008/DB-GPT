@@ -45,7 +45,9 @@ const ThinkingProcess: React.FC<ThinkingProcessProps> = ({
   if (!content) return null;
 
   return (
-    <div className={classNames('text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap', className)}>
+    <div
+      className={classNames('text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap', className)}
+    >
       {displayedText}
       {!isComplete && <span className='inline-block w-1.5 h-4 ml-1 bg-blue-500 animate-pulse' />}
     </div>
