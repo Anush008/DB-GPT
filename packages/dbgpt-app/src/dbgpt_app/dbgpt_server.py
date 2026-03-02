@@ -150,6 +150,24 @@ def initialize_app(param: ApplicationConfig, args: List[str] = None):
     # After init, when the database is ready
     system_app.after_init()
 
+    # Register default data sources
+    try:
+        from dbgpt_serve.datasource.manages.connect_config_db import ConnectConfigDao
+        from dbgpt.configs.model_config import ROOT_PATH
+        dao = ConnectConfigDao()
+        db_name = "Walmart_Sales"
+        if not dao.get_by_names(db_name):
+            db_absolute_path = os.path.join(ROOT_PATH, "docker/examples/dashboard/Walmart_Sales.db")
+            dao.add_file_db(
+                db_name=db_name,
+                db_type="sqlite",
+                db_path=db_absolute_path,
+                comment="Default Walmart Sales example database"
+            )
+            logger.info(f"Successfully registered default data source: {db_name} at {db_absolute_path}")
+    except Exception as e:
+        logger.error(f"Failed to register default data sources: {str(e)}")
+
     binding_port = web_config.port
     binding_host = web_config.host
     if not web_config.light:

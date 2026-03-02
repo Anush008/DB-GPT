@@ -25,11 +25,12 @@ from .gpts import GptsMemory, GptsMessageMemory, GptsPlansMemory
 logger = logging.getLogger(__name__)
 
 
-class StructuredObservation(TypedDict):
+class StructuredObservation(TypedDict, total=False):
     """Structured observation for agent memory."""
 
     question: Optional[str]
     thought: Optional[str]
+    phase: Optional[str]
     action: Optional[str]
     action_input: Optional[str]
     observation: Optional[str]

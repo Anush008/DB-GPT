@@ -53,6 +53,11 @@ Action: ...
 Action Input: ...
 Observation: ...(This is output provided by the external environment or Action output, \
 you are not allowed to generate it.)
+{% if task_progress %}
+{{ task_progress }}
+You MUST NOT repeat any action already listed above as ✅ completed.
+Pick the NEXT action that has NOT been done yet to make progress toward the final goal.
+{% endif %}
 Please Solve this task:
 {{ question }}\
 Please answer in the same language as the user's question.
@@ -74,7 +79,7 @@ _REACT_WRITE_MEMORY_TEMPLATE = """\
 
 
 class ReActAgent(ConversableAgent):
-    max_retry_count: int = 15
+    max_retry_count: int = 30
     run_mode: AgentRunMode = AgentRunMode.LOOP
 
     profile: ProfileConfig = ProfileConfig(

@@ -32,6 +32,7 @@ import {
 import { Button, Tooltip, message } from 'antd';
 import classNames from 'classnames';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import ObservationFormatter from './ObservationFormatter';
 
 export type StepStatus = 'pending' | 'running' | 'completed' | 'error';
@@ -156,7 +157,7 @@ const getStepIcon = (type: StepType, status: StepStatus) => {
 };
 
 // Get step type label in Chinese
-const getTypeLabel = (type: StepType): string => {
+const getTypeLabel = (type: StepType, t: any): string => {
   const labels: Record<StepType, string> = {
     read: '读取文件',
     edit: '编辑文件',
@@ -165,7 +166,7 @@ const getTypeLabel = (type: StepType): string => {
     grep: '搜索内容',
     glob: '查找文件',
     task: '执行任务',
-    skill: '加载技能',
+    skill: t('chat:load_skill') || '加载技能',
     sql: 'SQL查询',
     python: 'Python',
     html: 'HTML',
@@ -462,6 +463,7 @@ const StepCard: React.FC<{
   isActive: boolean;
   onClick: () => void;
 }> = memo(({ step, isActive, onClick }) => {
+  const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(false);
   const detailLine = step.description ? step.description.split('\n')[0] : '';
 
@@ -489,7 +491,7 @@ const StepCard: React.FC<{
           <span className='animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75' />
           <span className='relative inline-flex rounded-full h-2.5 w-2.5 bg-gradient-to-r from-blue-400 to-cyan-400' />
         </span>
-        <span className='text-sm text-gray-700 dark:text-gray-300'>思考中</span>
+        <span className='text-sm text-gray-700 dark:text-gray-300'>{t('chat:thinking')}</span>
       </div>
     );
   }
@@ -536,7 +538,7 @@ const StepCard: React.FC<{
           'text-gray-500': step.type === 'other',
         })}
       >
-        {getTypeLabel(step.type)}
+        {getTypeLabel(step.type, t)}
       </span>
       <div className='flex flex-col min-w-0 flex-1'>
         <span className='text-sm font-medium text-gray-800 dark:text-gray-200 truncate'>{step.title}</span>
@@ -594,6 +596,7 @@ const SkillResourceCard: React.FC<{
   isActive: boolean;
   onClick: () => void;
 }> = memo(({ step, isActive, onClick }) => {
+  const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(false);
   const [contentExpanded, setContentExpanded] = useState(false);
   const parsed = useMemo(() => parseSkillResourceDescription(step.description), [step.description]);
@@ -639,7 +642,7 @@ const SkillResourceCard: React.FC<{
           {getStepIcon(step.type, step.status)}
         </div>
         <span className='text-[10px] font-medium tracking-wide flex-shrink-0 text-indigo-600 dark:text-indigo-400'>
-          {getTypeLabel(step.type)}
+          {getTypeLabel(step.type, t)}
         </span>
         <div className='flex flex-col min-w-0 flex-1'>
           <span className='text-sm font-medium text-gray-800 dark:text-gray-200 truncate'>{resourceName}</span>
@@ -699,6 +702,7 @@ const SectionBlock: React.FC<{
   defaultExpanded?: boolean;
   stepThoughts?: Record<string, string>;
 }> = memo(({ section, activeStepId, onStepClick, defaultExpanded = true, stepThoughts }) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   const completedCount = section.steps.filter(s => s.status === 'completed').length;
@@ -804,6 +808,7 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
   onSkillCardClick,
   onSkillDownload,
 }) => {
+  const { t } = useTranslation();
   const handleStepClick = useCallback(
     (stepId: string, sectionId: string) => {
       onStepClick?.(stepId, sectionId);

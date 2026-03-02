@@ -101,7 +101,7 @@ const getTypeLabel = (type: StepCardProps['type']): string => {
     grep: '搜索内容',
     glob: '查找文件',
     task: '执行任务',
-    skill: '加载技能',
+    skill: t('chat:load_skill') || '加载技能',
     python: 'Python 脚本',
     html: 'HTML',
     other: '其他操作',
@@ -120,7 +120,9 @@ const ManusStepCard: React.FC<StepCardProps> = ({
   onClick,
   stats,
 }) => {
-  const typeLabel = useMemo(() => getTypeLabel(type), [type]);
+  const { t } = useTranslation();
+
+  const typeLabel = useMemo(() => getTypeLabel(type, t), [type, t]);
 
   return (
     <div

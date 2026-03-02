@@ -94,6 +94,8 @@ export interface ManusRightPanelProps {
   previewArtifact?: ArtifactItem | null;
   /** Database type for SQL editor display (e.g. 'sqlite', 'mysql', 'postgres') */
   databaseType?: string;
+  /** Database name for display */
+  databaseName?: string;
   /** Skill name for the skill-preview tab (set when a skill is created/packaged) */
   skillName?: string | null;
 }
@@ -340,7 +342,7 @@ const FileListItem: React.FC<{ artifact: ArtifactItem; onClick?: () => void }> =
 FileListItem.displayName = 'FileListItem';
 
 // Output Renderer Component
-const OutputRenderer: React.FC<{ output: ExecutionOutput; index: number }> = memo(({ output, index }) => {
+const OutputRenderer: React.FC<{ output: ExecutionOutput; index: number }> = memo(({ output, index: _index }) => {
   const content = output.content;
 
   if (output.output_type === 'thought') {
@@ -358,13 +360,13 @@ const OutputRenderer: React.FC<{ output: ExecutionOutput; index: number }> = mem
       )}
 
       {output.output_type === 'error' && (
-        <div className='rounded-lg bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-600 dark:text-red-400 font-mono whitespace-pre-wrap'>
+        <div className='rounded-lg bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-600 dark:text-red-400 font-mono whitespace-pre overflow-x-auto'>
           {String(content)}
         </div>
       )}
 
       {output.output_type === 'text' && (
-        <div className='rounded-lg bg-gray-900 px-4 py-3 text-sm text-green-400 font-mono whitespace-pre-wrap leading-relaxed overflow-x-auto'>
+        <div className='rounded-lg bg-gray-900 px-4 py-3 text-sm text-green-400 font-mono whitespace-pre leading-relaxed overflow-x-auto'>
           {String(content)}
         </div>
       )}
@@ -666,14 +668,14 @@ const SkillScriptRenderer: React.FC<{
           cleanTextOutputs.map((o, idx) => (
             <div
               key={`text-${idx}`}
-              className='rounded-lg bg-gray-900 mx-3 mt-2 px-4 py-3 text-sm text-green-400 font-mono whitespace-pre-wrap leading-relaxed overflow-x-auto'
+              className='rounded-lg bg-gray-900 mx-3 mt-2 px-4 py-3 text-sm text-green-400 font-mono whitespace-pre leading-relaxed overflow-x-auto'
             >
               {String(o.content)}
             </div>
           ))}
         {/* Fallback: if no text outputs but cleanOutputText has content */}
         {cleanTextOutputs.length === 0 && cleanOutputText && !htmlReportMatch && (
-          <div className='rounded-lg bg-gray-900 mx-3 mt-2 px-4 py-3 text-sm text-green-400 font-mono whitespace-pre-wrap leading-relaxed overflow-x-auto'>
+          <div className='rounded-lg bg-gray-900 mx-3 mt-2 px-4 py-3 text-sm text-green-400 font-mono whitespace-pre leading-relaxed overflow-x-auto'>
             {cleanOutputText}
           </div>
         )}
@@ -828,8 +830,8 @@ const CodeExecutionRenderer: React.FC<{
             <span className='sticky top-0 right-0 float-right z-10 text-[10px] text-gray-400 bg-gray-800/80 px-2 py-0.5 rounded mr-2 mt-2'>
               执行结果
             </span>
-            <div className='px-4 py-3 text-sm text-green-400 font-mono whitespace-pre-wrap leading-relaxed'>
-              {group.results.map(r => String(r.content)).join('\n')}
+            <div className='px-4 py-3 text-sm text-green-400 font-mono whitespace-pre leading-relaxed overflow-x-auto'>
+              {group.results.map(r => String(r.content)).join('')}
             </div>
           </div>
         </>
@@ -933,10 +935,10 @@ const TerminalRenderer: React.FC<{
       .join('');
   const resultChunks = outputs.filter(o => o.output_type === 'text');
   const errorChunks = outputs.filter(o => o.output_type === 'error');
-  const resultText = resultChunks.map(r => String(r.content)).join('\n');
-  const errorText = errorChunks.map(e => String(e.content)).join('\n');
+  const resultText = resultChunks.map(r => String(r.content)).join('');
+  const errorText = errorChunks.map(e => String(e.content)).join('');
   const isRunning = activeStep.status === 'running';
-  const isError = activeStep.status === 'error' || errorChunks.length > 0;
+  const _isError = activeStep.status === 'error' || errorChunks.length > 0;
 
   const allText = [command ? `$ ${command}` : '', resultText, errorText].filter(Boolean).join('\n');
 
@@ -984,10 +986,10 @@ const TerminalRenderer: React.FC<{
         )}
 
         {/* Output */}
-        {resultText && <div className='text-[#c9d1d9] whitespace-pre-wrap break-all mt-1'>{resultText}</div>}
+        {resultText && <div className='text-[#c9d1d9] whitespace-pre mt-1 w-fit min-w-full'>{resultText}</div>}
 
         {/* Error output */}
-        {errorText && <div className='text-[#f85149] whitespace-pre-wrap break-all mt-1'>{errorText}</div>}
+        {errorText && <div className='text-[#f85149] whitespace-pre mt-1 w-fit min-w-full'>{errorText}</div>}
 
         {/* Next prompt line / cursor */}
         {(resultText || errorText || command) && (
@@ -1018,7 +1020,7 @@ const TerminalRenderer: React.FC<{
 TerminalRenderer.displayName = 'TerminalRenderer';
 
 /** Parse skill name from skill-creator output (package_skill or init_skill steps) */
-const parseSkillCreatorOutput = (detail?: string, outputs?: ExecutionOutput[]): string | null => {
+const _parseSkillCreatorOutput = (detail?: string, outputs?: ExecutionOutput[]): string | null => {
   // Collect all text to search
   const allTexts: string[] = [];
   if (detail) allTexts.push(detail);
@@ -1130,7 +1132,7 @@ const FileTreeItem: React.FC<{
 const SkillCardRenderer: React.FC<{
   skillName: string;
   outputs: ExecutionOutput[];
-}> = memo(({ skillName, outputs }) => {
+}> = memo(({ skillName, outputs: _outputs }) => {
   const [detailData, setDetailData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1155,7 +1157,7 @@ const SkillCardRenderer: React.FC<{
         } else {
           setError(json.err_msg || 'Failed to load skill detail');
         }
-      } catch (e) {
+      } catch (_e) {
         setError('Network error');
       } finally {
         setLoading(false);
@@ -1226,7 +1228,7 @@ const SkillCardRenderer: React.FC<{
     return (
       <div className='flex flex-col items-center justify-center py-16 text-gray-400'>
         <LoadingOutlined className='text-3xl text-indigo-500 mb-4' />
-        <span className='text-sm'>加载技能详情...</span>
+        <span className='text-sm'>{t('chat:load_skill')}...</span>
       </div>
     );
   }
@@ -1439,7 +1441,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
   isRunning,
   onRerun,
   onShare,
-  terminalTitle = 'DB-GPT 的电脑',
+  terminalTitle,
   onCollapse,
   artifacts,
   onArtifactClick,
@@ -1447,6 +1449,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
   onPanelViewChange,
   previewArtifact,
   databaseType,
+  databaseName,
   skillName,
 }) => {
   const [inputCollapsed, setInputCollapsed] = useState(false);
@@ -1552,6 +1555,33 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
       } else if (visibleOutputs[i].output_type === 'html') {
         groups.push({ type: 'html-tabbed', html: visibleOutputs[i] });
         i += 1;
+      } else if (visibleOutputs[i].output_type === 'markdown') {
+        const mds: string[] = [String(visibleOutputs[i].content)];
+        const firstMd = visibleOutputs[i];
+        i += 1;
+        while (i < visibleOutputs.length && visibleOutputs[i].output_type === 'markdown') {
+          mds.push(String(visibleOutputs[i].content));
+          i += 1;
+        }
+        groups.push({ type: 'single', output: { ...firstMd, content: mds.join('') } });
+      } else if (visibleOutputs[i].output_type === 'text') {
+        const texts: string[] = [String(visibleOutputs[i].content)];
+        const firstText = visibleOutputs[i];
+        i += 1;
+        while (i < visibleOutputs.length && visibleOutputs[i].output_type === 'text') {
+          texts.push(String(visibleOutputs[i].content));
+          i += 1;
+        }
+        groups.push({ type: 'single', output: { ...firstText, content: texts.join('') } });
+      } else if (visibleOutputs[i].output_type === 'error') {
+        const errs: string[] = [String(visibleOutputs[i].content)];
+        const firstErr = visibleOutputs[i];
+        i += 1;
+        while (i < visibleOutputs.length && visibleOutputs[i].output_type === 'error') {
+          errs.push(String(visibleOutputs[i].content));
+          i += 1;
+        }
+        groups.push({ type: 'single', output: { ...firstErr, content: errs.join('') } });
       } else {
         groups.push({ type: 'single', output: visibleOutputs[i] });
         i += 1;
@@ -1583,7 +1613,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
           </div>
           <div className='flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 font-medium'>
             <DesktopOutlined className='text-gray-500' />
-            <span>{terminalTitle}</span>
+            <span>{terminalTitle || t('chat:db_gpt_computer')}</span>
             {isRunning && <LoadingOutlined spin className='text-blue-500 ml-1' />}
           </div>
         </div>
@@ -2030,6 +2060,11 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
                                   {databaseType && (
                                     <span className='text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-medium'>
                                       {getDbTypeInfo(databaseType).label}
+                                    </span>
+                                  )}
+                                  {databaseName && (
+                                    <span className='text-[10px] px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 font-medium'>
+                                      {databaseName}
                                     </span>
                                   )}
                                   <span className='text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 font-medium'>

@@ -31,6 +31,7 @@ import {
   FileOutlined,
   FilePptOutlined,
   FileTextOutlined,
+  PaperClipOutlined,
   PieChartOutlined,
   PlusOutlined,
   ReadOutlined,
@@ -74,6 +75,8 @@ const cleanFinalContent = (text: string): string => {
   let cleaned = text.replace(/\\n/g, '\n').trim();
   cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
   cleaned = cleaned.replace(/"\s*\}\s*$/, '').trim();
+  // Strip raw ReAct prefixes that may leak from the backend
+  cleaned = cleaned.replace(/^(Thought|Action|Action Input|Observation|Phase):\s*/gm, '').trim();
   return cleaned;
 };
 
@@ -311,6 +314,7 @@ const convertToManusFormat = (
       }
     | undefined,
   _userQuery?: string,
+  t?: (key: string) => string,
 ): {
   sections: ThinkingSection[];
   activeStep: ActiveStepInfo | null;
@@ -406,7 +410,7 @@ const convertToManusFormat = (
     const group = phaseGroups[key];
     sections.push({
       id: `section-${key}`,
-      title: key === '__default__' ? '执行步骤' : key,
+      title: key === '__default__' ? (t ? t('chat:execution_steps') : 'Execution Steps') : key,
       isCompleted: group.every(s => s.status === 'completed'),
       steps: group,
     });
@@ -458,14 +462,13 @@ const EXAMPLE_CARDS = [
     skillName: 'walmart-sales-analyzer',
   },
   {
-    id: 'csv_visual_report',
-    icon: '📋',
-    title: '自主分析表格',
-    description: '自主分析CSV表格数据，生成可视化网页报告',
-    query: '请自主分析这份表格，理解数据结构、字段含义和基本信息，然后进行深入分析并生成一份精美的可视化网页报告。',
-    fileName: 'Walmart_Sales.csv',
-    fileType: 'text/csv',
-    fileSize: 363735, // ~355.21 KB
+    id: 'db_profile_report',
+    icon: '🗄️',
+    title: '数据库画像与分析报告',
+    description: '连接数据库后，生成数据库画像并生成可视化网页报告',
+    query:
+      '请分析当前连接的数据库，生成数据库画像（包括表结构、字段信息、数据量统计等），并生成一份精美的交互式网页分析报告。',
+    dbName: 'Walmart_Sales',
     color: 'from-emerald-500/10 to-teal-500/10',
     borderColor: 'border-emerald-200/60 dark:border-emerald-800/40',
     iconBg: 'bg-emerald-100 dark:bg-emerald-900/40',
@@ -1377,9 +1380,15 @@ const Playground: NextPage = () => {
     return deduped;
   };
 
-  const handleStart = async (inputQuery = query, overrideFile?: File | null, overrideSkill?: Skill | null) => {
+  const handleStart = async (
+    inputQuery = query,
+    overrideFile?: File | null,
+    overrideSkill?: Skill | null,
+    overrideDb?: DataSource | null,
+  ) => {
     const effectiveFile = overrideFile !== undefined ? overrideFile : uploadedFile;
     const effectiveSkill = overrideSkill !== undefined ? overrideSkill : selectedSkill;
+    const effectiveDb = overrideDb !== undefined ? overrideDb : selectedDb;
     if ((!inputQuery.trim() && !effectiveFile) || loading) return;
 
     let finalQuery = inputQuery;
@@ -1436,7 +1445,7 @@ const Playground: NextPage = () => {
       }
       // Construct context prefix for non-file queries
       const contextParts = [];
-      if (selectedDb) contextParts.push(`[Database: ${selectedDb.db_name}]`);
+      if (effectiveDb) contextParts.push(`[Database: ${effectiveDb.db_name}]`);
       if (selectedKnowledge) contextParts.push(`[Knowledge: ${selectedKnowledge.name}]`);
       if (contextParts.length > 0) {
         finalQuery = `${contextParts.join(' ')} ${inputQuery}`;
@@ -1473,7 +1482,7 @@ const Playground: NextPage = () => {
           : undefined,
         attachedKnowledge: selectedKnowledge ?? undefined,
         attachedSkill: effectiveSkill ? { name: effectiveSkill.name, id: effectiveSkill.id } : undefined,
-        attachedDb: selectedDb ? { db_name: selectedDb.db_name, db_type: selectedDb.db_type } : undefined,
+        attachedDb: effectiveDb ? { db_name: effectiveDb.db_name, db_type: effectiveDb.db_type } : undefined,
       },
       {
         id: responseId,
@@ -1520,7 +1529,7 @@ const Playground: NextPage = () => {
           ext_info: {
             ...(currentUploadedFilePath ? { file_path: currentUploadedFilePath } : {}),
             ...(effectiveSkill ? { skill_id: effectiveSkill.id, skill_name: effectiveSkill.name } : {}),
-            ...(selectedDb ? { database_name: selectedDb.db_name, database_type: selectedDb.db_type } : {}),
+            ...(effectiveDb ? { database_name: effectiveDb.db_name, database_type: effectiveDb.db_type } : {}),
             ...(selectedKnowledge
               ? { knowledge_space_name: selectedKnowledge.name, knowledge_space_id: selectedKnowledge.id }
               : {}),
@@ -1600,7 +1609,9 @@ const Playground: NextPage = () => {
                 steps: nextSteps,
                 outputs: { ...current.outputs, [id]: current.outputs[id] || [] },
                 stepThoughts: nextThoughts,
-                activeStepId: id,
+                // Only auto-focus for existing step updates (e.g., "思考中" -> "sql_query").
+                // New placeholder steps wait for step.meta to get real content before stealing focus.
+                activeStepId: existingStepIndex >= 0 ? id : current.activeStepId || id,
               },
             };
           });
@@ -1621,6 +1632,10 @@ const Playground: NextPage = () => {
             });
             return;
           }
+          // Clear manual step selection so the right panel auto-tracks this step
+          if (payload.action) {
+            setSelectedStepId(null);
+          }
           setExecutionMap(prev => {
             const current = prev[responseId];
             if (!current) return prev;
@@ -1635,7 +1650,11 @@ const Playground: NextPage = () => {
                   payload.action !== 'shell_interpreter' &&
                   payload.action_input
                 ) {
-                  parts.push(`Action Input: ${payload.action_input}`);
+                  const inputStr =
+                    typeof payload.action_input === 'string'
+                      ? payload.action_input
+                      : JSON.stringify(payload.action_input, null, 2);
+                  parts.push(`Action Input: ${inputStr}`);
                 }
               }
               return {
@@ -1655,7 +1674,13 @@ const Playground: NextPage = () => {
               : current.stepThoughts;
             return {
               ...prev,
-              [responseId]: { ...current, steps: nextSteps, stepThoughts: nextThoughts },
+              [responseId]: {
+                ...current,
+                steps: nextSteps,
+                stepThoughts: nextThoughts,
+                // Focus right panel on this step when it receives action content
+                ...(payload.action ? { activeStepId: payload.id } : {}),
+              },
             };
           });
         } else if (payload.type === 'step.output') {
@@ -1865,7 +1890,9 @@ const Playground: NextPage = () => {
   };
 
   const handleExampleClick = async (example: (typeof EXAMPLE_CARDS)[number]) => {
-    const translatedQuery = (t(`example_${example.id}_query`) || example.query) as string;
+    const queryKey = `example_${example.id}_query`;
+    const queryVal = t(queryKey) as string;
+    const translatedQuery = (queryVal && queryVal !== queryKey ? queryVal : example.query) as string;
 
     if (loading) return;
 
@@ -1908,7 +1935,17 @@ const Playground: NextPage = () => {
         }
       }
 
-      handleStart(translatedQuery, fakeFile, exampleSkill);
+      // Auto-select database if example specifies one
+      let matchedDb: DataSource | null = null;
+      if (example.dbName && dataSources) {
+        const found = dataSources.find((ds: DataSource) => ds.db_name === example.dbName);
+        if (found) {
+          matchedDb = found;
+          setSelectedDb(found);
+        }
+      }
+
+      handleStart(translatedQuery, fakeFile, exampleSkill, matchedDb);
     } catch (err: unknown) {
       message.destroy('example-loading');
       console.error('Example click error:', err);
@@ -2226,7 +2263,7 @@ const Playground: NextPage = () => {
                       activeStep: _activeStep,
                       outputs: _outputs,
                       stepThoughts,
-                    } = convertToManusFormat(execution, round.humanMsg?.context);
+                    } = convertToManusFormat(execution, round.humanMsg?.context, t);
                     const isWorking =
                       (isLastRound &&
                         (round.viewMsg?.thinking || execution?.steps.some(s => s.status === 'running'))) ||
@@ -2606,8 +2643,15 @@ const Playground: NextPage = () => {
               >
                 {(() => {
                   const activeViewMsg = messages.find(m => m.id === selectedViewMsgId && m.role === 'view');
-                  const execution = activeViewMsg?.id ? executionMap[activeViewMsg.id] : undefined;
-                  const { activeStep, outputs, stepThoughts: _stepThoughts } = convertToManusFormat(execution);
+                  const rawExecution = activeViewMsg?.id ? executionMap[activeViewMsg.id] : undefined;
+                  // Respect user's manual step selection for the right panel
+                  const execution =
+                    rawExecution && selectedStepId ? { ...rawExecution, activeStepId: selectedStepId } : rawExecution;
+                  const {
+                    activeStep,
+                    outputs,
+                    stepThoughts: _stepThoughts,
+                  } = convertToManusFormat(execution, undefined, t);
                   const isRunning = execution?.steps.some(s => s.status === 'running') || false;
 
                   return (
@@ -2615,11 +2659,12 @@ const Playground: NextPage = () => {
                       activeStep={activeStep}
                       outputs={outputs}
                       databaseType={selectedDb?.db_type}
+                      databaseName={selectedDb?.db_name}
                       isRunning={isRunning}
                       onCollapse={() => setRightPanelCollapsed(true)}
                       onRerun={() => {}}
                       onShare={!loading && !!conversationId ? handleShare : undefined}
-                      terminalTitle='DB-GPT 的电脑'
+                      terminalTitle="DB-GPT's Computer"
                       artifacts={artifacts.filter(a => a.messageId === activeViewMsg?.id)}
                       onArtifactClick={artifact => {
                         if (artifact.type === 'html') {
@@ -2735,26 +2780,26 @@ const Playground: NextPage = () => {
                               key: 'upload',
                               label: (
                                 <Upload {...uploadProps}>
-                                  <div className='w-full'>从本地文件添加</div>
+                                  <div className='w-full'>{t('add_from_local')}</div>
                                 </Upload>
                               ),
-                              icon: <FileOutlined />,
+                              icon: <PaperClipOutlined />,
                             },
                             {
                               key: 'skill',
-                              label: '使用技能',
+                              label: t('use_skill'),
                               icon: <ThunderboltOutlined />,
                               onClick: () => setIsSkillPanelOpen(true),
                             },
                             {
                               key: 'knowledge',
-                              label: '使用知识库',
+                              label: t('use_knowledge'),
                               icon: <BookOutlined />,
                               onClick: () => setIsKnowledgePanelOpen(true),
                             },
                             {
                               key: 'database',
-                              label: '使用数据库',
+                              label: t('use_database'),
                               icon: <DatabaseOutlined />,
                               onClick: () => setTimeout(() => setIsDbPanelOpen(true), 100),
                             },
@@ -3205,7 +3250,7 @@ const Playground: NextPage = () => {
                   <div className='flex items-center justify-center gap-2 mb-4'>
                     <div className='h-px flex-1 bg-gradient-to-r from-transparent to-gray-200 dark:to-gray-700' />
                     <span className='text-xs font-medium text-gray-400 dark:text-gray-500 tracking-wider uppercase'>
-                      推荐示例
+                      {t('recommend_examples')}
                     </span>
                     <div className='h-px flex-1 bg-gradient-to-l from-transparent to-gray-200 dark:to-gray-700' />
                   </div>
@@ -3224,10 +3269,18 @@ const Playground: NextPage = () => {
                           </div>
                           <div className='flex-1 min-w-0'>
                             <h3 className='text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1'>
-                              {example.title}
+                              {(() => {
+                                const key = `example_${example.id}_title`;
+                                const val = t(key) as string;
+                                return val && val !== key ? val : example.title;
+                              })()}
                             </h3>
                             <p className='text-xs text-gray-500 dark:text-gray-400 line-clamp-2'>
-                              {example.description}
+                              {(() => {
+                                const key = `example_${example.id}_desc`;
+                                const val = t(key) as string;
+                                return val && val !== key ? val : example.description;
+                              })()}
                             </p>
                           </div>
                         </div>

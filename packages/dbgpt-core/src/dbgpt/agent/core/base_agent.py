@@ -1227,6 +1227,11 @@ class ConversableAgent(Role, Agent):
         reply_message_str = ""
         if context is None:
             context = {}
+        # Inject task progress summary so the LLM always knows what has been done
+        # regardless of how many memory fragments have been evicted from the buffer.
+        task_progress = self.task_progress_summary
+        if task_progress:
+            context["task_progress"] = task_progress
         if rely_messages:
             copied_rely_messages = [m.copy() for m in rely_messages]
             # When directly relying on historical messages, use the execution result

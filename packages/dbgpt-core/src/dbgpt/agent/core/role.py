@@ -50,6 +50,11 @@ class Role(ABC, BaseModel):
 
     template_env: SandboxedEnvironment = Field(default_factory=SandboxedEnvironment)
 
+    # Task progress tracking: list of dicts with keys 'step', 'action', 'phase'
+    # This is NOT a pydantic field - managed as a plain instance attribute
+    # so it survives across retry rounds without being serialised into memory.
+    _task_progress: List[Dict] = []
+
     async def build_prompt(
         self,
         question: Optional[str] = None,
@@ -195,6 +200,31 @@ class Role(ABC, BaseModel):
         """Return the current example template."""
         return self.current_profile.get_examples()
 
+    @property
+    def task_progress_summary(self) -> Optional[str]:
+        """Return a human-readable task progress summary.
+
+        Lists every action the agent has taken so far, marking the last entry as
+        the most recent step.  The summary is injected into every LLM call so the
+        model never forgets what has already been done and what still needs to be
+        done to complete the original task.
+        """
+        progress = getattr(self, "_task_progress", [])
+        if not progress:
+            return None
+        lines = ["## Task Progress (do NOT repeat completed steps)"]
+        for entry in progress:
+            step = entry.get("step", "?")
+            action = entry.get("action", "")
+            phase = entry.get("phase", "")
+            status = entry.get("status", "done")
+            icon = "\u2705" if status == "done" else "\u274c"
+            line = f"{icon} Step {step}: Action={action}"
+            if phase:
+                line += f" | Phase: {phase}"
+            lines.append(line)
+        return "\n".join(lines)
+
     def _render_template(self, template: str, **kwargs):
         r_template = self.template_env.from_string(template)
         return r_template.render(**kwargs)
@@ -262,6 +292,7 @@ class Role(ABC, BaseModel):
         mem_thoughts = action_output.thoughts or ai_message
         action = action_output.action
         action_input = action_output.action_input
+        phase = action_output.phase if hasattr(action_output, "phase") else None
         observation = check_fail_reason or action_output.observations
 
         memory_map = {
@@ -271,9 +302,29 @@ class Role(ABC, BaseModel):
         }
         if action_input:
             memory_map["action_input"] = action_input
+        if phase:
+            memory_map["phase"] = phase
 
         if current_retry_counter is not None and current_retry_counter == 0:
             memory_map["question"] = question
+
+        # ------------------------------------------------------------------
+        # Maintain task progress tracking (survives buffer eviction).
+        # _task_progress is a plain list on the instance, NOT a pydantic field,
+        # so it is never serialised/deserialised and stays in memory for the full
+        # lifetime of the agent object.
+        # ------------------------------------------------------------------
+        if check_pass and action:
+            if not hasattr(self, "_task_progress") or self._task_progress is None:
+                object.__setattr__(self, "_task_progress", [])
+            progress: List[Dict] = self._task_progress  # type: ignore[assignment]
+            step_num = (current_retry_counter or 0) + 1
+            progress.append({
+                "step": step_num,
+                "action": action,
+                "phase": phase or "",
+                "status": "done",
+            })
 
         write_memory_template = self.write_memory_template
         memory_content = self._render_template(write_memory_template, **memory_map)

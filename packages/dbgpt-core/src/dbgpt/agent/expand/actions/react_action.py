@@ -161,12 +161,13 @@ class ReActAction(ToolAction):
             act_out.thoughts = step.thought
         if step.phase:
             act_out.phase = step.phase
-        if (
-            not act_out.action_input
-            and step.action_input
-            and isinstance(step.action_input, str)
-        ):
-            act_out.action_input = step.action_input
+        if not act_out.action_input and step.action_input:
+            if isinstance(step.action_input, str):
+                act_out.action_input = step.action_input
+            else:
+                act_out.action_input = json.dumps(
+                    step.action_input, ensure_ascii=False
+                )
         return act_out
 
     @staticmethod

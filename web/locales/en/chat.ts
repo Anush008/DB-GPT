@@ -36,10 +36,10 @@ export const ChatEn = {
   example_walmart_sales_desc: 'Analyze Walmart sales CSV data, generate visual web report',
   example_walmart_sales_query:
     'Please comprehensively analyze this Walmart sales data, including sales trends across stores, holiday impacts, and the effects of temperature and fuel prices on sales, and generate a beautifully interactive web analysis report.',
-  example_csv_visual_title: 'Autonomous Table Analysis',
-  example_csv_visual_desc: 'Autonomously analyze CSV table data, generate visual web report',
-  example_csv_visual_query:
-    'Please autonomously analyze this table, understand its data structure, field meanings, and basic information, then conduct an in-depth analysis and generate a beautifully visual web report.',
+  example_db_profile_report_title: 'Database Profile & Analysis Report',
+  example_db_profile_report_desc: 'Connect to a database, generate database profile and visual web report',
+  example_db_profile_report_query:
+    'Please analyze the currently connected database, generate a database profile (including table structure, field information, data volume statistics, etc.), and generate a beautifully interactive web analysis report.',
   example_fin_report_title: 'Financial Report In-depth Analysis',
   example_fin_report_desc: 'Analyze Zhejiang Haixiang Pharmaceutical annual report, generate data visualization report',
   example_fin_report_query:
@@ -48,4 +48,11 @@ export const ChatEn = {
   example_create_sql_skill_desc: 'Use skill-creator to create a practical SQL data analysis skill',
   example_create_sql_skill_query:
     'Please use skill-creator to help me create a practical SQL data analysis skill, including core functions like connecting to a database, executing SQL queries, and data visualization.',
+  add_from_local: 'Add from local file',
+  use_skill: 'Use Skill',
+  use_knowledge: 'Use Knowledge Base',
+  use_database: 'Use Database',
+  execution_steps: 'Execution Steps',
+  db_gpt_computer: "DB-GPT's Computer",
+  load_skill: 'Load Skill',
 };

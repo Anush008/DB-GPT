@@ -267,9 +267,11 @@ const basicComponents: MarkdownComponent = {
   },
   table({ children }) {
     return (
-      <table className='my-2 rounded-tl-md rounded-tr-md  bg-white dark:bg-gray-800 text-sm rounded-lg overflow-hidden'>
-        {children}
-      </table>
+      <div className='w-full overflow-x-auto'>
+        <table className='my-2 rounded-tl-md rounded-tr-md bg-white dark:bg-gray-800 text-sm rounded-lg overflow-hidden whitespace-nowrap min-w-full'>
+          {children}
+        </table>
+      </div>
     );
   },
   thead({ children }) {

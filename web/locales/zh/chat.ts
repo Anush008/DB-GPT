@@ -44,10 +44,10 @@ export const ChatZh: Resources['translation'] = {
   example_walmart_sales_desc: '分析沃尔玛销售CSV数据，生成可视化网页报告',
   example_walmart_sales_query:
     '请全面分析这份沃尔玛销售数据，包括各门店销售趋势、假日影响、温度与油价对销售的影响等维度，生成一份精美的交互式网页分析报告。',
-  example_csv_visual_title: '自主分析表格',
-  example_csv_visual_desc: '自主分析CSV表格数据，生成可视化网页报告',
-  example_csv_visual_query:
-    '请自主分析这份表格，理解数据结构、字段含义和基本信息，然后进行深入分析并生成一份精美的可视化网页报告。',
+  example_db_profile_report_title: '数据库画像与分析报告',
+  example_db_profile_report_desc: '连接数据库后，生成数据库画像并生成可视化网页报告',
+  example_db_profile_report_query:
+    '请分析当前连接的数据库，生成数据库画像（包括表结构、字段信息、数据量统计等），并生成一份精美的交互式网页分析报告。',
   example_fin_report_title: '金融财报深度分析',
   example_fin_report_desc: '分析浙江海翔药业年度报告，生成数据可视化报告',
   example_fin_report_query:
@@ -56,4 +56,11 @@ export const ChatZh: Resources['translation'] = {
   example_create_sql_skill_desc: '使用skill-creator创建一个实用的SQL数据分析技能',
   example_create_sql_skill_query:
     '请使用 skill-creator 帮我创建一个实用的SQL数据分析技能，包含连接数据库、执行SQL查询和数据可视化等核心功能。',
+  add_from_local: '从本地文件添加',
+  use_skill: '使用技能',
+  use_knowledge: '使用知识库',
+  use_database: '使用数据库',
+  execution_steps: '执行步骤',
+  db_gpt_computer: 'DB-GPT 的电脑',
+  load_skill: '加载技能',
 } as const;
