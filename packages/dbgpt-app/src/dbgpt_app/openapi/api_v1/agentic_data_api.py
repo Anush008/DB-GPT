@@ -2015,8 +2015,24 @@ print(json.dumps(summary, ensure_ascii=False))
         try:
             gen_images = react_state.get("generated_images", [])
             if gen_images:
-                # Find which images are NOT already referenced in the HTML
-                missing = [url for url in gen_images if url not in fixed_html]
+                # Extract all image filenames already referenced in the HTML
+                # (e.g. "time_series_trend.png" from any src="...time_series_trend.png")
+                html_img_stems = set(
+                    re.sub(r"^[0-9a-f]+_", "", os.path.basename(src))
+                    for src in re.findall(
+                        r'<img[^>]+src=["\']([^"\']+)["\']', fixed_html, re.IGNORECASE
+                    )
+                )
+                # An image is "missing" only when neither its exact URL nor its
+                # stem (filename with UUID prefix stripped) is already covered.
+                def _img_stem(url):
+                    return re.sub(r"^[0-9a-f]+_", "", os.path.basename(url))
+
+                missing = [
+                    url
+                    for url in gen_images
+                    if url not in fixed_html and _img_stem(url) not in html_img_stems
+                ]
                 if missing:
                     imgs_html = "".join(
                         f'<div style="margin:16px 0">'
