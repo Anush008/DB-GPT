@@ -2220,9 +2220,9 @@ const Playground: NextPage = () => {
     >
       <div className='flex h-full w-full bg-[#f7f7f9] dark:bg-[#0f1012] text-[#1a1b1e] dark:text-gray-200 font-sans overflow-hidden'>
         {/* Main Content */}
-        <div className='flex-1 flex flex-col relative bg-white dark:bg-[#111217]'>
+        <div className='flex-1 flex flex-col relative overflow-hidden bg-white dark:bg-[#111217]'>
           {/* Top Header */}
-          <div className='h-16 flex items-center justify-between px-8 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-[#111217]/80 backdrop-blur sticky top-0 z-20'>
+          <div className='h-16 flex-shrink-0 flex items-center justify-between px-8 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-[#111217]/80 backdrop-blur z-20'>
             <div className='flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 px-2 py-1 rounded-md'>
               <span>DB-GPT</span>
             </div>
@@ -2247,11 +2247,11 @@ const Playground: NextPage = () => {
 
           {/* Chat Messages or Hero Section */}
           {messages.length > 0 ? (
-            <div className='flex-1 flex overflow-hidden justify-center'>
+            <div className='flex-1 flex overflow-hidden'>
               <div
-                className={`${rightPanelCollapsed ? 'max-w-[800px] w-full border-r-0' : 'w-[40%] min-w-[400px] border-r border-gray-200/80 dark:border-gray-800'} flex flex-col overflow-hidden bg-white dark:bg-[#111217] transition-all duration-300 relative`}
+                className={`${rightPanelCollapsed ? 'flex-1 max-w-[800px] border-r-0' : 'flex-[2] min-w-0 border-r border-gray-200/80 dark:border-gray-800'} flex flex-col overflow-hidden bg-white dark:bg-[#111217] transition-all duration-300 relative`}
               >
-                <div className='flex-1 overflow-y-auto'>
+                <div className='flex-1 min-h-0 overflow-y-auto'>
                   {rounds.map((round, roundIndex) => {
                     const isLastRound = roundIndex === rounds.length - 1;
                     const isSelected = round.viewMsg?.id === selectedViewMsgId;
@@ -2639,7 +2639,7 @@ const Playground: NextPage = () => {
                 )}
               </div>
               <div
-                className={`${rightPanelCollapsed ? 'w-0 min-w-0 overflow-hidden opacity-0' : 'w-[60%] min-w-[520px]'} bg-[#f8f8fb] dark:bg-[#0f1114] flex flex-col transition-all duration-300`}
+                className={`${rightPanelCollapsed ? 'w-0 min-w-0 overflow-hidden opacity-0' : 'flex-[3] min-w-0 overflow-hidden'} bg-[#f8f8fb] dark:bg-[#0f1114] flex flex-col transition-all duration-300`}
               >
                 {(() => {
                   const activeViewMsg = messages.find(m => m.id === selectedViewMsgId && m.role === 'view');
