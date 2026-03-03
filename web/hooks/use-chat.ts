@@ -110,15 +110,15 @@ const useChat = ({ queryAgentURL = '/api/v1/chat/completions', app_code }: Props
               } else if (message?.startsWith('[ERROR]')) {
                 onError?.(message?.replace('[ERROR]', ''));
               } else {
-                if (scene === 'chat_agent') {
-                  onMessage?.(message);
-                } else {
+                if (scene === 'chat_react_agent') {
                   const previous = lastMessageRef.current;
                   const delta = message.startsWith(previous) ? message.slice(previous.length) : message;
                   lastMessageRef.current = message;
                   if (delta) {
                     onMessage?.(delta);
                   }
+                } else {
+                  onMessage?.(message);
                 }
               }
             } else {

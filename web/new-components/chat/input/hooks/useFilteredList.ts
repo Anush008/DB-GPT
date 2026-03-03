@@ -28,25 +28,29 @@ export function useFilteredList<T>(options: UseFilteredListOptions<T>): UseFilte
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  const fetchItems = useCallback(
-    async (searchQuery: string) => {
-      setLoading(true);
-      try {
-        if (typeof items === 'function') {
-          const result = await items(searchQuery);
-          setAllItems(result);
-        } else {
-          setAllItems(items);
-        }
-      } catch (error) {
-        console.error('Error fetching items:', error);
-        setAllItems([]);
-      } finally {
-        setLoading(false);
+  // Keep a ref to always access the latest items without it being a useCallback dependency.
+  // This prevents infinite re-fetch loops when the caller passes an inline function/array
+  // that gets a new reference on every render.
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+
+  const fetchItems = useCallback(async (searchQuery: string) => {
+    setLoading(true);
+    try {
+      const currentItems = itemsRef.current;
+      if (typeof currentItems === 'function') {
+        const result = await currentItems(searchQuery);
+        setAllItems(result);
+      } else {
+        setAllItems(currentItems);
       }
-    },
-    [items],
-  );
+    } catch (error) {
+      console.error('Error fetching items:', error);
+      setAllItems([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []); // stable reference — never recreated
 
   const flat = useMemo(() => {
     if (!query) return allItems;
@@ -64,12 +68,19 @@ export function useFilteredList<T>(options: UseFilteredListOptions<T>): UseFilte
   }, [allItems, query, filterKeys]);
 
   useEffect(() => {
-    if (flat.length > 0 && !active) {
-      setActive(key(flat[0]));
-    } else if (flat.length === 0) {
+    if (flat.length === 0) {
       setActive(null);
+    } else {
+      // Use functional setter to avoid adding `active` as a dependency,
+      // which would cause this effect to re-run every time setActive is called.
+      setActive(prev => {
+        if (!prev) return key(flat[0]);
+        const stillExists = flat.some(item => key(item) === prev);
+        return stillExists ? prev : key(flat[0]);
+      });
     }
-  }, [flat, active, key]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flat, key]);
 
   const onInput = useCallback(
     (newQuery: string) => {
@@ -127,14 +138,15 @@ export function useFilteredList<T>(options: UseFilteredListOptions<T>): UseFilte
   const reset = useCallback(() => {
     setQuery('');
     setActive(null);
-    if (typeof items !== 'function') {
-      setAllItems(items);
+    const currentItems = itemsRef.current;
+    if (typeof currentItems !== 'function') {
+      setAllItems(currentItems);
     }
-  }, [items]);
+  }, []); // stable reference — uses itemsRef instead of items
 
   useEffect(() => {
     fetchItems('');
-  }, [fetchItems]);
+  }, [fetchItems]); // fetchItems is now stable, so this only runs on mount
 
   useEffect(() => {
     return () => {

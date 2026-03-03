@@ -59,7 +59,7 @@ function SideBar() {
     try {
       const [, data] = await apiInterceptors(getDialogueList());
       if (data && Array.isArray(data)) {
-        setDialogueList(data);
+        setDialogueList(data.filter(item => item.chat_mode === 'chat_react_agent'));
       }
     } catch (e) {
       console.error('Failed to fetch dialogue list', e);

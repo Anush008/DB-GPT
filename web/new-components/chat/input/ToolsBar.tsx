@@ -234,7 +234,6 @@ const ToolsBar: React.FC<{
       <div className='flex items-center justify-between h-full w-full'>
         <div className='flex gap-3 text-lg items-center'>
           <ModelSwitcher />
-          <KnowledgeSelector />
           <Resource fileList={fileList} setFileList={setFileList} setLoading={setLoading} fileName={fileName} />
           <Temperature temperatureValue={temperatureValue} setTemperatureValue={setTemperatureValue} />
           <MaxNewTokens maxNewTokensValue={maxNewTokensValue} setMaxNewTokensValue={setMaxNewTokensValue} />

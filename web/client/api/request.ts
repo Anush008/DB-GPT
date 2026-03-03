@@ -198,7 +198,7 @@ export const getRetrieveStrategyList = () => {
 };
 
 export const getSpaceList = (data?: any) => {
-  return POST<any, Array<ISpace>>('/knowledge/space/list', data);
+  return POST<any, Array<ISpace>>('/knowledge/space/list', data ?? {});
 };
 export const getDocumentList = (spaceName: string, data: Record<string, number | Array<number>>) => {
   return POST<Record<string, number | Array<number>>, IDocumentResponse>(`/knowledge/${spaceName}/document/list`, data);

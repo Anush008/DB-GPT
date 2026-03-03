@@ -1392,8 +1392,8 @@ const Playground: NextPage = () => {
     if ((!inputQuery.trim() && !effectiveFile) || loading) return;
 
     let finalQuery = inputQuery;
-    const appCode = 'chat_normal';
-    const chatMode = 'chat_normal';
+    const appCode = 'chat_react_agent';
+    const chatMode = 'chat_react_agent';
     let currentUploadedFilePath = null;
 
     // Handle File Upload if present
@@ -1525,7 +1525,7 @@ const Playground: NextPage = () => {
           user_input: finalQuery,
           temperature: 0.6,
           max_new_tokens: 4000,
-          select_param: appCode === 'chat_normal' ? '' : appCode,
+          select_param: appCode === 'chat_react_agent' ? '' : appCode,
           ext_info: {
             ...(currentUploadedFilePath ? { file_path: currentUploadedFilePath } : {}),
             ...(effectiveSkill ? { skill_id: effectiveSkill.id, skill_name: effectiveSkill.name } : {}),

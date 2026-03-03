@@ -12,7 +12,7 @@ import { SlashCommand } from './CommandPopover';
 import EnhancedChatInput, { ContentPart, EnhancedChatInputRef } from './EnhancedChatInput';
 import ToolsBar from './ToolsBar';
 
-const USE_ENHANCED_INPUT = true;
+const USE_ENHANCED_INPUT = false;
 
 const defaultCommands: SlashCommand[] = [
   { id: 'clear', trigger: 'clear', title: 'Clear chat history', type: 'builtin' },
