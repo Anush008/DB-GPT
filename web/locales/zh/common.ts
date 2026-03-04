@@ -444,4 +444,6 @@ export const CommonZh: Resources['translation'] = {
   evaluation_env_test: '测试集',
   evaluation_env_dev_tooltip: '用于本地开发、验证和调试的数据集',
   evaluation_env_test_tooltip: '用于正式评测打榜的数据集,结果用于评测集打榜排名',
+  home_title: 'DB-GPT AI数据助理',
+  home_subtitle: 'Agentic Data Driven Decisions',
 } as const;

@@ -441,4 +441,6 @@ export const CommonEn = {
   evaluation_env_test: 'Test Set',
   evaluation_env_dev_tooltip: 'Dataset for local development, validation and debugging',
   evaluation_env_test_tooltip: 'Dataset for official evaluation and leaderboard ranking',
+  home_title: 'DB-GPT AI Assistant',
+  home_subtitle: 'Agentic Data Driven Decisions',
 } as const;
