@@ -17,6 +17,7 @@ import axios from '@/utils/ctx-axios';
 import { sendSpacePostRequest } from '@/utils/request';
 import {
   ArrowUpOutlined,
+  AudioOutlined,
   BarChartOutlined,
   BellOutlined,
   BookOutlined,
@@ -2420,10 +2421,10 @@ const Playground: NextPage = () => {
                       )}
                     </div>
 
-                    {/* Gradient Outer Frame */}
-                    <div className='rounded-2xl p-[1.5px] bg-gradient-to-br from-[#a78bfa] via-[#818cf8] to-[#3b82f6] shadow-[0_4px_24px_rgba(139,92,246,0.13)]'>
-                      {/* White Inner Box */}
-                      <div className='bg-white dark:bg-[#1e1f24] rounded-[14px] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] p-2 px-3'>
+                    {/* Outer Frame - Floating Effect */}
+                    <div className='rounded-2xl w-full relative transition-all duration-300 shadow-[0_12px_32px_rgba(0,0,0,0.1),0_4px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_20px_48px_rgba(0,0,0,0.16),0_8px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_12px_32px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_20px_48px_rgba(0,0,0,0.5)]'>
+                      {/* White Inner Box - Clean Glass Card */}
+                      <div className='bg-white/95 backdrop-blur-md dark:bg-[#1e1f24]/95 rounded-2xl border border-gray-100 dark:border-[#33353b] shadow-[inset_0_1px_0_rgba(255,255,255,1)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] p-3 px-4'>
                         <Input.TextArea
                           value={query}
                           onChange={e => {
@@ -2443,14 +2444,14 @@ const Playground: NextPage = () => {
                             t('ask_data_question') ||
                             'Ask a question about your database, upload a CSV, or generate a report...'
                           }
-                          autoSize={{ minRows: 1, maxRows: 4 }}
-                          className='flex-1 resize-none !border-none !shadow-none !bg-transparent px-0 py-1'
+                          autoSize={{ minRows: 2, maxRows: 6 }}
+                          className='flex-1 resize-none !border-none !shadow-none !bg-transparent px-0 py-2'
                           style={{ backgroundColor: 'transparent' }}
                         />
 
                         {/* Toolbar Row */}
                         <div className='flex items-center justify-between mt-1'>
-                          <div className='flex items-center gap-1.5'>
+                          <div className='flex items-center gap-3'>
                             {/* Add Button */}
                             <Dropdown
                               menu={{
@@ -2644,36 +2645,49 @@ const Playground: NextPage = () => {
                             />
                           </div>
 
-                          {/* Send Button with blue gradient + gloss animation */}
-                          <Button
-                            type='primary'
-                            shape='circle'
-                            icon={<ArrowUpOutlined />}
-                            onClick={() => handleStart()}
-                            disabled={(!query.trim() && !uploadedFile) || loading}
-                            loading={loading}
-                            className={`group/send relative overflow-hidden border-none shadow-lg flex-shrink-0 h-9 w-9 transition-all duration-200 ${
-                              query.trim() || uploadedFile
-                                ? 'bg-gradient-to-br from-[#3b82f6] to-[#2563eb] hover:shadow-blue-300/40 hover:shadow-xl hover:scale-105'
-                                : 'bg-gray-200 text-gray-400'
-                            }`}
-                            style={
-                              query.trim() || uploadedFile
-                                ? { background: 'linear-gradient(135deg, #3b82f6, #2563eb)' }
-                                : undefined
-                            }
-                          >
-                            {(query.trim() || uploadedFile) && (
-                              <span
-                                className='absolute inset-0 opacity-0 group-hover/send:opacity-100 transition-opacity duration-300 pointer-events-none'
-                                style={{
-                                  background:
-                                    'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.25) 45%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0.25) 55%, transparent 60%)',
-                                  animation: 'glossSweepChat 1.8s ease-in-out infinite',
-                                }}
+                          <div className='flex items-center gap-3'>
+                            {/* Voice Button */}
+                            <Tooltip title='语音输入'>
+                              <Button
+                                type='text'
+                                shape='circle'
+                                icon={<AudioOutlined className='text-gray-500 text-[18px]' />}
+                                onClick={() => message.info('语音输入即将上线')}
+                                className='flex-shrink-0 h-9 w-9 transition-all duration-200 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800'
                               />
-                            )}
-                          </Button>
+                            </Tooltip>
+
+                            {/* Send Button with blue gradient + gloss animation */}
+                            <Button
+                              type='primary'
+                              shape='circle'
+                              icon={<ArrowUpOutlined />}
+                              onClick={() => handleStart()}
+                              disabled={(!query.trim() && !uploadedFile) || loading}
+                              loading={loading}
+                              className={`group/send relative overflow-hidden border-none shadow-lg flex-shrink-0 h-9 w-9 transition-all duration-200 ${
+                                query.trim() || uploadedFile
+                                  ? 'bg-gradient-to-br from-[#3b82f6] to-[#2563eb] hover:shadow-blue-300/40 hover:shadow-xl hover:scale-105'
+                                  : 'bg-gray-200 text-gray-400'
+                              }`}
+                              style={
+                                query.trim() || uploadedFile
+                                  ? { background: 'linear-gradient(135deg, #3b82f6, #2563eb)' }
+                                  : undefined
+                              }
+                            >
+                              {(query.trim() || uploadedFile) && (
+                                <span
+                                  className='absolute inset-0 opacity-0 group-hover/send:opacity-100 transition-opacity duration-300 pointer-events-none'
+                                  style={{
+                                    background:
+                                      'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.25) 45%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0.25) 55%, transparent 60%)',
+                                    animation: 'glossSweepChat 1.8s ease-in-out infinite',
+                                  }}
+                                />
+                              )}
+                            </Button>
+                          </div>
                           <style
                             dangerouslySetInnerHTML={{
                               __html: `@keyframes glossSweepChat { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }`,
@@ -2774,10 +2788,10 @@ const Playground: NextPage = () => {
 
                 {/* Input Box Container - Premium Layered Style */}
                 <div className='w-full relative'>
-                  {/* Gradient Outer Frame */}
-                  <div className='rounded-3xl p-[2px] bg-gradient-to-br from-[#a78bfa] via-[#818cf8] to-[#3b82f6] shadow-[0_8px_40px_rgba(139,92,246,0.15)] hover:shadow-[0_12px_48px_rgba(139,92,246,0.22)] transition-shadow duration-500'>
-                    {/* White Inner Box */}
-                    <div className='bg-white dark:bg-[#1e1f24] rounded-[22px] shadow-[inset_0_2px_0_rgba(255,255,255,0.9)] p-4'>
+                  {/* Outer Frame - Floating Effect */}
+                  <div className='w-full relative transition-all duration-500 rounded-[28px] shadow-[0_16px_48px_rgba(0,0,0,0.12),0_6px_20px_rgba(0,0,0,0.08)] hover:shadow-[0_24px_64px_rgba(0,0,0,0.2),0_12px_32px_rgba(0,0,0,0.1)] dark:shadow-[0_16px_48px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_24px_64px_rgba(0,0,0,0.5)]'>
+                    {/* White Inner Box - Clean Glass Card */}
+                    <div className='bg-white/95 backdrop-blur-md dark:bg-[#1e1f24]/95 rounded-[28px] border border-gray-100 dark:border-[#33353b] shadow-[inset_0_1px_0_rgba(255,255,255,1)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] p-5 relative z-10'>
                       {/* Uploaded File, Database, Knowledge Tags */}
                       {(uploadedFile || selectedDb || selectedKnowledge) && (
                         <div className='flex flex-wrap gap-2 mb-2'>
@@ -2831,14 +2845,14 @@ const Playground: NextPage = () => {
                           t('ask_data_question') ||
                           'Ask a question about your database, upload a CSV, or generate a report...'
                         }
-                        autoSize={{ minRows: 2, maxRows: 6 }}
-                        className='text-lg resize-none !border-none !shadow-none !bg-transparent px-2 mb-1'
+                        autoSize={{ minRows: 3, maxRows: 8 }}
+                        className='text-lg resize-none !border-none !shadow-none !bg-transparent px-2 py-2 mb-2'
                         style={{ backgroundColor: 'transparent' }}
                       />
 
                       {/* Input Toolbar */}
                       <div className='flex items-center justify-between px-1 mt-1'>
-                        <div className='flex items-center gap-1.5'>
+                        <div className='flex items-center gap-4'>
                           {/* Add Button with Dropdown Menu */}
                           <Dropdown
                             menu={{
@@ -3281,37 +3295,51 @@ const Playground: NextPage = () => {
                           />
                         </div>
 
-                        {/* Send Button with blue gradient + gloss */}
-                        <Button
-                          type='primary'
-                          shape='circle'
-                          size='large'
-                          icon={<ArrowUpOutlined />}
-                          onClick={() => handleStart()}
-                          disabled={(!query.trim() && !uploadedFile) || loading}
-                          loading={loading}
-                          className={`group/send relative overflow-hidden border-none shadow-lg transition-all duration-200 ${
-                            query.trim() || uploadedFile
-                              ? 'bg-gradient-to-br from-[#3b82f6] to-[#2563eb] hover:shadow-blue-300/40 hover:shadow-xl hover:scale-105'
-                              : 'bg-gray-200 text-gray-400'
-                          }`}
-                          style={
-                            query.trim() || uploadedFile
-                              ? { background: 'linear-gradient(135deg, #3b82f6, #2563eb)' }
-                              : undefined
-                          }
-                        >
-                          {(query.trim() || uploadedFile) && (
-                            <span
-                              className='absolute inset-0 opacity-0 group-hover/send:opacity-100 transition-opacity duration-300 pointer-events-none'
-                              style={{
-                                background:
-                                  'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.25) 45%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0.25) 55%, transparent 60%)',
-                                animation: 'glossSweepHero 1.8s ease-in-out infinite',
-                              }}
+                        <div className='flex items-center gap-3'>
+                          {/* Voice Button */}
+                          <Tooltip title='语音输入'>
+                            <Button
+                              type='text'
+                              shape='circle'
+                              size='large'
+                              icon={<AudioOutlined className='text-gray-500 text-xl' />}
+                              onClick={() => message.info('语音输入即将上线')}
+                              className='flex-shrink-0 transition-all duration-200 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800'
                             />
-                          )}
-                        </Button>
+                          </Tooltip>
+
+                          {/* Send Button with blue gradient + gloss */}
+                          <Button
+                            type='primary'
+                            shape='circle'
+                            size='large'
+                            icon={<ArrowUpOutlined />}
+                            onClick={() => handleStart()}
+                            disabled={(!query.trim() && !uploadedFile) || loading}
+                            loading={loading}
+                            className={`group/send relative overflow-hidden border-none shadow-lg transition-all duration-200 ${
+                              query.trim() || uploadedFile
+                                ? 'bg-gradient-to-br from-[#3b82f6] to-[#2563eb] hover:shadow-blue-300/40 hover:shadow-xl hover:scale-105'
+                                : 'bg-gray-200 text-gray-400'
+                            }`}
+                            style={
+                              query.trim() || uploadedFile
+                                ? { background: 'linear-gradient(135deg, #3b82f6, #2563eb)' }
+                                : undefined
+                            }
+                          >
+                            {(query.trim() || uploadedFile) && (
+                              <span
+                                className='absolute inset-0 opacity-0 group-hover/send:opacity-100 transition-opacity duration-300 pointer-events-none'
+                                style={{
+                                  background:
+                                    'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.25) 45%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0.25) 55%, transparent 60%)',
+                                  animation: 'glossSweepHero 1.8s ease-in-out infinite',
+                                }}
+                              />
+                            )}
+                          </Button>
+                        </div>
                         <style
                           dangerouslySetInnerHTML={{
                             __html: `@keyframes glossSweepHero { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }`,
