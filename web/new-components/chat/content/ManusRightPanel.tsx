@@ -40,6 +40,7 @@ import { GPTVis } from '@antv/gpt-vis';
 import { Button, Table, Tooltip, message } from 'antd';
 import classNames from 'classnames';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ArtifactItem, StepStatus, StepType } from './ManusLeftPanel';
 
 /** Resolve image paths like `/images/xxx.png` to full backend URLs in dev mode */
@@ -1452,6 +1453,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
   databaseName,
   skillName,
 }) => {
+  const { t } = useTranslation();
   const [inputCollapsed, setInputCollapsed] = useState(false);
   const [internalPanelView, setInternalPanelView] = useState<PanelView>('execution');
   const [fileFilter, setFileFilter] = useState<FileFilterTab>('all');
