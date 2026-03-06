@@ -2430,7 +2430,7 @@ const Playground: NextPage = () => {
                           onChange={e => {
                             const newValue = e.target.value;
                             setQuery(newValue);
-                            if (newValue.startsWith('/') && !isSkillPanelOpen) {
+                            if (newValue === '/' && !isSkillPanelOpen && !selectedSkill) {
                               setIsSkillPanelOpen(true);
                             }
                           }}
@@ -2522,11 +2522,16 @@ const Playground: NextPage = () => {
                                           skill.description.toLowerCase().includes(skillSearchQuery.toLowerCase()),
                                       )
                                       .map(skill => (
-                                        <div
+                                         <div
                                           key={skill.id}
                                           onClick={() => {
-                                            setSelectedSkill(skill);
-                                            setQuery(`/${skill.name} `);
+                                            if (selectedSkill?.id === skill.id) {
+                                              setSelectedSkill(null);
+                                              setQuery('');
+                                            } else {
+                                              setSelectedSkill(skill);
+                                              setQuery(`/${skill.name} `);
+                                            }
                                             setIsSkillPanelOpen(false);
                                             setSkillSearchQuery('');
                                           }}
@@ -2831,7 +2836,7 @@ const Playground: NextPage = () => {
                         onChange={e => {
                           const newValue = e.target.value;
                           setQuery(newValue);
-                          if (newValue.startsWith('/') && !isSkillPanelOpen) {
+                          if (newValue === '/' && !isSkillPanelOpen && !selectedSkill) {
                             setIsSkillPanelOpen(true);
                           }
                         }}
@@ -2929,11 +2934,16 @@ const Playground: NextPage = () => {
                                         skill.description.toLowerCase().includes(skillSearchQuery.toLowerCase()),
                                     )
                                     .map(skill => (
-                                      <div
+                                       <div
                                         key={skill.id}
                                         onClick={() => {
-                                          setSelectedSkill(skill);
-                                          setQuery(`/${skill.name} `);
+                                          if (selectedSkill?.id === skill.id) {
+                                            setSelectedSkill(null);
+                                            setQuery('');
+                                          } else {
+                                            setSelectedSkill(skill);
+                                            setQuery(`/${skill.name} `);
+                                          }
                                           setIsSkillPanelOpen(false);
                                           setSkillSearchQuery('');
                                         }}

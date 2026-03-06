@@ -299,7 +299,7 @@ function SideBar() {
       <Link href='/'>
         <div className='flex items-center justify-center gap-2 px-4 py-2.5 mb-4 bg-black dark:bg-white dark:text-black text-white rounded-xl text-sm font-medium hover:opacity-90 transition-opacity cursor-pointer'>
           <PlusOutlined className='text-xs' />
-          <span>{t('new_task') || '新建任务'}</span>
+          <span>{t('new_task')}</span>
         </div>
       </Link>
 
@@ -342,7 +342,7 @@ function SideBar() {
       {/* All Tasks Section */}
       <div className='mt-4 mb-2 px-1'>
         <div className='text-xs font-semibold text-gray-400 uppercase tracking-wider'>
-          {t('all_tasks') || '所有任务'}
+          {t('all_tasks')}
         </div>
       </div>
       <div className='flex-1 overflow-y-auto min-h-0'>
@@ -383,7 +383,7 @@ function SideBar() {
             <div className='text-gray-300 dark:text-gray-600 mb-2'>
               <MessageOutlined style={{ fontSize: 24 }} />
             </div>
-            <p className='text-xs text-gray-400'>{t('no_tasks') || '暂无历史任务'}</p>
+            <p className='text-xs text-gray-400'>{t('no_tasks')}</p>
           </div>
         )}
       </div>
