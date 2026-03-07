@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{REPORT_TITLE}}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-light: #818cf8;
+            --primary-bg: #eef2ff;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-rose: #f43f5e;
+            --accent-purple: #8b5cf6;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --bg-page: #f8fafc;
+            --card-bg: #ffffff;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
+            background: var(--bg-page);
+            color: var(--text-primary);
+            margin: 0; padding: 0;
+            line-height: 1.7;
+        }
+        .prose p { margin-bottom: 0.75em; line-height: 1.8; }
+        .prose ul { list-style: disc; padding-left: 1.5em; margin-bottom: 0.75em; }
+        .prose ol { list-style: decimal; padding-left: 1.5em; margin-bottom: 0.75em; }
+        .prose li { margin-bottom: 0.4em; }
+        .prose strong { color: var(--primary); font-weight: 600; }
+        .prose h3 { font-size: 1.1em; font-weight: 600; color: var(--text-primary); margin: 1em 0 0.5em; }
+
+        .section-badge {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: #fff; padding: 0.35rem 1rem; border-radius: 2rem;
+            font-weight: 600; font-size: 0.95rem; letter-spacing: 0.02em;
+            box-shadow: 0 2px 8px rgba(79,70,229,0.25);
+        }
+        .section-badge svg { width: 18px; height: 18px; }
+
+        .metric-card {
+            background: #fff; border-radius: 12px; padding: 1.25rem;
+            border: 1px solid #e2e8f0;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .metric-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.08); }
+        .metric-card .label { font-size: 0.85rem; color: var(--text-secondary); font-weight: 500; margin-bottom: 0.25rem; }
+        .metric-card .value { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); }
+
+        .insight-box {
+            background: linear-gradient(135deg, #eff6ff 0%, #f0f4ff 100%);
+            border-left: 4px solid var(--accent-blue);
+            padding: 1.25rem 1.5rem; border-radius: 0 8px 8px 0;
+            margin-top: 1.5rem;
+        }
+        .insight-box .insight-title {
+            font-weight: 700; color: var(--accent-blue); margin-bottom: 0.5rem;
+            display: flex; align-items: center; gap: 0.4rem; font-size: 1rem;
+        }
+
+        .data-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin: 1rem 0; }
+        .data-table th {
+            background: #f1f5f9; color: var(--text-primary); font-weight: 600;
+            padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid #e2e8f0;
+        }
+        .data-table td { padding: 0.65rem 1rem; border-bottom: 1px solid #f1f5f9; }
+        .data-table tr:hover td { background: #f8fafc; }
+        .data-table .num { font-weight: 600; color: var(--primary); }
+
+        .chart-card {
+            background: #fff; border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.04);
+            padding: 2rem; margin-bottom: 2rem;
+            overflow: hidden;
+        }
+        .chart-card-header {
+            display: flex; align-items: center; gap: 0.75rem;
+            margin-bottom: 1.5rem; padding-bottom: 1rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .chart-card-header h2 {
+            font-size: 1.35rem; font-weight: 700; color: var(--text-primary); margin: 0;
+        }
+        .chart-card-header .icon {
+            width: 36px; height: 36px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem; flex-shrink: 0;
+        }
+
+        @media print {
+            .chart-card { break-inside: avoid; }
+            body { background: #fff; }
+        }
+    </style>
+</head>
+<body>
+    <!-- ============ HEADER ============ -->
+    <header style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #a855f7 100%); position: relative; overflow: hidden;">
+        <div style="position: absolute; top: -50%; left: -10%; width: 60%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%); pointer-events: none;"></div>
+        <div style="position: absolute; bottom: -30%; right: -5%; width: 40%; height: 160%; background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%); pointer-events: none;"></div>
+        <div class="max-w-6xl mx-auto px-6 py-16 text-center relative" style="z-index: 1;">
+            <h1 style="font-size: 2.5rem; font-weight: 800; color: #fff; margin: 0 0 0.75rem; letter-spacing: 0.02em; text-shadow: 0 2px 12px rgba(0,0,0,0.15);">{{REPORT_TITLE}}</h1>
+            <p style="font-size: 1.15rem; color: rgba(255,255,255,0.85); margin: 0; font-weight: 400;">{{REPORT_SUBTITLE}}</p>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-10" style="display: flex; flex-direction: column; gap: 2rem;">
+
+        <!-- ============ SECTION 1: EXEC SUMMARY ============ -->
+        <div class="chart-card">
+            <div style="margin-bottom: 1.25rem;">
+                <span class="section-badge">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                    Executive Summary
+                </span>
+            </div>
+            <div class="prose max-w-none" style="color: var(--text-secondary);">{{EXEC_SUMMARY}}</div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6" id="overview-metrics"></div>
+        </div>
+
+        <!-- ============ SECTION 2: DISTRIBUTIONS ============ -->
+        <div class="chart-card" id="distribution-section">
+            <div class="chart-card-header">
+                <div class="icon" style="background: #dbeafe; color: #2563eb;">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                </div>
+                <h2>Distribution Analysis</h2>
+            </div>
+            <div id="distribution-charts" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+            <div class="insight-box">
+                <div class="insight-title">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Insights
+                </div>
+                <div class="prose max-w-none" style="color: var(--text-secondary);">{{DISTRIBUTION_INSIGHTS}}</div>
+            </div>
+        </div>
+
+        <!-- ============ SECTION 3: CORRELATION ============ -->
+        <div class="chart-card" id="correlation-section">
+            <div class="chart-card-header">
+                <div class="icon" style="background: #fce7f3; color: #db2777;">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </div>
+                <h2>Correlation Analysis</h2>
+            </div>
+            <div id="correlation-chart" style="height: 500px; width: 100%;"></div>
+            <div class="insight-box">
+                <div class="insight-title">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    Insights
+                </div>
+                <div class="prose max-w-none" style="color: var(--text-secondary);">{{CORRELATION_INSIGHTS}}</div>
+            </div>
+        </div>
+
+        <!-- ============ SECTION 4: CATEGORICAL ============ -->
+        <div class="chart-card" id="categorical-section">
+            <div class="chart-card-header">
+                <div class="icon" style="background: #d1fae5; color: #059669;">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
+                </div>
+                <h2>Categorical Analysis</h2>
+            </div>
+            <div id="categorical-charts" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+            <div id="topn-chart" style="height: 400px; width: 100%; margin-top: 1.5rem;"></div>
+            <div class="insight-box">
+                <div class="insight-title">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    Insights
+                </div>
+                <div class="prose max-w-none" style="color: var(--text-secondary);">{{CATEGORICAL_INSIGHTS}}</div>
+            </div>
+        </div>
+
+        <!-- ============ SECTION 5: TIME SERIES ============ -->
+        <div class="chart-card" id="time-series-section">
+            <div class="chart-card-header">
+                <div class="icon" style="background: #ede9fe; color: #7c3aed;">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                </div>
+                <h2>Time Series Analysis</h2>
+            </div>
+            <div id="time-series-chart" style="height: 400px; width: 100%;"></div>
+            <div class="insight-box">
+                <div class="insight-title">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Insights
+                </div>
+                <div class="prose max-w-none" style="color: var(--text-secondary);">{{TIME_SERIES_INSIGHTS}}</div>
+            </div>
+        </div>
+
+        <!-- ============ SECTION 6: RADAR / SCATTER ============ -->
+        <div class="chart-card" id="advanced-section">
+            <div class="chart-card-header">
+                <div class="icon" style="background: #fef3c7; color: #d97706;">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                </div>
+                <h2>Advanced Analysis</h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div id="radar-chart" style="height: 400px; width: 100%;"></div>
+                <div id="scatter-chart" style="height: 400px; width: 100%;"></div>
+            </div>
+        </div>
+
+        <!-- ============ SECTION 7: DATA TABLE ============ -->
+        <div class="chart-card" id="table-section">
+            <div class="chart-card-header">
+                <div class="icon" style="background: #e0e7ff; color: #4338ca;">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                </div>
+                <h2>Statistical Summary</h2>
+            </div>
+            <div id="stats-table-container" style="overflow-x: auto;"></div>
+        </div>
+
+        <!-- ============ SECTION 8: CONCLUSIONS ============ -->
+        <div class="chart-card">
+            <div style="margin-bottom: 1.25rem;">
+                <span class="section-badge" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); box-shadow: 0 2px 8px rgba(5,150,105,0.25);">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Conclusions &amp; Recommendations
+                </span>
+            </div>
+            <div class="prose max-w-none" style="color: var(--text-secondary);">{{CONCLUSIONS}}</div>
+        </div>
+
+    </main>
+
+    <!-- ============ FOOTER ============ -->
+    <footer style="background: #1e293b; color: #94a3b8; text-align: center; padding: 2.5rem 1rem;">
+        <p style="margin: 0 0 0.5rem; font-size: 0.95rem;">Powered by AI Data Analysis Engine</p>
+        <p style="margin: 0; font-size: 0.8rem; opacity: 0.7;">Auto-generated interactive report</p>
+    </footer>
+
+    <!-- ============ CHART DATA (safe JSON injection) ============ -->
+    <script type="application/json" id="echart-binddata">
+{{CHART_DATA_JSON}}
+    </script>
+
+    <!-- ============ RENDERING LOGIC ============ -->
+    <script>
+    (function() {
+        var C = {};
+        try {
+            var el = document.getElementById("echart-binddata");
+            if (el) {
+                var raw = (el.textContent || "").trim();
+                if (raw.charAt(0) === "{") C = JSON.parse(raw);
+            }
+        } catch(e) { console.error("Parse error:", e); }
+
+        var I = [];
+        var COLORS = ["#6366f1","#3b82f6","#06b6d4","#10b981","#f59e0b","#f43f5e","#8b5cf6","#ec4899","#14b8a6","#84cc16"];
+
+        function mkDiv(parent, h) {
+            var d = document.createElement("div");
+            d.style.cssText = "height:" + h + "px;width:100%;border:1px solid #f1f5f9;border-radius:8px;padding:4px;background:#fff;";
+            parent.appendChild(d);
+            return d;
+        }
+
+        window.onload = function() {
+
+            // ======== 1. OVERVIEW METRIC CARDS ========
+            if (C.overview) {
+                var ov = C.overview;
+                var mc = document.getElementById("overview-metrics");
+                if (mc) {
+                    var items = [
+                        {l:"Total Rows", v: ov.rows ? ov.rows.toLocaleString() : "N/A", icon:"#6366f1"},
+                        {l:"Total Cols", v: ov.cols || "N/A", icon:"#3b82f6"},
+                        {l:"Missing Cells", v: ov.missing_cells != null ? ov.missing_cells.toLocaleString() : "0", icon:"#f59e0b"},
+                        {l:"Completeness", v: ov.missing_pct != null ? (100 - ov.missing_pct).toFixed(1) + "%" : "100%", icon:"#10b981"}
+                    ];
+                    items.forEach(function(m) {
+                        var card = document.createElement("div");
+                        card.className = "metric-card";
+                        card.innerHTML = '<div class="label">' + m.l + '</div><div class="value" style="color:' + m.icon + '">' + m.v + '</div>';
+                        mc.appendChild(card);
+                    });
+                }
+            }
+
+            // ======== 2. DISTRIBUTION BAR CHARTS ========
+            var dKeys = C.distributions ? Object.keys(C.distributions) : [];
+            if (dKeys.length > 0) {
+                var dc = document.getElementById("distribution-charts");
+                if (dc) {
+                    dKeys.forEach(function(col, idx) {
+                        var div = mkDiv(dc, 320);
+                        var ch = echarts.init(div);
+                        I.push(ch);
+                        var dd = C.distributions[col];
+                        ch.setOption({
+                            title: { text: col, left: "center", top: 8, textStyle: { fontSize: 14, fontWeight: 600, color: "#334155" } },
+                            tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, backgroundColor: "rgba(30,41,59,0.9)", borderWidth: 0, textStyle: { color: "#fff" } },
+                            grid: { left: "3%", right: "4%", bottom: "10%", top: "18%", containLabel: true },
+                            xAxis: { type: "category", data: dd.bins, axisLabel: { rotate: 35, fontSize: 9, color: "#94a3b8" }, axisLine: { lineStyle: { color: "#e2e8f0" } } },
+                            yAxis: { type: "value", splitLine: { lineStyle: { color: "#f1f5f9", type: "dashed" } }, axisLabel: { color: "#94a3b8" } },
+                            series: [{
+                                type: "bar", data: dd.counts, barWidth: "60%",
+                                itemStyle: {
+                                    borderRadius: [6, 6, 0, 0],
+                                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                        { offset: 0, color: COLORS[idx % COLORS.length] },
+                                        { offset: 1, color: COLORS[idx % COLORS.length] + "66" }
+                                    ])
+                                },
+                                emphasis: { itemStyle: { shadowBlur: 10, shadowColor: "rgba(0,0,0,0.15)" } }
+                            }]
+                        });
+                    });
+                }
+            } else {
+                var ds = document.getElementById("distribution-section");
+                if (ds) ds.style.display = "none";
+            }
+
+            // ======== 3. CORRELATION HEATMAP ========
+            var corr = C.correlations;
+            if (corr && corr.cols && corr.cols.length > 1) {
+                var ce = document.getElementById("correlation-chart");
+                if (ce) {
+                    var ch = echarts.init(ce);
+                    I.push(ch);
+                    ch.setOption({
+                        tooltip: {
+                            position: "top",
+                            backgroundColor: "rgba(30,41,59,0.9)", borderWidth: 0, textStyle: { color: "#fff" },
+                            formatter: function(p) { return corr.cols[p.data[0]] + " vs " + corr.cols[p.data[1]] + "<br/>r = <b>" + p.data[2] + "</b>"; }
+                        },
+                        grid: { height: "68%", top: "5%", bottom: "22%", left: "15%", right: "5%" },
+                        xAxis: { type: "category", data: corr.cols, splitArea: { show: true, areaStyle: { color: ["rgba(250,250,250,0.3)", "rgba(200,200,200,0.08)"] } }, axisLabel: { interval: 0, rotate: 35, fontSize: 11, color: "#64748b" } },
+                        yAxis: { type: "category", data: corr.cols, splitArea: { show: true, areaStyle: { color: ["rgba(250,250,250,0.3)", "rgba(200,200,200,0.08)"] } }, axisLabel: { fontSize: 11, color: "#64748b" } },
+                        visualMap: { min: -1, max: 1, calculable: true, orient: "horizontal", left: "center", bottom: "2%", itemWidth: 20, itemHeight: 140, textStyle: { color: "#64748b" }, inRange: { color: ["#312e81","#4338ca","#6366f1","#a5b4fc","#e0e7ff","#fef3c7","#fcd34d","#f59e0b","#ea580c","#dc2626","#991b1b"] } },
+                        series: [{
+                            type: "heatmap", data: corr.data,
+                            label: { show: true, fontSize: 11, fontWeight: 600, formatter: function(p) { return p.data[2].toFixed(2); } },
+                            emphasis: { itemStyle: { shadowBlur: 12, shadowColor: "rgba(0,0,0,0.25)" } }
+                        }]
+                    });
+                }
+            } else {
+                var cs = document.getElementById("correlation-section");
+                if (cs) cs.style.display = "none";
+            }
+
+            // ======== 4. CATEGORICAL PIE/DONUT CHARTS ========
+            var catKeys = C.categories ? Object.keys(C.categories) : [];
+            if (catKeys.length > 0) {
+                var cc = document.getElementById("categorical-charts");
+                if (cc) {
+                    catKeys.forEach(function(col, idx) {
+                        var div = mkDiv(cc, 380);
+                        var ch = echarts.init(div);
+                        I.push(ch);
+                        var pd = C.categories[col].labels.map(function(lbl, i) { return { name: lbl, value: C.categories[col].values[i] }; });
+                        ch.setOption({
+                            title: { text: col, left: "center", top: 8, textStyle: { fontSize: 14, fontWeight: 600, color: "#334155" } },
+                            tooltip: { trigger: "item", formatter: "{b}<br/>{c} ({d}%)", backgroundColor: "rgba(30,41,59,0.9)", borderWidth: 0, textStyle: { color: "#fff" } },
+                            legend: { orient: "horizontal", bottom: 0, type: "scroll", textStyle: { fontSize: 11, color: "#64748b" } },
+                            color: COLORS,
+                            series: [{
+                                type: "pie", radius: ["42%", "68%"], center: ["50%", "48%"],
+                                data: pd,
+                                label: { show: true, formatter: "{d}%", fontSize: 11, fontWeight: 600 },
+                                itemStyle: { borderRadius: 6, borderColor: "#fff", borderWidth: 2 },
+                                emphasis: { scaleSize: 8, label: { fontSize: 14, fontWeight: 700 } }
+                            }]
+                        });
+                    });
+                }
+
+                var bestCat = catKeys[0];
+                var topnEl = document.getElementById("topn-chart");
+                if (topnEl && C.categories[bestCat]) {
+                    var td = C.categories[bestCat];
+                    var labels = td.labels.slice().reverse();
+                    var vals = td.values.slice().reverse();
+                    var ch = echarts.init(topnEl);
+                    I.push(ch);
+                    ch.setOption({
+                        title: { text: bestCat + " Top " + labels.length, left: "center", top: 8, textStyle: { fontSize: 14, fontWeight: 600, color: "#334155" } },
+                        tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, backgroundColor: "rgba(30,41,59,0.9)", borderWidth: 0, textStyle: { color: "#fff" } },
+                        grid: { left: "3%", right: "10%", bottom: "5%", top: "15%", containLabel: true },
+                        xAxis: { type: "value", splitLine: { lineStyle: { color: "#f1f5f9", type: "dashed" } }, axisLabel: { color: "#94a3b8" } },
+                        yAxis: { type: "category", data: labels, axisLabel: { fontSize: 11, color: "#334155", width: 120, overflow: "truncate" } },
+                        series: [{
+                            type: "bar", data: vals, barWidth: "55%",
+                            itemStyle: { borderRadius: [0, 6, 6, 0], color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: "#818cf8" }, { offset: 1, color: "#6366f1" }]) },
+                            label: { show: true, position: "right", formatter: "{c}", fontSize: 11, fontWeight: 600, color: "#4f46e5" }
+                        }]
+                    });
+                }
+            } else {
+                var cas = document.getElementById("categorical-section");
+                if (cas) cas.style.display = "none";
+            }
+
+            // ======== 5. TIME SERIES LINE CHART ========
+            var ts = C.time_series;
+            if (ts && ts.dates && ts.dates.length > 0) {
+                var te = document.getElementById("time-series-chart");
+                if (te) {
+                    var ch = echarts.init(te);
+                    I.push(ch);
+                    ch.setOption({
+                        title: { text: (ts.name || "") + " Trend", left: "center", top: 8, textStyle: { fontSize: 14, fontWeight: 600, color: "#334155" } },
+                        tooltip: { trigger: "axis", backgroundColor: "rgba(30,41,59,0.9)", borderWidth: 0, textStyle: { color: "#fff" } },
+                        grid: { left: "3%", right: "4%", bottom: "8%", top: "18%", containLabel: true },
+                        xAxis: { type: "category", data: ts.dates, boundaryGap: false, axisLabel: { color: "#94a3b8", rotate: 30 }, axisLine: { lineStyle: { color: "#e2e8f0" } } },
+                        yAxis: { type: "value", scale: true, splitLine: { lineStyle: { color: "#f1f5f9", type: "dashed" } }, axisLabel: { color: "#94a3b8" } },
+                        dataZoom: [{ type: "inside", start: 0, end: 100 }],
+                        series: [{
+                            type: "line", data: ts.values, smooth: true, symbol: "circle", symbolSize: 6,
+                            areaStyle: { opacity: 0.15, color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: "#8b5cf6" }, { offset: 1, color: "#8b5cf600" }]) },
+                            itemStyle: { color: "#8b5cf6" },
+                            lineStyle: { width: 3, shadowColor: "rgba(139,92,246,0.3)", shadowBlur: 8, shadowOffsetY: 4 }
+                        }]
+                    });
+                }
+            } else {
+                var tss = document.getElementById("time-series-section");
+                if (tss) tss.style.display = "none";
+            }
+
+            // ======== 6. RADAR CHART ========
+            var numCols = C.numeric_cols || [];
+            var dists = C.distributions || {};
+            var radarEl = document.getElementById("radar-chart");
+            if (radarEl && numCols.length >= 3) {
+                var radarCols = numCols.slice(0, 8);
+                var indicator = [];
+                var radarValues = [];
+                radarCols.forEach(function(col) {
+                    var d = dists[col];
+                    if (d && d.counts) {
+                        var total = d.counts.reduce(function(a, b) { return a + b; }, 0);
+                        indicator.push({ name: col, max: total });
+                        var maxVal = Math.max.apply(null, d.counts);
+                        radarValues.push(maxVal);
+                    }
+                });
+                if (indicator.length >= 3) {
+                    var ch = echarts.init(radarEl);
+                    I.push(ch);
+                    ch.setOption({
+                        title: { text: "Feature Distribution Radar", left: "center", top: 8, textStyle: { fontSize: 13, fontWeight: 600, color: "#334155" } },
+                        tooltip: { backgroundColor: "rgba(30,41,59,0.9)", borderWidth: 0, textStyle: { color: "#fff" } },
+                        radar: {
+                            indicator: indicator, shape: "polygon",
+                            axisName: { color: "#64748b", fontSize: 10 },
+                            splitArea: { areaStyle: { color: ["#fff", "#f8fafc", "#f1f5f9", "#e2e8f0"] } },
+                            splitLine: { lineStyle: { color: "#e2e8f0" } }
+                        },
+                        series: [{
+                            type: "radar",
+                            data: [{ value: radarValues, name: "Peak Frequency", areaStyle: { opacity: 0.2, color: "#6366f1" }, lineStyle: { color: "#6366f1", width: 2 }, itemStyle: { color: "#6366f1" } }]
+                        }]
+                    });
+                }
+            }
+            if (radarEl && numCols.length < 3) { radarEl.style.display = "none"; }
+
+            // ======== 7. SCATTER CHART ========
+            var scatterEl = document.getElementById("scatter-chart");
+            if (scatterEl && C.scatter && C.scatter.x && C.scatter.x.length > 0) {
+                var sc = C.scatter;
+                var scData = sc.x.map(function(xv, i) { return [xv, sc.y[i]]; });
+                var ch = echarts.init(scatterEl);
+                I.push(ch);
+                ch.setOption({
+                    title: { text: sc.x_name + " vs " + sc.y_name, left: "center", top: 8, textStyle: { fontSize: 13, fontWeight: 600, color: "#334155" } },
+                    tooltip: { backgroundColor: "rgba(30,41,59,0.9)", borderWidth: 0, textStyle: { color: "#fff" }, formatter: function(p) { return sc.x_name + ": " + p.data[0] + "<br/>" + sc.y_name + ": " + p.data[1]; } },
+                    grid: { left: "10%", right: "5%", bottom: "12%", top: "18%" },
+                    xAxis: { type: "value", name: sc.x_name, nameTextStyle: { color: "#94a3b8", fontSize: 11 }, splitLine: { lineStyle: { color: "#f1f5f9", type: "dashed" } }, axisLabel: { color: "#94a3b8" }, scale: true },
+                    yAxis: { type: "value", name: sc.y_name, nameTextStyle: { color: "#94a3b8", fontSize: 11 }, splitLine: { lineStyle: { color: "#f1f5f9", type: "dashed" } }, axisLabel: { color: "#94a3b8" }, scale: true },
+                    series: [{
+                        type: "scatter", data: scData, symbolSize: 8,
+                        itemStyle: { color: "#f43f5e", opacity: 0.6, borderColor: "#fff", borderWidth: 1 },
+                        emphasis: { itemStyle: { opacity: 1, shadowBlur: 8, shadowColor: "rgba(244,63,94,0.4)" } }
+                    }]
+                });
+            } else if (scatterEl) {
+                scatterEl.style.display = "none";
+            }
+
+            // Hide advanced section if nothing to show
+            var advSec = document.getElementById("advanced-section");
+            if (advSec) {
+                var radarHidden = !radarEl || radarEl.style.display === "none";
+                var scatterHidden = !scatterEl || scatterEl.style.display === "none";
+                if (radarHidden && scatterHidden) advSec.style.display = "none";
+            }
+
+            // ======== 8. STATS TABLE ========
+            var tableEl = document.getElementById("stats-table-container");
+            var tableSec = document.getElementById("table-section");
+            if (tableEl && C.stats_table && C.stats_table.headers && C.stats_table.rows && C.stats_table.rows.length > 0) {
+                var st = C.stats_table;
+                var html = '<table class="data-table"><thead><tr>';
+                st.headers.forEach(function(h) { html += "<th>" + h + "</th>"; });
+                html += "</tr></thead><tbody>";
+                st.rows.forEach(function(row) {
+                    html += "<tr>";
+                    row.forEach(function(cell, ci) {
+                        var cls = ci === 0 ? "" : (typeof cell === "number" ? ' class="num"' : "");
+                        var val = typeof cell === "number" ? cell.toLocaleString() : cell;
+                        html += "<td" + cls + ">" + val + "</td>";
+                    });
+                    html += "</tr>";
+                });
+                html += "</tbody></table>";
+                tableEl.innerHTML = html;
+            } else if (tableSec) {
+                tableSec.style.display = "none";
+            }
+        };
+
+        window.addEventListener("resize", function() { I.forEach(function(c) { if (c) c.resize(); }); });
+    })();
+    </script>
+</body>
+</html>
