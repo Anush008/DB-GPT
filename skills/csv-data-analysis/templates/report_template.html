@@ -8,526 +8,1015 @@
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <style>
         :root {
-            --primary: #4f46e5;
-            --primary-light: #818cf8;
-            --primary-bg: #eef2ff;
-            --accent-blue: #3b82f6;
-            --accent-green: #10b981;
-            --accent-amber: #f59e0b;
-            --accent-rose: #f43f5e;
-            --accent-purple: #8b5cf6;
-            --text-primary: #1e293b;
-            --text-secondary: #64748b;
-            --bg-page: #f8fafc;
-            --card-bg: #ffffff;
+            --ink-900: #0f172a;
+            --ink-700: #334155;
+            --ink-500: #64748b;
+            --line: #dbe3ef;
+            --panel: rgba(255, 255, 255, 0.92);
+            --panel-strong: #ffffff;
+            --page-top: #eef4fb;
+            --page-bottom: #f8fafc;
+            --blue: #1d4ed8;
+            --blue-soft: #dbeafe;
+            --teal: #0f766e;
+            --amber: #b45309;
+            --rose: #be123c;
+            --violet: #6d28d9;
+            --emerald: #047857;
+            --shadow: 0 20px 45px rgba(15, 23, 42, 0.06);
         }
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
-            background: var(--bg-page);
-            color: var(--text-primary);
-            margin: 0; padding: 0;
-            line-height: 1.7;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 26%),
+                radial-gradient(circle at top right, rgba(15, 118, 110, 0.06), transparent 22%),
+                linear-gradient(180deg, var(--page-top) 0%, var(--page-bottom) 28%, #f8fafc 100%);
+            color: var(--ink-900);
+            line-height: 1.65;
+            -webkit-font-smoothing: antialiased;
         }
-        .prose p { margin-bottom: 0.75em; line-height: 1.8; }
-        .prose ul { list-style: disc; padding-left: 1.5em; margin-bottom: 0.75em; }
-        .prose ol { list-style: decimal; padding-left: 1.5em; margin-bottom: 0.75em; }
-        .prose li { margin-bottom: 0.4em; }
-        .prose strong { color: var(--primary); font-weight: 600; }
-        .prose h3 { font-size: 1.1em; font-weight: 600; color: var(--text-primary); margin: 1em 0 0.5em; }
-
-        .section-badge {
-            display: inline-flex; align-items: center; gap: 0.5rem;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-            color: #fff; padding: 0.35rem 1rem; border-radius: 2rem;
-            font-weight: 600; font-size: 0.95rem; letter-spacing: 0.02em;
-            box-shadow: 0 2px 8px rgba(79,70,229,0.25);
+        .page {
+            max-width: 1220px;
+            margin: 0 auto;
+            padding: 20px 18px 32px;
         }
-        .section-badge svg { width: 18px; height: 18px; }
-
-        .metric-card {
-            background: #fff; border-radius: 12px; padding: 1.25rem;
-            border: 1px solid #e2e8f0;
-            transition: transform 0.2s, box-shadow 0.2s;
+        .hero {
+            background: linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(248,250,252,0.96) 100%);
+            border: 1px solid rgba(219, 227, 239, 0.95);
+            border-radius: 20px;
+            padding: 22px 24px;
+            box-shadow: var(--shadow);
+            margin-bottom: 16px;
         }
-        .metric-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.08); }
-        .metric-card .label { font-size: 0.85rem; color: var(--text-secondary); font-weight: 500; margin-bottom: 0.25rem; }
-        .metric-card .value { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); }
-
+        .hero-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.8fr) minmax(320px, 1fr);
+            gap: 18px;
+            align-items: stretch;
+        }
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--blue);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        .eyebrow::before {
+            content: "";
+            width: 26px;
+            height: 2px;
+            border-radius: 999px;
+            background: var(--blue);
+        }
+        .hero h1 {
+            font-size: clamp(28px, 4vw, 38px);
+            line-height: 1.14;
+            letter-spacing: -0.03em;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: var(--ink-700);
+            font-size: 15px;
+            max-width: 760px;
+            margin-bottom: 14px;
+        }
+        .hero-note {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: var(--blue-soft);
+            color: var(--blue);
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+        .summary-card {
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            background: var(--panel-strong);
+            padding: 14px 14px 12px;
+            min-height: 92px;
+        }
+        .summary-card .label {
+            color: var(--ink-500);
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .summary-card .value {
+            font-size: 22px;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 4px;
+        }
+        .summary-card .desc {
+            font-size: 12px;
+            color: var(--ink-500);
+        }
+        .section {
+            margin-bottom: 14px;
+        }
+        .section-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 10px;
+            padding: 0 2px;
+        }
+        .section-title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .section-no {
+            width: 34px;
+            height: 34px;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: #fff;
+            font-size: 14px;
+            box-shadow: 0 8px 16px rgba(37, 99, 235, 0.16);
+        }
+        .section-title {
+            font-size: 21px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+        .section-desc {
+            color: var(--ink-500);
+            font-size: 13px;
+        }
+        .board,
+        .panel {
+            background: var(--panel);
+            border: 1px solid rgba(219, 227, 239, 0.95);
+            border-radius: 18px;
+            box-shadow: var(--shadow);
+        }
+        .board {
+            padding: 18px;
+        }
+        .panel {
+            padding: 16px;
+        }
+        .panel-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--ink-900);
+            margin-bottom: 12px;
+        }
+        .muted {
+            color: var(--ink-500);
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+        }
+        .metric-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+        }
+        .metric-item {
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: #fff;
+            padding: 14px;
+        }
+        .metric-item .label {
+            font-size: 11px;
+            color: var(--ink-500);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .metric-item .value {
+            font-size: 24px;
+            line-height: 1.1;
+            font-weight: 800;
+        }
+        .metric-item .hint {
+            margin-top: 5px;
+            font-size: 12px;
+            color: var(--ink-500);
+        }
+        .chart-box {
+            border: 1px solid rgba(226, 232, 240, 0.9);
+            background: #fff;
+            border-radius: 16px;
+            padding: 6px;
+        }
+        .prose {
+            color: var(--ink-700);
+            font-size: 14px;
+            line-height: 1.78;
+        }
+        .prose p { margin-bottom: 0.65em; }
+        .prose ul, .prose ol { margin-bottom: 0.65em; padding-left: 1.4em; }
+        .prose li { margin-bottom: 0.28em; }
+        .prose h3 {
+            color: var(--ink-900);
+            font-size: 16px;
+            font-weight: 800;
+            margin: 0.9em 0 0.4em;
+        }
+        .prose strong { color: var(--blue); }
         .insight-box {
-            background: linear-gradient(135deg, #eff6ff 0%, #f0f4ff 100%);
-            border-left: 4px solid var(--accent-blue);
-            padding: 1.25rem 1.5rem; border-radius: 0 8px 8px 0;
-            margin-top: 1.5rem;
+            margin-top: 12px;
+            border-left: 4px solid var(--blue);
+            background: linear-gradient(180deg, #eff6ff 0%, #f8fbff 100%);
+            border-radius: 0 14px 14px 0;
+            padding: 14px 16px;
         }
-        .insight-box .insight-title {
-            font-weight: 700; color: var(--accent-blue); margin-bottom: 0.5rem;
-            display: flex; align-items: center; gap: 0.4rem; font-size: 1rem;
+        .insight-label {
+            font-size: 11px;
+            color: var(--blue);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            font-weight: 800;
+            margin-bottom: 8px;
         }
-
-        .data-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin: 1rem 0; }
+        .signal-list {
+            display: grid;
+            gap: 10px;
+        }
+        .signal-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: #fff;
+            padding: 12px 14px;
+        }
+        .signal-item .name {
+            font-weight: 700;
+            color: var(--ink-900);
+            margin-bottom: 4px;
+        }
+        .signal-item .meta {
+            font-size: 12px;
+            color: var(--ink-500);
+        }
+        .badge {
+            min-width: 64px;
+            align-self: center;
+            text-align: center;
+            padding: 8px 10px;
+            border-radius: 999px;
+            background: #eff6ff;
+            color: var(--blue);
+            font-size: 12px;
+            font-weight: 800;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
         .data-table th {
-            background: #f1f5f9; color: var(--text-primary); font-weight: 600;
-            padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid #e2e8f0;
+            background: var(--blue);
+            color: #fff;
+            text-align: left;
+            padding: 10px 11px;
+            font-size: 11px;
+            font-weight: 700;
         }
-        .data-table td { padding: 0.65rem 1rem; border-bottom: 1px solid #f1f5f9; }
-        .data-table tr:hover td { background: #f8fafc; }
-        .data-table .num { font-weight: 600; color: var(--primary); }
-
-        .chart-card {
-            background: #fff; border-radius: 16px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.04);
-            padding: 2rem; margin-bottom: 2rem;
-            overflow: hidden;
+        .data-table td {
+            padding: 9px 11px;
+            border-bottom: 1px solid #edf2f7;
         }
-        .chart-card-header {
-            display: flex; align-items: center; gap: 0.75rem;
-            margin-bottom: 1.5rem; padding-bottom: 1rem;
-            border-bottom: 1px solid #f1f5f9;
+        .data-table tbody tr:nth-child(even) td { background: #f8fafc; }
+        .data-table .num {
+            color: var(--blue);
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
         }
-        .chart-card-header h2 {
-            font-size: 1.35rem; font-weight: 700; color: var(--text-primary); margin: 0;
+        .outlier-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+            gap: 10px;
         }
-        .chart-card-header .icon {
-            width: 36px; height: 36px; border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.1rem; flex-shrink: 0;
+        .outlier-item {
+            border-radius: 14px;
+            padding: 12px 14px;
+            border-left: 4px solid;
+            background: #fff;
         }
-
+        .outlier-item .col-name {
+            font-size: 12px;
+            color: var(--ink-500);
+            margin-bottom: 6px;
+        }
+        .outlier-item .count {
+            font-size: 20px;
+            line-height: 1.1;
+            font-weight: 800;
+        }
+        .footer {
+            text-align: center;
+            color: var(--ink-500);
+            font-size: 12px;
+            padding: 14px 10px 4px;
+        }
+        @media (max-width: 900px) {
+            .hero-grid, .grid-2, .grid-3 { grid-template-columns: 1fr; }
+            .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        @media (max-width: 640px) {
+            .page { padding: 14px 12px 24px; }
+            .hero, .board, .panel { padding: 14px; }
+            .summary-grid { grid-template-columns: 1fr; }
+            .metric-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
         @media print {
-            .chart-card { break-inside: avoid; }
             body { background: #fff; }
+            .hero, .board, .panel { box-shadow: none; }
+            .section, .board { break-inside: avoid; }
         }
     </style>
 </head>
 <body>
-    <!-- ============ HEADER ============ -->
-    <header style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #a855f7 100%); position: relative; overflow: hidden;">
-        <div style="position: absolute; top: -50%; left: -10%; width: 60%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%); pointer-events: none;"></div>
-        <div style="position: absolute; bottom: -30%; right: -5%; width: 40%; height: 160%; background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%); pointer-events: none;"></div>
-        <div class="max-w-6xl mx-auto px-6 py-16 text-center relative" style="z-index: 1;">
-            <h1 style="font-size: 2.5rem; font-weight: 800; color: #fff; margin: 0 0 0.75rem; letter-spacing: 0.02em; text-shadow: 0 2px 12px rgba(0,0,0,0.15);">{{REPORT_TITLE}}</h1>
-            <p style="font-size: 1.15rem; color: rgba(255,255,255,0.85); margin: 0; font-weight: 400;">{{REPORT_SUBTITLE}}</p>
-        </div>
-    </header>
-
-    <main class="max-w-6xl mx-auto px-4 py-10" style="display: flex; flex-direction: column; gap: 2rem;">
-
-        <!-- ============ SECTION 1: EXEC SUMMARY ============ -->
-        <div class="chart-card">
-            <div style="margin-bottom: 1.25rem;">
-                <span class="section-badge">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                    Executive Summary
-                </span>
-            </div>
-            <div class="prose max-w-none" style="color: var(--text-secondary);">{{EXEC_SUMMARY}}</div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6" id="overview-metrics"></div>
-        </div>
-
-        <!-- ============ SECTION 2: DISTRIBUTIONS ============ -->
-        <div class="chart-card" id="distribution-section">
-            <div class="chart-card-header">
-                <div class="icon" style="background: #dbeafe; color: #2563eb;">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+    <div class="page">
+        <section class="hero">
+            <div class="hero-grid">
+                <div>
+                    <h1>{{REPORT_TITLE}}</h1>
+                    <p class="subtitle">{{REPORT_SUBTITLE}}</p>
                 </div>
-                <h2>Distribution Analysis</h2>
-            </div>
-            <div id="distribution-charts" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
-            <div class="insight-box">
-                <div class="insight-title">
-                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    Insights
+                <div class="summary-grid" id="hero-summary-grid">
+                    <div class="summary-card">
+                        <div class="label">数据规模</div>
+                        <div class="value" id="hero-rows">--</div>
+                        <div class="desc">样本量与字段规模</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="label">完整度</div>
+                        <div class="value" id="hero-completeness">--</div>
+                        <div class="desc">缺失与重复情况</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="label">核心指标</div>
+                        <div class="value" id="hero-metric">--</div>
+                        <div class="desc">自动识别的主分析指标</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="label">异动差距</div>
+                        <div class="value" id="hero-gap">--</div>
+                        <div class="desc">高低分组差异概览</div>
+                    </div>
                 </div>
-                <div class="prose max-w-none" style="color: var(--text-secondary);">{{DISTRIBUTION_INSIGHTS}}</div>
             </div>
-        </div>
+        </section>
 
-        <!-- ============ SECTION 3: CORRELATION ============ -->
-        <div class="chart-card" id="correlation-section">
-            <div class="chart-card-header">
-                <div class="icon" style="background: #fce7f3; color: #db2777;">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        <section class="section">
+            <div class="section-head">
+                <div class="section-title-wrap">
+                    <div class="section-no" style="background:#1d4ed8;">01</div>
+                    <div>
+                        <div class="section-title">报告摘要</div>
+                        <div class="section-desc">快速概览数据规模、重点发现和关键判断</div>
+                    </div>
                 </div>
-                <h2>Correlation Analysis</h2>
             </div>
-            <div id="correlation-chart" style="height: 500px; width: 100%;"></div>
-            <div class="insight-box">
-                <div class="insight-title">
-                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                    Insights
+            <div class="board">
+                <div class="prose">{{EXEC_SUMMARY}}</div>
+                <div class="metric-row" id="overview-metrics" style="margin-top:14px;"></div>
+            </div>
+        </section>
+
+        <section class="section" id="quality-section">
+            <div class="section-head">
+                <div class="section-title-wrap">
+                    <div class="section-no" style="background:#0f766e;">02</div>
+                    <div>
+                        <div class="section-title">数据概览与质量检查</div>
+                        <div class="section-desc">检查数据结构、字段类型、缺失情况与整体质量</div>
+                    </div>
                 </div>
-                <div class="prose max-w-none" style="color: var(--text-secondary);">{{CORRELATION_INSIGHTS}}</div>
             </div>
-        </div>
-
-        <!-- ============ SECTION 4: CATEGORICAL ============ -->
-        <div class="chart-card" id="categorical-section">
-            <div class="chart-card-header">
-                <div class="icon" style="background: #d1fae5; color: #059669;">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
+            <div class="board grid-2">
+                <div class="panel">
+                    <div class="panel-title">字段缺失率分布</div>
+                    <div class="chart-box" id="missing-rate-chart" style="height: 320px;"></div>
                 </div>
-                <h2>Categorical Analysis</h2>
-            </div>
-            <div id="categorical-charts" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
-            <div id="topn-chart" style="height: 400px; width: 100%; margin-top: 1.5rem;"></div>
-            <div class="insight-box">
-                <div class="insight-title">
-                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-                    Insights
+                <div class="panel">
+                    <div class="panel-title">字段类型结构</div>
+                    <div class="chart-box" id="dtype-chart" style="height: 320px;"></div>
                 </div>
-                <div class="prose max-w-none" style="color: var(--text-secondary);">{{CATEGORICAL_INSIGHTS}}</div>
             </div>
-        </div>
+        </section>
 
-        <!-- ============ SECTION 5: TIME SERIES ============ -->
-        <div class="chart-card" id="time-series-section">
-            <div class="chart-card-header">
-                <div class="icon" style="background: #ede9fe; color: #7c3aed;">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+        <section class="section" id="distribution-section">
+            <div class="section-head">
+                <div class="section-title-wrap">
+                    <div class="section-no" style="background:#2563eb;">03</div>
+                    <div>
+                        <div class="section-title">数值指标分布特征</div>
+                        <div class="section-desc">观察核心数值列的分布形态、离散程度和偏态特征</div>
+                    </div>
                 </div>
-                <h2>Time Series Analysis</h2>
             </div>
-            <div id="time-series-chart" style="height: 400px; width: 100%;"></div>
-            <div class="insight-box">
-                <div class="insight-title">
-                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    Insights
+            <div class="board">
+                <div id="distribution-charts" class="grid-2"></div>
+                <div class="insight-box">
+                    <div class="insight-label">Distribution Insights</div>
+                    <div class="prose">{{DISTRIBUTION_INSIGHTS}}</div>
                 </div>
-                <div class="prose max-w-none" style="color: var(--text-secondary);">{{TIME_SERIES_INSIGHTS}}</div>
             </div>
-        </div>
+        </section>
 
-        <!-- ============ SECTION 6: RADAR / SCATTER ============ -->
-        <div class="chart-card" id="advanced-section">
-            <div class="chart-card-header">
-                <div class="icon" style="background: #fef3c7; color: #d97706;">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+        <section class="section" id="feature-section">
+            <div class="section-head">
+                <div class="section-title-wrap">
+                    <div class="section-no" style="background:#d97706;">04</div>
+                    <div>
+                        <div class="section-title">特征分析与结构分析</div>
+                        <div class="section-desc">从分类结构、排名对比和统计画像理解数据特征</div>
+                    </div>
                 </div>
-                <h2>Advanced Analysis</h2>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div id="radar-chart" style="height: 400px; width: 100%;"></div>
-                <div id="scatter-chart" style="height: 400px; width: 100%;"></div>
-            </div>
-        </div>
-
-        <!-- ============ SECTION 7: DATA TABLE ============ -->
-        <div class="chart-card" id="table-section">
-            <div class="chart-card-header">
-                <div class="icon" style="background: #e0e7ff; color: #4338ca;">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            <div class="board grid-2">
+                <div class="panel">
+                    <div class="panel-title">分类维度结构</div>
+                    <div id="categorical-charts" class="grid-2"></div>
+                    <div class="insight-box">
+                        <div class="insight-label">Categorical Insights</div>
+                        <div class="prose">{{CATEGORICAL_INSIGHTS}}</div>
+                    </div>
                 </div>
-                <h2>Statistical Summary</h2>
+                <div class="panel">
+                    <div class="panel-title">Top / Bottom 排名特征</div>
+                    <div class="grid-2">
+                        <div class="chart-box" id="top5-chart" style="height: 300px;"></div>
+                        <div class="chart-box" id="bottom5-chart" style="height: 300px;"></div>
+                    </div>
+                    <div class="chart-box" id="segment-comparison-chart" style="height: 310px; margin-top: 12px;"></div>
+                </div>
             </div>
-            <div id="stats-table-container" style="overflow-x: auto;"></div>
-        </div>
+        </section>
 
-        <!-- ============ SECTION 8: CONCLUSIONS ============ -->
-        <div class="chart-card">
-            <div style="margin-bottom: 1.25rem;">
-                <span class="section-badge" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); box-shadow: 0 2px 8px rgba(5,150,105,0.25);">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    Conclusions &amp; Recommendations
-                </span>
+        <section class="section" id="relation-section">
+            <div class="section-head">
+                <div class="section-title-wrap">
+                    <div class="section-no" style="background:#be123c;">05</div>
+                    <div>
+                        <div class="section-title">关系分析与异常识别</div>
+                        <div class="section-desc">关注变量联动、异常点分布以及结构性关系特征</div>
+                    </div>
+                </div>
             </div>
-            <div class="prose max-w-none" style="color: var(--text-secondary);">{{CONCLUSIONS}}</div>
-        </div>
+            <div class="board">
+                <div class="grid-2">
+                    <div class="panel">
+                        <div class="panel-title">相关性与散点关系</div>
+                        <div class="grid-2">
+                            <div class="chart-box" id="correlation-chart" style="height: 420px;"></div>
+                            <div class="chart-box" id="scatter-chart" style="height: 420px;"></div>
+                        </div>
+                        <div class="insight-box">
+                            <div class="insight-label">Correlation Insights</div>
+                            <div class="prose">{{CORRELATION_INSIGHTS}}</div>
+                        </div>
+                    </div>
+                    <div class="panel" id="boxplot-section">
+                        <div class="panel-title">异常值与箱线分布</div>
+                        <div id="outlier-summary" style="margin-bottom: 12px;"></div>
+                        <div class="chart-box" id="boxplot-chart" style="height: 420px;"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-    </main>
+        <section class="section" id="anomaly-section">
+            <div class="section-head">
+                <div class="section-title-wrap">
+                    <div class="section-no" style="background:#6d28d9;">06</div>
+                    <div>
+                        <div class="section-title">数据异动概述</div>
+                        <div class="section-desc">围绕核心指标概括波动、分层差距、异常比例和主要异动特征</div>
+                    </div>
+                </div>
+            </div>
+            <div class="board grid-2">
+                <div class="panel">
+                    <div class="panel-title">异动概览指标</div>
+                    <div class="metric-row" id="anomaly-metrics"></div>
+                    <div class="chart-box" id="anomaly-band-chart" style="height: 300px; margin-top: 12px;"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-title">时间/序列视角（如适用）</div>
+                    <div class="chart-box" id="time-series-chart" style="height: 300px;"></div>
+                    <div class="insight-box">
+                        <div class="insight-label">Time Series / Anomaly Insights</div>
+                        <div class="prose">{{TIME_SERIES_INSIGHTS}}</div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-    <!-- ============ FOOTER ============ -->
-    <footer style="background: #1e293b; color: #94a3b8; text-align: center; padding: 2.5rem 1rem;">
-        <p style="margin: 0 0 0.5rem; font-size: 0.95rem;">Powered by AI Data Analysis Engine</p>
-        <p style="margin: 0; font-size: 0.8rem; opacity: 0.7;">Auto-generated interactive report</p>
-    </footer>
+        <section class="section" id="driver-section">
+            <div class="section-head">
+                <div class="section-title-wrap">
+                    <div class="section-no" style="background:#0ea5e9;">07</div>
+                    <div>
+                        <div class="section-title">归因分析模块</div>
+                        <div class="section-desc">在基础分析之上，补充关键驱动维度、组间差异和可能原因线索</div>
+                    </div>
+                </div>
+            </div>
+            <div class="board grid-2">
+                <div class="panel">
+                    <div class="panel-title">主要驱动维度排序</div>
+                    <div class="chart-box" id="driver-chart" style="height: 360px;"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-title">归因线索摘要</div>
+                    <div class="signal-list" id="driver-signal-list"></div>
+                </div>
+            </div>
+        </section>
 
-    <!-- ============ CHART DATA (safe JSON injection) ============ -->
+        <section class="section" id="stats-section">
+            <div class="section-head">
+                <div class="section-title-wrap">
+                    <div class="section-no" style="background:#047857;">08</div>
+                    <div>
+                        <div class="section-title">分析结果与统计明细</div>
+                        <div class="section-desc">通过统计表和全局画像沉淀分析结果，作为原因推测的证据基础</div>
+                    </div>
+                </div>
+            </div>
+            <div class="board grid-2" id="stats-layout">
+                <div class="panel">
+                    <div class="panel-title">特征轮廓雷达</div>
+                    <div class="chart-box" id="radar-chart" style="height: 340px;"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-title">统计摘要表</div>
+                    <div id="stats-table-container" style="overflow-x:auto;"></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section-head">
+                <div class="section-title-wrap">
+                    <div class="section-no" style="background:#1e40af;">09</div>
+                    <div>
+                        <div class="section-title">原因推测、总结与建议</div>
+                        <div class="section-desc">对前述现象进行收束，区分证据与推测，并给出行动建议</div>
+                    </div>
+                </div>
+            </div>
+            <div class="board">
+                <div class="prose">{{CONCLUSIONS}}</div>
+            </div>
+        </section>
+
+        <div class="footer">Powered by AI Data Analysis Engine · Professional interactive report for CSV exploration</div>
+    </div>
+
     <script type="application/json" id="echart-binddata">
 {{CHART_DATA_JSON}}
     </script>
 
-    <!-- ============ RENDERING LOGIC ============ -->
     <script>
-    (function() {
+    (function () {
         var C = {};
+        function parseEmbeddedJson(raw) {
+            var text = (raw || "").trim();
+            if (!text) return {};
+            var candidates = [text];
+            if (text.indexOf('\\"') >= 0) {
+                candidates.push(
+                    text
+                        .replace(/\\"/g, '"')
+                        .replace(/\\n/g, "\n")
+                        .replace(/\\t/g, "\t")
+                );
+            }
+            if ((text.charAt(0) === '"' && text.charAt(text.length - 1) === '"') || (text.charAt(0) === "'" && text.charAt(text.length - 1) === "'")) {
+                candidates.push(text.slice(1, -1));
+            }
+            for (var i = 0; i < candidates.length; i++) {
+                try {
+                    var parsed = JSON.parse(candidates[i]);
+                    if (typeof parsed === "string") parsed = JSON.parse(parsed);
+                    if (parsed && typeof parsed === "object") return parsed;
+                } catch (err) {}
+            }
+            return {};
+        }
+
         try {
             var el = document.getElementById("echart-binddata");
             if (el) {
-                var raw = (el.textContent || "").trim();
-                if (raw.charAt(0) === "{") C = JSON.parse(raw);
+                C = parseEmbeddedJson(el.textContent || "");
             }
-        } catch(e) { console.error("Parse error:", e); }
-
-        var I = [];
-        var COLORS = ["#6366f1","#3b82f6","#06b6d4","#10b981","#f59e0b","#f43f5e","#8b5cf6","#ec4899","#14b8a6","#84cc16"];
-
-        function mkDiv(parent, h) {
-            var d = document.createElement("div");
-            d.style.cssText = "height:" + h + "px;width:100%;border:1px solid #f1f5f9;border-radius:8px;padding:4px;background:#fff;";
-            parent.appendChild(d);
-            return d;
+        } catch (e) {
+            console.error("Chart data parse error:", e);
         }
 
-        window.onload = function() {
+        var charts = [];
+        var COLORS = ["#2563eb", "#7c3aed", "#059669", "#d97706", "#e11d48", "#0d9488", "#4f46e5", "#0891b2"];
+        var TT = { backgroundColor: "rgba(15,23,42,0.92)", borderWidth: 0, textStyle: { color: "#fff", fontSize: 12 } };
 
-            // ======== 1. OVERVIEW METRIC CARDS ========
-            if (C.overview) {
-                var ov = C.overview;
-                var mc = document.getElementById("overview-metrics");
-                if (mc) {
-                    var items = [
-                        {l:"Total Rows", v: ov.rows ? ov.rows.toLocaleString() : "N/A", icon:"#6366f1"},
-                        {l:"Total Cols", v: ov.cols || "N/A", icon:"#3b82f6"},
-                        {l:"Missing Cells", v: ov.missing_cells != null ? ov.missing_cells.toLocaleString() : "0", icon:"#f59e0b"},
-                        {l:"Completeness", v: ov.missing_pct != null ? (100 - ov.missing_pct).toFixed(1) + "%" : "100%", icon:"#10b981"}
+        function byId(id) { return document.getElementById(id); }
+        function hide(id) { var el = byId(id); if (el) el.style.display = "none"; }
+        function initChart(id) {
+            var el = byId(id);
+            if (!el) return null;
+            var chart = echarts.init(el);
+            charts.push(chart);
+            return chart;
+        }
+        function formatNum(value) {
+            if (value == null || value === "") return "--";
+            if (typeof value === "number") {
+                if (Math.abs(value) >= 1000) return value.toLocaleString();
+                return (Math.round(value * 100) / 100).toString();
+            }
+            return String(value);
+        }
+        function setText(id, value) {
+            var el = byId(id);
+            if (el) el.textContent = value;
+        }
+
+        window.onload = function () {
+            var overview = C.overview || {};
+            var anomaly = C.anomaly_overview || {};
+            var primaryMetric = C.primary_metric || anomaly.metric || "--";
+            setText("hero-rows", overview.rows != null ? overview.rows.toLocaleString() + " 行" : "--");
+            setText("hero-completeness", overview.missing_pct != null ? (100 - overview.missing_pct).toFixed(1) + "%" : "--");
+            setText("hero-metric", primaryMetric || "--");
+            setText("hero-gap", anomaly.gap != null ? formatNum(anomaly.gap) : "--");
+
+            if (overview && Object.keys(overview).length > 0) {
+                var metricWrap = byId("overview-metrics");
+                if (metricWrap) {
+                    var cards = [
+                        { label: "样本行数", value: overview.rows != null ? overview.rows.toLocaleString() : "--", hint: "总记录数" },
+                        { label: "字段数量", value: overview.cols != null ? overview.cols : "--", hint: "总列数" },
+                        { label: "完整率", value: overview.missing_pct != null ? (100 - overview.missing_pct).toFixed(1) + "%" : "--", hint: "缺失越低越好" },
+                        { label: "重复记录", value: overview.duplicate_rows != null ? overview.duplicate_rows : "--", hint: "重复行检查" },
+                        { label: "内存占用", value: overview.memory_kb != null ? overview.memory_kb + " KB" : "--", hint: "数据量级" },
+                        { label: "主分析指标", value: primaryMetric || "--", hint: "后续异动分析基准" }
                     ];
-                    items.forEach(function(m) {
-                        var card = document.createElement("div");
-                        card.className = "metric-card";
-                        card.innerHTML = '<div class="label">' + m.l + '</div><div class="value" style="color:' + m.icon + '">' + m.v + '</div>';
-                        mc.appendChild(card);
-                    });
+                    metricWrap.innerHTML = cards.map(function (item) {
+                        return '<div class="metric-item"><div class="label">' + item.label + '</div><div class="value">' + item.value + '</div><div class="hint">' + item.hint + '</div></div>';
+                    }).join("");
                 }
             }
 
-            // ======== 2. DISTRIBUTION BAR CHARTS ========
-            var dKeys = C.distributions ? Object.keys(C.distributions) : [];
+            var dq = C.data_quality;
+            if (dq && dq.columns && dq.columns.length > 0) {
+                var missingChart = initChart("missing-rate-chart");
+                if (missingChart) {
+                    var cols = dq.columns.slice(0, 20);
+                    var rates = dq.missing_rates.slice(0, 20);
+                    missingChart.setOption({
+                        title: { text: "字段缺失率", left: "center", top: 6, textStyle: { fontSize: 12, fontWeight: 700, color: "#334155" } },
+                        tooltip: Object.assign({ trigger: "axis", axisPointer: { type: "shadow" }, formatter: function (p) { return p[0].name + '<br/>缺失率 <b>' + p[0].value + '%</b>'; } }, TT),
+                        grid: { left: "4%", right: "8%", bottom: "6%", top: "16%", containLabel: true },
+                        xAxis: { type: "value", max: 100, axisLabel: { formatter: "{value}%", color: "#64748b" }, splitLine: { lineStyle: { color: "#e2e8f0", type: "dashed" } } },
+                        yAxis: { type: "category", data: cols.slice().reverse(), axisLabel: { color: "#334155", width: 120, overflow: "truncate" } },
+                        series: [{ type: "bar", data: rates.slice().reverse(), barWidth: "56%", itemStyle: { borderRadius: [0, 6, 6, 0], color: function (p) { return p.value > 20 ? "#be123c" : p.value > 5 ? "#b45309" : "#0f766e"; } }, label: { show: true, position: "right", formatter: "{c}%", color: "#64748b" } }]
+                    });
+                }
+                var dtypeChart = initChart("dtype-chart");
+                if (dtypeChart && dq.dtype_summary) {
+                    var dtypeData = [];
+                    Object.keys(dq.dtype_summary).forEach(function (key) { dtypeData.push({ name: key, value: dq.dtype_summary[key] }); });
+                    dtypeChart.setOption({
+                        title: { text: "字段类型分布", left: "center", top: 6, textStyle: { fontSize: 12, fontWeight: 700, color: "#334155" } },
+                        tooltip: Object.assign({ trigger: "item", formatter: "{b}: {c} ({d}%)" }, TT),
+                        legend: { bottom: 8, textStyle: { color: "#64748b", fontSize: 11 } },
+                        color: ["#2563eb", "#7c3aed", "#d97706", "#059669"],
+                        series: [{ type: "pie", radius: ["46%", "72%"], center: ["50%", "46%"], data: dtypeData, label: { show: true, formatter: function (p) { return p.name + ' ' + p.percent + '%'; }, fontSize: 11, fontWeight: 700 }, itemStyle: { borderRadius: 8, borderColor: "#fff", borderWidth: 2 } }]
+                    });
+                }
+            } else {
+                hide("quality-section");
+            }
+
+            var dists = C.distributions || {};
+            var dKeys = Object.keys(dists);
             if (dKeys.length > 0) {
-                var dc = document.getElementById("distribution-charts");
+                var dc = byId("distribution-charts");
                 if (dc) {
-                    dKeys.forEach(function(col, idx) {
-                        var div = mkDiv(dc, 320);
-                        var ch = echarts.init(div);
-                        I.push(ch);
-                        var dd = C.distributions[col];
-                        ch.setOption({
-                            title: { text: col, left: "center", top: 8, textStyle: { fontSize: 14, fontWeight: 600, color: "#334155" } },
-                            tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, backgroundColor: "rgba(30,41,59,0.9)", borderWidth: 0, textStyle: { color: "#fff" } },
-                            grid: { left: "3%", right: "4%", bottom: "10%", top: "18%", containLabel: true },
-                            xAxis: { type: "category", data: dd.bins, axisLabel: { rotate: 35, fontSize: 9, color: "#94a3b8" }, axisLine: { lineStyle: { color: "#e2e8f0" } } },
-                            yAxis: { type: "value", splitLine: { lineStyle: { color: "#f1f5f9", type: "dashed" } }, axisLabel: { color: "#94a3b8" } },
-                            series: [{
-                                type: "bar", data: dd.counts, barWidth: "60%",
-                                itemStyle: {
-                                    borderRadius: [6, 6, 0, 0],
-                                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                                        { offset: 0, color: COLORS[idx % COLORS.length] },
-                                        { offset: 1, color: COLORS[idx % COLORS.length] + "66" }
-                                    ])
-                                },
-                                emphasis: { itemStyle: { shadowBlur: 10, shadowColor: "rgba(0,0,0,0.15)" } }
-                            }]
+                    dKeys.forEach(function (col, idx) {
+                        var holder = document.createElement("div");
+                        holder.className = "chart-box";
+                        holder.style.height = "290px";
+                        dc.appendChild(holder);
+                        var chart = echarts.init(holder);
+                        charts.push(chart);
+                        var item = dists[col];
+                        chart.setOption({
+                            title: { text: col, left: "center", top: 6, textStyle: { fontSize: 12, fontWeight: 700, color: "#334155" } },
+                            tooltip: Object.assign({ trigger: "axis", axisPointer: { type: "shadow" } }, TT),
+                            grid: { left: "4%", right: "4%", bottom: "14%", top: "16%", containLabel: true },
+                            xAxis: { type: "category", data: item.bins, axisLabel: { rotate: 35, fontSize: 9, color: "#64748b" }, axisLine: { lineStyle: { color: "#e2e8f0" } } },
+                            yAxis: { type: "value", axisLabel: { color: "#64748b" }, splitLine: { lineStyle: { color: "#e2e8f0", type: "dashed" } } },
+                            series: [{ type: "bar", data: item.counts, barWidth: "58%", itemStyle: { borderRadius: [6, 6, 0, 0], color: COLORS[idx % COLORS.length] } }]
                         });
                     });
                 }
             } else {
-                var ds = document.getElementById("distribution-section");
-                if (ds) ds.style.display = "none";
+                hide("distribution-section");
             }
 
-            // ======== 3. CORRELATION HEATMAP ========
-            var corr = C.correlations;
-            if (corr && corr.cols && corr.cols.length > 1) {
-                var ce = document.getElementById("correlation-chart");
-                if (ce) {
-                    var ch = echarts.init(ce);
-                    I.push(ch);
-                    ch.setOption({
-                        tooltip: {
-                            position: "top",
-                            backgroundColor: "rgba(30,41,59,0.9)", borderWidth: 0, textStyle: { color: "#fff" },
-                            formatter: function(p) { return corr.cols[p.data[0]] + " vs " + corr.cols[p.data[1]] + "<br/>r = <b>" + p.data[2] + "</b>"; }
-                        },
-                        grid: { height: "68%", top: "5%", bottom: "22%", left: "15%", right: "5%" },
-                        xAxis: { type: "category", data: corr.cols, splitArea: { show: true, areaStyle: { color: ["rgba(250,250,250,0.3)", "rgba(200,200,200,0.08)"] } }, axisLabel: { interval: 0, rotate: 35, fontSize: 11, color: "#64748b" } },
-                        yAxis: { type: "category", data: corr.cols, splitArea: { show: true, areaStyle: { color: ["rgba(250,250,250,0.3)", "rgba(200,200,200,0.08)"] } }, axisLabel: { fontSize: 11, color: "#64748b" } },
-                        visualMap: { min: -1, max: 1, calculable: true, orient: "horizontal", left: "center", bottom: "2%", itemWidth: 20, itemHeight: 140, textStyle: { color: "#64748b" }, inRange: { color: ["#312e81","#4338ca","#6366f1","#a5b4fc","#e0e7ff","#fef3c7","#fcd34d","#f59e0b","#ea580c","#dc2626","#991b1b"] } },
-                        series: [{
-                            type: "heatmap", data: corr.data,
-                            label: { show: true, fontSize: 11, fontWeight: 600, formatter: function(p) { return p.data[2].toFixed(2); } },
-                            emphasis: { itemStyle: { shadowBlur: 12, shadowColor: "rgba(0,0,0,0.25)" } }
-                        }]
-                    });
-                }
-            } else {
-                var cs = document.getElementById("correlation-section");
-                if (cs) cs.style.display = "none";
-            }
-
-            // ======== 4. CATEGORICAL PIE/DONUT CHARTS ========
             var catKeys = C.categories ? Object.keys(C.categories) : [];
             if (catKeys.length > 0) {
-                var cc = document.getElementById("categorical-charts");
-                if (cc) {
-                    catKeys.forEach(function(col, idx) {
-                        var div = mkDiv(cc, 380);
-                        var ch = echarts.init(div);
-                        I.push(ch);
-                        var pd = C.categories[col].labels.map(function(lbl, i) { return { name: lbl, value: C.categories[col].values[i] }; });
-                        ch.setOption({
-                            title: { text: col, left: "center", top: 8, textStyle: { fontSize: 14, fontWeight: 600, color: "#334155" } },
-                            tooltip: { trigger: "item", formatter: "{b}<br/>{c} ({d}%)", backgroundColor: "rgba(30,41,59,0.9)", borderWidth: 0, textStyle: { color: "#fff" } },
-                            legend: { orient: "horizontal", bottom: 0, type: "scroll", textStyle: { fontSize: 11, color: "#64748b" } },
+                var catWrap = byId("categorical-charts");
+                if (catWrap) {
+                    catKeys.forEach(function (col) {
+                        var holder = document.createElement("div");
+                        holder.className = "chart-box";
+                        holder.style.height = "300px";
+                        catWrap.appendChild(holder);
+                        var chart = echarts.init(holder);
+                        charts.push(chart);
+                        var values = C.categories[col].labels.map(function (label, i) {
+                            return { name: label, value: C.categories[col].values[i] };
+                        });
+                        chart.setOption({
+                            title: { text: col, left: "center", top: 6, textStyle: { fontSize: 12, fontWeight: 700, color: "#334155" } },
+                            tooltip: Object.assign({ trigger: "item", formatter: "{b}<br/>{c} ({d}%)" }, TT),
+                            legend: { bottom: 0, type: "scroll", textStyle: { fontSize: 10, color: "#64748b" } },
                             color: COLORS,
-                            series: [{
-                                type: "pie", radius: ["42%", "68%"], center: ["50%", "48%"],
-                                data: pd,
-                                label: { show: true, formatter: "{d}%", fontSize: 11, fontWeight: 600 },
-                                itemStyle: { borderRadius: 6, borderColor: "#fff", borderWidth: 2 },
-                                emphasis: { scaleSize: 8, label: { fontSize: 14, fontWeight: 700 } }
-                            }]
+                            series: [{ type: "pie", radius: ["40%", "66%"], center: ["50%", "45%"], data: values, label: { show: true, formatter: "{d}%", fontSize: 10, fontWeight: 700 }, itemStyle: { borderRadius: 6, borderColor: "#fff", borderWidth: 2 } }]
                         });
                     });
                 }
+            }
 
-                var bestCat = catKeys[0];
-                var topnEl = document.getElementById("topn-chart");
-                if (topnEl && C.categories[bestCat]) {
-                    var td = C.categories[bestCat];
-                    var labels = td.labels.slice().reverse();
-                    var vals = td.values.slice().reverse();
-                    var ch = echarts.init(topnEl);
-                    I.push(ch);
-                    ch.setOption({
-                        title: { text: bestCat + " Top " + labels.length, left: "center", top: 8, textStyle: { fontSize: 14, fontWeight: 600, color: "#334155" } },
-                        tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, backgroundColor: "rgba(30,41,59,0.9)", borderWidth: 0, textStyle: { color: "#fff" } },
-                        grid: { left: "3%", right: "10%", bottom: "5%", top: "15%", containLabel: true },
-                        xAxis: { type: "value", splitLine: { lineStyle: { color: "#f1f5f9", type: "dashed" } }, axisLabel: { color: "#94a3b8" } },
-                        yAxis: { type: "category", data: labels, axisLabel: { fontSize: 11, color: "#334155", width: 120, overflow: "truncate" } },
-                        series: [{
-                            type: "bar", data: vals, barWidth: "55%",
-                            itemStyle: { borderRadius: [0, 6, 6, 0], color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: "#818cf8" }, { offset: 1, color: "#6366f1" }]) },
-                            label: { show: true, position: "right", formatter: "{c}", fontSize: 11, fontWeight: 600, color: "#4f46e5" }
-                        }]
+            var tb = C.top_bottom;
+            if (tb && tb.top5 && tb.top5.labels && tb.top5.labels.length > 0) {
+                var topChart = initChart("top5-chart");
+                if (topChart) {
+                    topChart.setOption({
+                        title: { text: "Top 5（按 " + tb.rank_col + "）", left: "center", top: 6, textStyle: { fontSize: 12, fontWeight: 700, color: "#334155" } },
+                        tooltip: Object.assign({ trigger: "axis", axisPointer: { type: "shadow" } }, TT),
+                        grid: { left: "4%", right: "14%", bottom: "5%", top: "15%", containLabel: true },
+                        xAxis: { type: "value", axisLabel: { color: "#64748b" }, splitLine: { lineStyle: { color: "#e2e8f0", type: "dashed" } } },
+                        yAxis: { type: "category", data: tb.top5.labels.slice().reverse(), axisLabel: { color: "#334155", width: 100, overflow: "truncate" } },
+                        series: [{ type: "bar", data: tb.top5.values.slice().reverse(), barWidth: "52%", itemStyle: { borderRadius: [0, 6, 6, 0], color: "#2563eb" }, label: { show: true, position: "right", color: "#1d4ed8" } }]
+                    });
+                }
+                var bottomChart = initChart("bottom5-chart");
+                if (bottomChart) {
+                    bottomChart.setOption({
+                        title: { text: "Bottom 5（按 " + tb.rank_col + "）", left: "center", top: 6, textStyle: { fontSize: 12, fontWeight: 700, color: "#334155" } },
+                        tooltip: Object.assign({ trigger: "axis", axisPointer: { type: "shadow" } }, TT),
+                        grid: { left: "4%", right: "14%", bottom: "5%", top: "15%", containLabel: true },
+                        xAxis: { type: "value", axisLabel: { color: "#64748b" }, splitLine: { lineStyle: { color: "#e2e8f0", type: "dashed" } } },
+                        yAxis: { type: "category", data: tb.bottom5.labels.slice().reverse(), axisLabel: { color: "#334155", width: 100, overflow: "truncate" } },
+                        series: [{ type: "bar", data: tb.bottom5.values.slice().reverse(), barWidth: "52%", itemStyle: { borderRadius: [0, 6, 6, 0], color: "#e11d48" }, label: { show: true, position: "right", color: "#be123c" } }]
+                    });
+                }
+            }
+
+            var seg = C.segment_comparison || {};
+            if (seg.labels && seg.labels.length > 0) {
+                var segmentChart = initChart("segment-comparison-chart");
+                if (segmentChart) {
+                    segmentChart.setOption({
+                        title: { text: seg.dimension + " 分组均值对比（" + seg.metric + "）", left: "center", top: 6, textStyle: { fontSize: 12, fontWeight: 700, color: "#334155" } },
+                        tooltip: Object.assign({ trigger: "axis", axisPointer: { type: "shadow" } }, TT),
+                        grid: { left: "4%", right: "6%", bottom: "15%", top: "18%", containLabel: true },
+                        xAxis: { type: "category", data: seg.labels, axisLabel: { rotate: 25, color: "#64748b" } },
+                        yAxis: { type: "value", axisLabel: { color: "#64748b" }, splitLine: { lineStyle: { color: "#e2e8f0", type: "dashed" } } },
+                        series: [{ type: "bar", data: seg.values, barWidth: "48%", itemStyle: { borderRadius: [6, 6, 0, 0], color: "#0f766e" }, label: { show: true, position: "top", color: "#0f766e" } }]
                     });
                 }
             } else {
-                var cas = document.getElementById("categorical-section");
-                if (cas) cas.style.display = "none";
+                var segEl = byId("segment-comparison-chart");
+                if (segEl) segEl.style.display = "none";
             }
 
-            // ======== 5. TIME SERIES LINE CHART ========
-            var ts = C.time_series;
-            if (ts && ts.dates && ts.dates.length > 0) {
-                var te = document.getElementById("time-series-chart");
-                if (te) {
-                    var ch = echarts.init(te);
-                    I.push(ch);
-                    ch.setOption({
-                        title: { text: (ts.name || "") + " Trend", left: "center", top: 8, textStyle: { fontSize: 14, fontWeight: 600, color: "#334155" } },
-                        tooltip: { trigger: "axis", backgroundColor: "rgba(30,41,59,0.9)", borderWidth: 0, textStyle: { color: "#fff" } },
-                        grid: { left: "3%", right: "4%", bottom: "8%", top: "18%", containLabel: true },
-                        xAxis: { type: "category", data: ts.dates, boundaryGap: false, axisLabel: { color: "#94a3b8", rotate: 30 }, axisLine: { lineStyle: { color: "#e2e8f0" } } },
-                        yAxis: { type: "value", scale: true, splitLine: { lineStyle: { color: "#f1f5f9", type: "dashed" } }, axisLabel: { color: "#94a3b8" } },
-                        dataZoom: [{ type: "inside", start: 0, end: 100 }],
-                        series: [{
-                            type: "line", data: ts.values, smooth: true, symbol: "circle", symbolSize: 6,
-                            areaStyle: { opacity: 0.15, color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: "#8b5cf6" }, { offset: 1, color: "#8b5cf600" }]) },
-                            itemStyle: { color: "#8b5cf6" },
-                            lineStyle: { width: 3, shadowColor: "rgba(139,92,246,0.3)", shadowBlur: 8, shadowOffsetY: 4 }
-                        }]
+            var corr = C.correlations;
+            if (corr && corr.cols && corr.cols.length > 1) {
+                var corrChart = initChart("correlation-chart");
+                if (corrChart) {
+                    corrChart.setOption({
+                        title: { text: "相关性热力图", left: "center", top: 6, textStyle: { fontSize: 12, fontWeight: 700, color: "#334155" } },
+                        tooltip: Object.assign({ position: "top", formatter: function (p) { return corr.cols[p.data[0]] + ' / ' + corr.cols[p.data[1]] + '<br/>r = <b>' + p.data[2] + '</b>'; } }, TT),
+                        grid: { height: "60%", top: "10%", bottom: "22%", left: "18%", right: "5%" },
+                        xAxis: { type: "category", data: corr.cols, splitArea: { show: true }, axisLabel: { rotate: 35, color: "#64748b", fontSize: 9 } },
+                        yAxis: { type: "category", data: corr.cols, splitArea: { show: true }, axisLabel: { color: "#64748b", fontSize: 9 } },
+                        visualMap: { min: -1, max: 1, calculable: true, orient: "horizontal", left: "center", bottom: "2%", itemWidth: 16, itemHeight: 100, textStyle: { color: "#64748b", fontSize: 10 }, inRange: { color: ["#1e3a8a", "#60a5fa", "#f8fafc", "#f59e0b", "#991b1b"] } },
+                        series: [{ type: "heatmap", data: corr.data, label: { show: corr.cols.length <= 10, fontSize: 9, fontWeight: 700, formatter: function (p) { return p.data[2].toFixed(2); } } }]
+                    });
+                }
+                var scatter = C.scatter;
+                var scatterChart = initChart("scatter-chart");
+                if (scatterChart && scatter && scatter.x && scatter.x.length > 0) {
+                    scatterChart.setOption({
+                        title: { text: scatter.x_name + ' vs ' + scatter.y_name, left: "center", top: 6, textStyle: { fontSize: 12, fontWeight: 700, color: "#334155" } },
+                        tooltip: Object.assign({ formatter: function (p) { return scatter.x_name + ': ' + p.data[0] + '<br/>' + scatter.y_name + ': ' + p.data[1]; } }, TT),
+                        grid: { left: "12%", right: "5%", bottom: "12%", top: "16%" },
+                        xAxis: { type: "value", name: scatter.x_name, axisLabel: { color: "#64748b" }, splitLine: { lineStyle: { color: "#e2e8f0", type: "dashed" } }, scale: true },
+                        yAxis: { type: "value", name: scatter.y_name, axisLabel: { color: "#64748b" }, splitLine: { lineStyle: { color: "#e2e8f0", type: "dashed" } }, scale: true },
+                        series: [{ type: "scatter", data: scatter.x.map(function (x, i) { return [x, scatter.y[i]]; }), symbolSize: 7, itemStyle: { color: "#2563eb", opacity: 0.65 } }]
+                    });
+                } else {
+                    hide("scatter-chart");
+                }
+            } else {
+                hide("relation-section");
+            }
+
+            var bpKeys = C.box_plots ? Object.keys(C.box_plots) : [];
+            var outlierData = C.outliers || {};
+            if (bpKeys.length > 0) {
+                var outlierWrap = byId("outlier-summary");
+                if (outlierWrap) {
+                    outlierWrap.innerHTML = '<div class="outlier-grid">' + bpKeys.map(function (col) {
+                        var o = outlierData[col] || { count: 0, pct: 0 };
+                        var bg = o.count > 0 ? '#fef2f2' : '#ecfdf5';
+                        var bc = o.count > 0 ? '#be123c' : '#047857';
+                        var tc = o.count > 0 ? '#9f1239' : '#065f46';
+                        return '<div class="outlier-item" style="background:' + bg + ';border-left-color:' + bc + '"><div class="col-name">' + col + '</div><div class="count" style="color:' + tc + '">' + o.count + ' <span style="font-size:12px;font-weight:600;color:#64748b;">(' + o.pct + '%)</span></div></div>';
+                    }).join('') + '</div>';
+                }
+                var boxChart = initChart("boxplot-chart");
+                if (boxChart) {
+                    var boxData = [];
+                    var outlierPoints = [];
+                    bpKeys.slice(0, 8).forEach(function (col, idx) {
+                        var bp = C.box_plots[col];
+                        boxData.push([bp.lower_fence, bp.q1, bp.median, bp.q3, bp.upper_fence]);
+                        (bp.outliers || []).forEach(function (value) { outlierPoints.push([idx, value]); });
+                    });
+                    boxChart.setOption({
+                        title: { text: "箱线图对比", left: "center", top: 6, textStyle: { fontSize: 12, fontWeight: 700, color: "#334155" } },
+                        tooltip: Object.assign({ trigger: "item" }, TT),
+                        grid: { left: "10%", right: "5%", bottom: "12%", top: "16%" },
+                        xAxis: { type: "category", data: bpKeys.slice(0, 8), axisLabel: { rotate: 25, color: "#64748b" } },
+                        yAxis: { type: "value", scale: true, axisLabel: { color: "#64748b" }, splitLine: { lineStyle: { color: "#e2e8f0", type: "dashed" } } },
+                        series: [
+                            { type: "boxplot", data: boxData, itemStyle: { color: "#dbeafe", borderColor: "#2563eb", borderWidth: 2 } },
+                            { type: "scatter", data: outlierPoints, symbolSize: 6, itemStyle: { color: "#e11d48", opacity: 0.68 } }
+                        ]
+                    });
+                }
+            }
+
+            if (anomaly && anomaly.metric) {
+                var anomalyWrap = byId("anomaly-metrics");
+                if (anomalyWrap) {
+                    var anomalyCards = [
+                        { label: "核心指标", value: anomaly.metric, hint: "自动识别" },
+                        { label: "均值 / 中位数", value: formatNum(anomaly.mean) + ' / ' + formatNum(anomaly.median), hint: "中心位置" },
+                        { label: "P10 / P90", value: formatNum(anomaly.q10) + ' / ' + formatNum(anomaly.q90), hint: "分位带" },
+                        { label: "高低组差距", value: formatNum(anomaly.gap), hint: "高位组均值 - 低位组均值" },
+                        { label: "异常值占比", value: formatNum(anomaly.outlier_pct) + '%', hint: "主指标异常比例" },
+                        { label: "组别规模", value: formatNum(anomaly.top_group_size) + ' / ' + formatNum(anomaly.bottom_group_size), hint: "高位组 / 低位组" }
+                    ];
+                    anomalyWrap.innerHTML = anomalyCards.map(function (item) {
+                        return '<div class="metric-item"><div class="label">' + item.label + '</div><div class="value">' + item.value + '</div><div class="hint">' + item.hint + '</div></div>';
+                    }).join("");
+                }
+                var anomalyChart = initChart("anomaly-band-chart");
+                if (anomalyChart) {
+                    anomalyChart.setOption({
+                        title: { text: anomaly.metric + ' 分位带样本分布', left: "center", top: 6, textStyle: { fontSize: 12, fontWeight: 700, color: "#334155" } },
+                        tooltip: Object.assign({ trigger: "axis", axisPointer: { type: "shadow" } }, TT),
+                        grid: { left: "5%", right: "5%", bottom: "12%", top: "16%", containLabel: true },
+                        xAxis: { type: "category", data: anomaly.band_labels || [], axisLabel: { color: "#64748b" } },
+                        yAxis: { type: "value", axisLabel: { color: "#64748b" }, splitLine: { lineStyle: { color: "#e2e8f0", type: "dashed" } } },
+                        series: [{ type: "bar", data: anomaly.band_values || [], barWidth: "46%", itemStyle: { borderRadius: [6, 6, 0, 0], color: "#6d28d9" }, label: { show: true, position: "top", color: "#6d28d9" } }]
                     });
                 }
             } else {
-                var tss = document.getElementById("time-series-section");
-                if (tss) tss.style.display = "none";
+                hide("anomaly-section");
             }
 
-            // ======== 6. RADAR CHART ========
-            var numCols = C.numeric_cols || [];
-            var dists = C.distributions || {};
-            var radarEl = document.getElementById("radar-chart");
-            if (radarEl && numCols.length >= 3) {
-                var radarCols = numCols.slice(0, 8);
-                var indicator = [];
-                var radarValues = [];
-                radarCols.forEach(function(col) {
-                    var d = dists[col];
-                    if (d && d.counts) {
-                        var total = d.counts.reduce(function(a, b) { return a + b; }, 0);
-                        indicator.push({ name: col, max: total });
-                        var maxVal = Math.max.apply(null, d.counts);
-                        radarValues.push(maxVal);
+            var timeSeries = C.time_series || {};
+            if (timeSeries.dates && timeSeries.dates.length > 0) {
+                var tsChart = initChart("time-series-chart");
+                if (tsChart) {
+                    tsChart.setOption({
+                        title: { text: (timeSeries.name || "指标") + ' 趋势线', left: "center", top: 6, textStyle: { fontSize: 12, fontWeight: 700, color: "#334155" } },
+                        tooltip: Object.assign({ trigger: "axis" }, TT),
+                        grid: { left: "4%", right: "5%", bottom: "14%", top: "16%", containLabel: true },
+                        xAxis: { type: "category", data: timeSeries.dates, boundaryGap: false, axisLabel: { rotate: 28, color: "#64748b", fontSize: 9 } },
+                        yAxis: { type: "value", scale: true, axisLabel: { color: "#64748b" }, splitLine: { lineStyle: { color: "#e2e8f0", type: "dashed" } } },
+                        series: [{ type: "line", data: timeSeries.values, smooth: true, symbolSize: 5, itemStyle: { color: "#2563eb" }, lineStyle: { width: 2.5, color: "#2563eb" }, areaStyle: { color: "rgba(37,99,235,0.08)" } }]
+                    });
+                }
+            } else {
+                var tsEl = byId("time-series-chart");
+                if (tsEl) {
+                    tsEl.innerHTML = '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:13px;">当前数据未识别到可用时间列，已保留文字分析位用于说明分层特征与异动概况。</div>';
+                }
+            }
+
+            var driver = C.driver_analysis || {};
+            if (driver.items && driver.items.length > 0) {
+                var driverChart = initChart("driver-chart");
+                if (driverChart) {
+                    var items = driver.items.slice(0, 8);
+                    driverChart.setOption({
+                        title: { text: (driver.metric || '核心指标') + ' 的驱动线索排序', left: "center", top: 6, textStyle: { fontSize: 12, fontWeight: 700, color: "#334155" } },
+                        tooltip: Object.assign({ trigger: "axis", axisPointer: { type: "shadow" }, formatter: function (p) { var item = items[p[0].dataIndex]; return item.name + '<br/>驱动分 <b>' + item.score + '</b><br/>相关系数 ' + item.corr + '<br/>组间差异强度 ' + item.gap_ratio; } }, TT),
+                        grid: { left: "6%", right: "10%", bottom: "6%", top: "14%", containLabel: true },
+                        xAxis: { type: "value", max: 100, axisLabel: { color: "#64748b" }, splitLine: { lineStyle: { color: "#e2e8f0", type: "dashed" } } },
+                        yAxis: { type: "category", data: items.map(function (item) { return item.name; }).reverse(), axisLabel: { color: "#334155", width: 120, overflow: "truncate" } },
+                        series: [{ type: "bar", data: items.map(function (item) { return item.score; }).reverse(), barWidth: "56%", itemStyle: { borderRadius: [0, 6, 6, 0], color: "#0ea5e9" }, label: { show: true, position: "right", color: "#0369a1" } }]
+                    });
+                }
+                var signalList = byId("driver-signal-list");
+                if (signalList) {
+                    signalList.innerHTML = driver.items.slice(0, 5).map(function (item) {
+                        return '<div class="signal-item"><div><div class="name">' + item.name + '</div><div class="meta">相关系数 ' + item.corr + ' · 高位组均值 ' + formatNum(item.top_mean) + ' · 低位组均值 ' + formatNum(item.bottom_mean) + ' · 组间差异强度 ' + formatNum(item.gap_ratio) + '</div></div><div class="badge">' + item.score + '</div></div>';
+                    }).join("");
+                }
+            } else {
+                hide("driver-section");
+            }
+
+            var radarChart = initChart("radar-chart");
+            var radarOk = false;
+            if (radarChart && C.numeric_cols && C.numeric_cols.length >= 3 && C.distributions) {
+                var indicators = [];
+                var values = [];
+                C.numeric_cols.slice(0, 8).forEach(function (col) {
+                    var dist = C.distributions[col];
+                    if (dist && dist.counts) {
+                        var total = dist.counts.reduce(function (a, b) { return a + b; }, 0);
+                        indicators.push({ name: col.length > 12 ? col.slice(0, 12) + '...' : col, max: total || 1 });
+                        values.push(Math.max.apply(null, dist.counts));
                     }
                 });
-                if (indicator.length >= 3) {
-                    var ch = echarts.init(radarEl);
-                    I.push(ch);
-                    ch.setOption({
-                        title: { text: "Feature Distribution Radar", left: "center", top: 8, textStyle: { fontSize: 13, fontWeight: 600, color: "#334155" } },
-                        tooltip: { backgroundColor: "rgba(30,41,59,0.9)", borderWidth: 0, textStyle: { color: "#fff" } },
-                        radar: {
-                            indicator: indicator, shape: "polygon",
-                            axisName: { color: "#64748b", fontSize: 10 },
-                            splitArea: { areaStyle: { color: ["#fff", "#f8fafc", "#f1f5f9", "#e2e8f0"] } },
-                            splitLine: { lineStyle: { color: "#e2e8f0" } }
-                        },
-                        series: [{
-                            type: "radar",
-                            data: [{ value: radarValues, name: "Peak Frequency", areaStyle: { opacity: 0.2, color: "#6366f1" }, lineStyle: { color: "#6366f1", width: 2 }, itemStyle: { color: "#6366f1" } }]
-                        }]
+                if (indicators.length >= 3) {
+                    radarOk = true;
+                    radarChart.setOption({
+                        title: { text: "全局特征轮廓", left: "center", top: 6, textStyle: { fontSize: 12, fontWeight: 700, color: "#334155" } },
+                        tooltip: Object.assign({}, TT),
+                        radar: { indicator: indicators, axisName: { color: "#64748b", fontSize: 9 }, splitArea: { areaStyle: { color: ["#fff", "#f8fafc", "#eef2ff"] } }, splitLine: { lineStyle: { color: "#dbeafe" } } },
+                        series: [{ type: "radar", data: [{ value: values, name: "峰值频次", areaStyle: { color: "rgba(37,99,235,0.12)" }, lineStyle: { color: "#2563eb", width: 2 }, itemStyle: { color: "#2563eb" } }] }]
                     });
                 }
             }
-            if (radarEl && numCols.length < 3) { radarEl.style.display = "none"; }
-
-            // ======== 7. SCATTER CHART ========
-            var scatterEl = document.getElementById("scatter-chart");
-            if (scatterEl && C.scatter && C.scatter.x && C.scatter.x.length > 0) {
-                var sc = C.scatter;
-                var scData = sc.x.map(function(xv, i) { return [xv, sc.y[i]]; });
-                var ch = echarts.init(scatterEl);
-                I.push(ch);
-                ch.setOption({
-                    title: { text: sc.x_name + " vs " + sc.y_name, left: "center", top: 8, textStyle: { fontSize: 13, fontWeight: 600, color: "#334155" } },
-                    tooltip: { backgroundColor: "rgba(30,41,59,0.9)", borderWidth: 0, textStyle: { color: "#fff" }, formatter: function(p) { return sc.x_name + ": " + p.data[0] + "<br/>" + sc.y_name + ": " + p.data[1]; } },
-                    grid: { left: "10%", right: "5%", bottom: "12%", top: "18%" },
-                    xAxis: { type: "value", name: sc.x_name, nameTextStyle: { color: "#94a3b8", fontSize: 11 }, splitLine: { lineStyle: { color: "#f1f5f9", type: "dashed" } }, axisLabel: { color: "#94a3b8" }, scale: true },
-                    yAxis: { type: "value", name: sc.y_name, nameTextStyle: { color: "#94a3b8", fontSize: 11 }, splitLine: { lineStyle: { color: "#f1f5f9", type: "dashed" } }, axisLabel: { color: "#94a3b8" }, scale: true },
-                    series: [{
-                        type: "scatter", data: scData, symbolSize: 8,
-                        itemStyle: { color: "#f43f5e", opacity: 0.6, borderColor: "#fff", borderWidth: 1 },
-                        emphasis: { itemStyle: { opacity: 1, shadowBlur: 8, shadowColor: "rgba(244,63,94,0.4)" } }
-                    }]
-                });
-            } else if (scatterEl) {
-                scatterEl.style.display = "none";
+            if (!radarOk) {
+                hide("radar-chart");
+                var statsLayout = byId("stats-layout");
+                if (statsLayout) statsLayout.style.gridTemplateColumns = "1fr";
             }
 
-            // Hide advanced section if nothing to show
-            var advSec = document.getElementById("advanced-section");
-            if (advSec) {
-                var radarHidden = !radarEl || radarEl.style.display === "none";
-                var scatterHidden = !scatterEl || scatterEl.style.display === "none";
-                if (radarHidden && scatterHidden) advSec.style.display = "none";
-            }
-
-            // ======== 8. STATS TABLE ========
-            var tableEl = document.getElementById("stats-table-container");
-            var tableSec = document.getElementById("table-section");
-            if (tableEl && C.stats_table && C.stats_table.headers && C.stats_table.rows && C.stats_table.rows.length > 0) {
-                var st = C.stats_table;
+            var stats = C.stats_table;
+            var tableWrap = byId("stats-table-container");
+            if (tableWrap && stats && stats.headers && stats.rows && stats.rows.length > 0) {
                 var html = '<table class="data-table"><thead><tr>';
-                st.headers.forEach(function(h) { html += "<th>" + h + "</th>"; });
-                html += "</tr></thead><tbody>";
-                st.rows.forEach(function(row) {
-                    html += "<tr>";
-                    row.forEach(function(cell, ci) {
-                        var cls = ci === 0 ? "" : (typeof cell === "number" ? ' class="num"' : "");
-                        var val = typeof cell === "number" ? cell.toLocaleString() : cell;
-                        html += "<td" + cls + ">" + val + "</td>";
+                stats.headers.forEach(function (h) { html += '<th>' + h + '</th>'; });
+                html += '</tr></thead><tbody>';
+                stats.rows.forEach(function (row) {
+                    html += '<tr>';
+                    row.forEach(function (cell, idx) {
+                        html += '<td' + (idx === 0 ? '' : ' class="num"') + '>' + formatNum(cell) + '</td>';
                     });
-                    html += "</tr>";
+                    html += '</tr>';
                 });
-                html += "</tbody></table>";
-                tableEl.innerHTML = html;
-            } else if (tableSec) {
-                tableSec.style.display = "none";
+                html += '</tbody></table>';
+                tableWrap.innerHTML = html;
+            } else if (!radarOk) {
+                hide("stats-section");
             }
         };
 
-        window.addEventListener("resize", function() { I.forEach(function(c) { if (c) c.resize(); }); });
+        window.addEventListener("resize", function () {
+            charts.forEach(function (chart) {
+                if (chart) chart.resize();
+            });
+        });
     })();
     </script>
 </body>
