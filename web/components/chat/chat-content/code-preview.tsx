@@ -29,7 +29,7 @@ export function CodePreview({ code, light, dark, language, customStyle }: Props)
         }}
       />
       <SyntaxHighlighter
-        customStyle={customStyle}
+        customStyle={{ ...customStyle, maxHeight: '400px', overflow: 'auto' }}
         language={language}
         style={mode === 'dark' ? (dark ?? coldarkDark) : (light ?? oneDark)}
       >

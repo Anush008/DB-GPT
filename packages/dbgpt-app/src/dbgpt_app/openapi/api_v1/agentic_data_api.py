@@ -1336,7 +1336,14 @@ print(json.dumps(summary, ensure_ascii=False))
             {"output_type": "code", "content": code.strip()},
         ]
         if output_text.strip():
-            chunks.append({"output_type": "text", "content": output_text.strip()})
+            clean_output = output_text.strip()
+            max_out_len = 2000
+            if len(clean_output) > max_out_len:
+                clean_output = (
+                    clean_output[:max_out_len]
+                    + f"\n\n... [Output truncated, length: {len(clean_output)} chars. Only showing first {max_out_len} chars. If you generated HTML, the file is saved.]"
+                )
+            chunks.append({"output_type": "text", "content": clean_output})
         else:
             chunks.append(
                 {
@@ -1532,7 +1539,9 @@ print(json.dumps(summary, ensure_ascii=False))
                             # Might be {"charts": {...}} or flat dict
                             chart_map = chart_output.get("charts", chart_output)
                             for name, abs_path in chart_map.items():
-                                if isinstance(abs_path, str) and os.path.isfile(abs_path):
+                                if isinstance(abs_path, str) and os.path.isfile(
+                                    abs_path
+                                ):
                                     ext = os.path.splitext(abs_path)[1].lower()
                                     if ext in IMAGE_EXTS:
                                         unique_name = (
@@ -1550,9 +1559,9 @@ print(json.dumps(summary, ensure_ascii=False))
                                         orig_stem = os.path.splitext(
                                             os.path.basename(abs_path)
                                         )[0].lower()
-                                        react_state.setdefault(
-                                            "image_url_map", {}
-                                        )[orig_stem] = img_url
+                                        react_state.setdefault("image_url_map", {})[
+                                            orig_stem
+                                        ] = img_url
                     except (json.JSONDecodeError, TypeError):
                         pass
                     # Also scan the output dir for any new .png files
@@ -1569,9 +1578,7 @@ print(json.dumps(summary, ensure_ascii=False))
                                 if orig_stem not in react_state.get(
                                     "image_url_map", {}
                                 ):
-                                    unique_name = (
-                                        f"{uuid.uuid4().hex[:8]}_{fname}"
-                                    )
+                                    unique_name = f"{uuid.uuid4().hex[:8]}_{fname}"
                                     dest = os.path.join(
                                         STATIC_MESSAGE_IMG_PATH, unique_name
                                     )
@@ -1580,9 +1587,9 @@ print(json.dumps(summary, ensure_ascii=False))
                                     react_state.setdefault(
                                         "generated_images", []
                                     ).append(img_url)
-                                    react_state.setdefault(
-                                        "image_url_map", {}
-                                    )[orig_stem] = img_url
+                                    react_state.setdefault("image_url_map", {})[
+                                        orig_stem
+                                    ] = img_url
                     # Append image URL summary for LLM reference
                     all_images = react_state.get("generated_images", [])
                     if all_images:
@@ -1590,9 +1597,7 @@ print(json.dumps(summary, ensure_ascii=False))
                             "\u5df2\u751f\u6210\u7684\u56fe\u7247URL\uff08\u5728\u751f\u6210HTML\u62a5\u544a\u65f6\u8bf7\u4f7f\u7528\u8fd9\u4e9bURL\uff09:\n"
                             + "\n".join(f"  - {url}" for url in all_images)
                         )
-                        chunks.append(
-                            {"output_type": "text", "content": img_summary}
-                        )
+                        chunks.append({"output_type": "text", "content": img_summary})
                     logger.info(
                         "shell_interpreter: captured %d images for skill script",
                         len(react_state.get("image_url_map", {})),
@@ -2023,6 +2028,7 @@ print(json.dumps(summary, ensure_ascii=False))
                         r'<img[^>]+src=["\']([^"\']+)["\']', fixed_html, re.IGNORECASE
                     )
                 )
+
                 # An image is "missing" only when neither its exact URL nor its
                 # stem (filename with UUID prefix stripped) is already covered.
                 def _img_stem(url):
@@ -2188,11 +2194,11 @@ Please always response in the same language as the user's input language.
 ## Available Tools Description
 1. **execute_skill_script_file** (recommended for executing skill scripts): Execute script files in the skills scripts directory, automatically handling post-processing such as copying images to the static directory and recording calculation results.
    Parameters: {{"skill_name": "skill name", "script_file_name": "script file name", "args": {{parameters}}}}
-   - Example: {{"skill_name": "{pre_matched_skill.metadata.name if pre_matched_skill else 'skill'}", "script_file_name": "calculate_ratios.py", "args": {{"input_data": "..."}}}}
+   - Example: {{"skill_name": "{pre_matched_skill.metadata.name if pre_matched_skill else "skill"}", "script_file_name": "calculate_ratios.py", "args": {{"input_data": "..."}}}}
    - **Must use this tool when executing skill scripts**, do not use shell_interpreter.
 2. **get_skill_resource**: Read reference documents, configurations, templates, and other non-script resource files in the skill.
    Parameters: {{"skill_name": "skill name", "resource_path": "resource path"}}
-   - Read reference document: {{"skill_name": "{pre_matched_skill.metadata.name if pre_matched_skill else 'skill'}", "resource_path": "references/analysis_framework.md"}}
+   - Read reference document: {{"skill_name": "{pre_matched_skill.metadata.name if pre_matched_skill else "skill"}", "resource_path": "references/analysis_framework.md"}}
    - Note: The report template does not need to be read using this tool; directly use the template_path parameter of html_interpreter.
 3. **execute_skill_script**: Execute the inline script defined in the skill (backup). Parameters: {{"skill_name": "skill name", "script_name": "script name", "args": {{"parameter name": "parameter value"}}}}
 4. **shell_interpreter**: Execute shell/bash commands (only for non-skill script system commands, such as ls, cat, etc.).
@@ -2333,7 +2339,7 @@ Action Input: The JSON format of tool parameters
     )
 
     agent_builder = (
-        ReActAgent(max_retry_count=10)
+        ReActAgent(max_retry_count=30)
         .bind(context)
         .bind(agent_memory)
         .bind(llm_config)
@@ -2534,14 +2540,16 @@ Action Input: The JSON format of tool parameters
             if round_num in round_step_map:
                 # Step already exists (from thinking) - update title/phase with same id
                 react_step_id = round_step_map[round_num]
-                updated_event = _sse_event({
-                    "type": "step.start",
-                    "step": step,
-                    "id": react_step_id,
-                    "title": action_title,
-                    "detail": "Thought/Action/Observation",
-                    "phase": inferred_phase,
-                })
+                updated_event = _sse_event(
+                    {
+                        "type": "step.start",
+                        "step": step,
+                        "id": react_step_id,
+                        "title": action_title,
+                        "detail": "Thought/Action/Observation",
+                        "phase": inferred_phase,
+                    }
+                )
                 yield updated_event
             else:
                 react_step_id, react_step_event = build_step(
@@ -2938,6 +2946,7 @@ async def download_skill_package(
             "Content-Disposition": f'attachment; filename="{skill_name}.zip"',
         },
     )
+
 
 @router.post("/v1/chat/react-agent")
 async def chat_react_agent(

@@ -10,7 +10,6 @@ import { useTranslation } from 'react-i18next';
 
 import { parseResourceValue, transformFileUrl } from '@/utils';
 
-import KnowledgeSelector from './KnowledgeSelector';
 import MaxNewTokens from './MaxNewTokens';
 import ModelSwitcher from './ModelSwitcher';
 import Resource from './Resource';

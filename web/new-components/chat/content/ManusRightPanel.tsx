@@ -40,6 +40,7 @@ import { GPTVis } from '@antv/gpt-vis';
 import { Button, Table, Tooltip, message } from 'antd';
 import classNames from 'classnames';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ArtifactItem, StepStatus, StepType } from './ManusLeftPanel';
 
 /** Resolve image paths like `/images/xxx.png` to full backend URLs in dev mode */
@@ -73,6 +74,8 @@ export interface ActiveStepInfo {
   subtitle?: string;
   status: StepStatus;
   detail?: string;
+  action?: string;
+  actionInput?: any;
 }
 
 export interface ManusRightPanelProps {
@@ -1133,6 +1136,7 @@ const SkillCardRenderer: React.FC<{
   skillName: string;
   outputs: ExecutionOutput[];
 }> = memo(({ skillName, outputs: _outputs }) => {
+  const { t } = useTranslation();
   const [detailData, setDetailData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1452,6 +1456,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
   databaseName,
   skillName,
 }) => {
+  const { t } = useTranslation();
   const [inputCollapsed, setInputCollapsed] = useState(false);
   const [internalPanelView, setInternalPanelView] = useState<PanelView>('execution');
   const [fileFilter, setFileFilter] = useState<FileFilterTab>('all');
@@ -1969,21 +1974,38 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
                           return null;
                         })()) ||
                       (activeStep.type === 'sql' &&
-                        activeStep.detail.includes('Action: sql_query') &&
+                        (activeStep.action === 'sql_query' ||
+                          (activeStep.detail && activeStep.detail.includes('Action: sql_query'))) &&
                         (() => {
-                          // Parse SQL from Action Input JSON
-                          const inputMatch = activeStep.detail.match(/Action Input:\s*({[\s\S]*?})(?:\n|$)/);
                           let sql = '';
-                          if (inputMatch) {
+                          if (activeStep.actionInput) {
                             try {
-                              const parsed = JSON.parse(inputMatch[1]);
-                              sql = parsed.sql || '';
+                              const parsed =
+                                typeof activeStep.actionInput === 'string'
+                                  ? JSON.parse(activeStep.actionInput)
+                                  : activeStep.actionInput;
+                              sql = parsed?.sql || '';
                             } catch {
-                              // fallback: extract raw sql string
-                              const rawMatch = inputMatch[1].match(/"sql"\s*:\s*"([\s\S]*?)"/);
+                              const rawMatch = String(activeStep.actionInput).match(/"sql"\s*:\s*"([\s\S]*?)"/);
                               if (rawMatch) sql = rawMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
                             }
                           }
+
+                          if (!sql && activeStep.detail) {
+                            // Parse SQL from Action Input JSON
+                            const inputMatch = activeStep.detail.match(/Action Input:\s*({[\s\S]*?})(?:\n|$)/);
+                            if (inputMatch) {
+                              try {
+                                const parsed = JSON.parse(inputMatch[1]);
+                                sql = parsed.sql || '';
+                              } catch {
+                                // fallback: extract raw sql string
+                                const rawMatch = inputMatch[1].match(/"sql"\s*:\s*"([\s\S]*?)"/);
+                                if (rawMatch) sql = rawMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+                              }
+                            }
+                          }
+
                           if (!sql) return null;
 
                           // Simple SQL keyword highlighting
@@ -2085,7 +2107,10 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
                                 </Tooltip>
                               </div>
                               {/* SQL code area */}
-                              <div className='bg-[#1e1e2e] dark:bg-[#0d0d11] overflow-x-auto'>
+                              <div
+                                className='bg-[#1e1e2e] dark:bg-[#0d0d11] overflow-auto'
+                                style={{ maxHeight: '400px' }}
+                              >
                                 <pre className='text-[13px] leading-6 font-mono text-gray-200 p-4 m-0 whitespace-pre-wrap break-words'>
                                   <code>{highlightSQL(sql)}</code>
                                 </pre>

@@ -429,6 +429,8 @@ const convertToManusFormat = (
         subtitle: cleanDetail?.split('\n')[0]?.slice(0, 80),
         status: getStepStatus(step.status),
         detail: cleanDetail,
+        action: step.action,
+        actionInput: step.actionInput,
       };
     }
   }
