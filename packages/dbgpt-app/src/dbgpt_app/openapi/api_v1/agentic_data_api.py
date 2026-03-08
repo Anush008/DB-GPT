@@ -38,6 +38,33 @@ if TYPE_CHECKING:
 REACT_AGENT_MEMORY_CACHE: Dict[str, "GptsMemory"] = {}
 
 DEFAULT_SKILLS_DIR = resolve_root_path("skills") or "skills"
+AUTO_DATA_MARKER_PATTERN = re.compile(
+    r"###([A-Z0-9_]+)_START###\s*(.*?)\s*###\1_END###", re.DOTALL
+)
+
+
+def _extract_auto_data_markers(text: str) -> tuple[str, Dict[str, str]]:
+    """Extract generic marker blocks from script output text.
+
+    Marker format:
+        ###KEY_START###...###KEY_END###
+    """
+
+    if not text or "###" not in text:
+        return text, {}
+
+    extracted: Dict[str, str] = {}
+
+    def _replace(match: re.Match) -> str:
+        key = match.group(1)
+        value = match.group(2).strip()
+        if value:
+            extracted[key] = value
+        return ""
+
+    cleaned = AUTO_DATA_MARKER_PATTERN.sub(_replace, text)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned).strip()
+    return cleaned, extracted
 
 
 async def _execute_skill_script_impl(
@@ -440,7 +467,7 @@ async def _react_agent_stream(
     from dbgpt.agent.resource import ResourcePack, ToolPack, tool
     from dbgpt.agent.resource.base import AgentResource, ResourceType
     from dbgpt.agent.resource.manage import get_resource_manager
-    from dbgpt.agent.util.llm.llm import LLMConfig
+    from dbgpt.agent.util.llm.llm import LLMConfig, LLMStrategyType
     from dbgpt.agent.util.react_parser import ReActOutputParser
     from dbgpt.core import StorageConversation
     from dbgpt.model.cluster.client import DefaultLLMClient
@@ -1532,7 +1559,9 @@ print(json.dumps(summary, ensure_ascii=False))
                             # Might be {"charts": {...}} or flat dict
                             chart_map = chart_output.get("charts", chart_output)
                             for name, abs_path in chart_map.items():
-                                if isinstance(abs_path, str) and os.path.isfile(abs_path):
+                                if isinstance(abs_path, str) and os.path.isfile(
+                                    abs_path
+                                ):
                                     ext = os.path.splitext(abs_path)[1].lower()
                                     if ext in IMAGE_EXTS:
                                         unique_name = (
@@ -1550,9 +1579,9 @@ print(json.dumps(summary, ensure_ascii=False))
                                         orig_stem = os.path.splitext(
                                             os.path.basename(abs_path)
                                         )[0].lower()
-                                        react_state.setdefault(
-                                            "image_url_map", {}
-                                        )[orig_stem] = img_url
+                                        react_state.setdefault("image_url_map", {})[
+                                            orig_stem
+                                        ] = img_url
                     except (json.JSONDecodeError, TypeError):
                         pass
                     # Also scan the output dir for any new .png files
@@ -1569,9 +1598,7 @@ print(json.dumps(summary, ensure_ascii=False))
                                 if orig_stem not in react_state.get(
                                     "image_url_map", {}
                                 ):
-                                    unique_name = (
-                                        f"{uuid.uuid4().hex[:8]}_{fname}"
-                                    )
+                                    unique_name = f"{uuid.uuid4().hex[:8]}_{fname}"
                                     dest = os.path.join(
                                         STATIC_MESSAGE_IMG_PATH, unique_name
                                     )
@@ -1580,9 +1607,9 @@ print(json.dumps(summary, ensure_ascii=False))
                                     react_state.setdefault(
                                         "generated_images", []
                                     ).append(img_url)
-                                    react_state.setdefault(
-                                        "image_url_map", {}
-                                    )[orig_stem] = img_url
+                                    react_state.setdefault("image_url_map", {})[
+                                        orig_stem
+                                    ] = img_url
                     # Append image URL summary for LLM reference
                     all_images = react_state.get("generated_images", [])
                     if all_images:
@@ -1590,9 +1617,7 @@ print(json.dumps(summary, ensure_ascii=False))
                             "\u5df2\u751f\u6210\u7684\u56fe\u7247URL\uff08\u5728\u751f\u6210HTML\u62a5\u544a\u65f6\u8bf7\u4f7f\u7528\u8fd9\u4e9bURL\uff09:\n"
                             + "\n".join(f"  - {url}" for url in all_images)
                         )
-                        chunks.append(
-                            {"output_type": "text", "content": img_summary}
-                        )
+                        chunks.append({"output_type": "text", "content": img_summary})
                     logger.info(
                         "shell_interpreter: captured %d images for skill script",
                         len(react_state.get("image_url_map", {})),
@@ -1720,10 +1745,31 @@ print(json.dumps(summary, ensure_ascii=False))
                         + "\n".join(f"  - {url}" for url in all_images)
                     )
                     chunks.append({"output_type": "text", "content": img_summary})
-                # Special handling for calculate_ratios.py output:
-                # Store its output in react_state so html_interpreter can use
-                # it automatically. This prevents the LLM from having to echo
-                # back 30 keys of data in JSON
+                auto_data = react_state.get("auto_data")
+                if not isinstance(auto_data, dict):
+                    auto_data = {}
+                    react_state["auto_data"] = auto_data
+                filtered_chunks = []
+                for chunk in chunks:
+                    if chunk.get("output_type") != "text":
+                        filtered_chunks.append(chunk)
+                        continue
+                    content = chunk.get("content") or ""
+                    cleaned, extracted = _extract_auto_data_markers(content)
+                    if extracted:
+                        auto_data.update(extracted)
+                        logger.info(
+                            "execute_skill_script_file: captured auto_data keys=%s",
+                            sorted(extracted.keys()),
+                        )
+                    if cleaned:
+                        chunk["content"] = cleaned
+                        filtered_chunks.append(chunk)
+                    elif not extracted:
+                        filtered_chunks.append(chunk)
+                chunks = filtered_chunks
+
+                # Compatibility path for existing financial-report skill.
                 if script_file_name == "calculate_ratios.py":
                     for chunk in chunks:
                         if chunk.get("output_type") == "text":
@@ -1849,10 +1895,14 @@ print(json.dumps(summary, ensure_ascii=False))
                         replacements = {}
             if not isinstance(replacements, dict):
                 replacements = {}
+            auto_data = react_state.get("auto_data", {})
+            if isinstance(auto_data, dict):
+                replacements = {**auto_data, **replacements}
+
             # Merge LLM replacements with ratio_data from calculate_ratios.py
             ratio_data = react_state.get("ratio_data", {})
             if isinstance(ratio_data, dict):
-                # LLM's data overwrites ratio_data if keys overlap
+                # auto_data / LLM data overwrites ratio_data if keys overlap
                 merged = {**ratio_data, **replacements}
                 replacements = merged
 
@@ -1872,7 +1922,7 @@ print(json.dumps(summary, ensure_ascii=False))
 
             def _replace_placeholder(m):
                 key = m.group(1)
-                return str(replacements.get(key, "NA"))
+                return str(replacements.get(key, ""))
 
             html = re.sub(r"\{\{([A-Z_0-9]+)\}\}", _replace_placeholder, raw_template)
             if not title or title == "Report":
@@ -1931,8 +1981,13 @@ print(json.dumps(summary, ensure_ascii=False))
                 )
 
         # ── Mode 3: inline html ──────────────────────────────────────
-        # Unescape literal \n sequences that LLM may produce
-        if html and isinstance(html, str):
+        # Unescape literal \n sequences that LLM may produce.
+        # IMPORTANT: Only apply this unescape when html was provided directly
+        # (inline mode).  Template mode (Mode 1) and file mode (Mode 2) produce
+        # real HTML that already contains actual newlines and may contain JS
+        # regex literals like /\\n/ which must NOT be collapsed into real
+        # newlines — doing so corrupts the JS and breaks chart rendering.
+        if html and isinstance(html, str) and not template_path and not file_path:
             if "\\n" in html:
                 html = html.replace("\\n", "\n")
             if "\\t" in html:
@@ -2023,6 +2078,7 @@ print(json.dumps(summary, ensure_ascii=False))
                         r'<img[^>]+src=["\']([^"\']+)["\']', fixed_html, re.IGNORECASE
                     )
                 )
+
                 # An image is "missing" only when neither its exact URL nor its
                 # stem (filename with UUID prefix stripped) is already covered.
                 def _img_stem(url):
@@ -2072,7 +2128,16 @@ print(json.dumps(summary, ensure_ascii=False))
         ).create(),
         auto_convert_message=True,
     )
-    llm_config = LLMConfig(llm_client=llm_client)
+    # If user specified a model_name, use Priority strategy to ensure the
+    # agent uses the requested model instead of picking the first available one.
+    if dialogue.model_name:
+        llm_config = LLMConfig(
+            llm_client=llm_client,
+            llm_strategy=LLMStrategyType.Priority,
+            strategy_context=json.dumps([dialogue.model_name]),
+        )
+    else:
+        llm_config = LLMConfig(llm_client=llm_client)
 
     conv_id = dialogue.conv_uid or str(uuid.uuid4())
     react_state["conv_id"] = conv_id
@@ -2188,11 +2253,11 @@ Please always response in the same language as the user's input language.
 ## Available Tools Description
 1. **execute_skill_script_file** (recommended for executing skill scripts): Execute script files in the skills scripts directory, automatically handling post-processing such as copying images to the static directory and recording calculation results.
    Parameters: {{"skill_name": "skill name", "script_file_name": "script file name", "args": {{parameters}}}}
-   - Example: {{"skill_name": "{pre_matched_skill.metadata.name if pre_matched_skill else 'skill'}", "script_file_name": "calculate_ratios.py", "args": {{"input_data": "..."}}}}
+   - Example: {{"skill_name": "{pre_matched_skill.metadata.name if pre_matched_skill else "skill"}", "script_file_name": "calculate_ratios.py", "args": {{"input_data": "..."}}}}
    - **Must use this tool when executing skill scripts**, do not use shell_interpreter.
 2. **get_skill_resource**: Read reference documents, configurations, templates, and other non-script resource files in the skill.
    Parameters: {{"skill_name": "skill name", "resource_path": "resource path"}}
-   - Read reference document: {{"skill_name": "{pre_matched_skill.metadata.name if pre_matched_skill else 'skill'}", "resource_path": "references/analysis_framework.md"}}
+   - Read reference document: {{"skill_name": "{pre_matched_skill.metadata.name if pre_matched_skill else "skill"}", "resource_path": "references/analysis_framework.md"}}
    - Note: The report template does not need to be read using this tool; directly use the template_path parameter of html_interpreter.
 3. **execute_skill_script**: Execute the inline script defined in the skill (backup). Parameters: {{"skill_name": "skill name", "script_name": "script name", "args": {{"parameter name": "parameter value"}}}}
 4. **shell_interpreter**: Execute shell/bash commands (only for non-skill script system commands, such as ls, cat, etc.).
@@ -2534,14 +2599,16 @@ Action Input: The JSON format of tool parameters
             if round_num in round_step_map:
                 # Step already exists (from thinking) - update title/phase with same id
                 react_step_id = round_step_map[round_num]
-                updated_event = _sse_event({
-                    "type": "step.start",
-                    "step": step,
-                    "id": react_step_id,
-                    "title": action_title,
-                    "detail": "Thought/Action/Observation",
-                    "phase": inferred_phase,
-                })
+                updated_event = _sse_event(
+                    {
+                        "type": "step.start",
+                        "step": step,
+                        "id": react_step_id,
+                        "title": action_title,
+                        "detail": "Thought/Action/Observation",
+                        "phase": inferred_phase,
+                    }
+                )
                 yield updated_event
             else:
                 react_step_id, react_step_event = build_step(
@@ -2938,6 +3005,7 @@ async def download_skill_package(
             "Content-Disposition": f'attachment; filename="{skill_name}.zip"',
         },
     )
+
 
 @router.post("/v1/chat/react-agent")
 async def chat_react_agent(
