@@ -13,13 +13,13 @@ import Icon, {
   DeleteOutlined,
   EditOutlined,
   GlobalOutlined,
+  LineChartOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   MessageOutlined,
   PlusOutlined,
   RightOutlined,
-  SettingOutlined,
-  ThunderboltOutlined,
+  RocketOutlined,
 } from '@ant-design/icons';
 import { Popover, Skeleton, Tooltip, message } from 'antd';
 import cls from 'classnames';
@@ -40,8 +40,8 @@ type RouteItem = {
 };
 
 function smallMenuItemStyle(active?: boolean) {
-  return `flex items-center justify-center mx-auto rounded w-14 h-14 text-xl hover:bg-[#F1F5F9] dark:hover:bg-theme-dark transition-colors cursor-pointer ${
-    active ? 'bg-[#F1F5F9] dark:bg-theme-dark' : ''
+  return `flex items-center justify-center mx-auto rounded w-14 h-14 text-xl hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors cursor-pointer ${
+    active ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 shadow-sm' : ''
   }`;
 }
 
@@ -49,6 +49,12 @@ function SideBar() {
   const { isMenuExpand, setIsMenuExpand, mode, setMode } = useContext(ChatContext);
   const router = useRouter();
   const { pathname } = router;
+  const isSettingsActive =
+    pathname.startsWith('/construct/app') ||
+    pathname.startsWith('/construct/flow') ||
+    pathname.startsWith('/construct/prompt') ||
+    pathname.startsWith('/construct/dbgpts') ||
+    pathname === '/models_evaluation';
   const { t, i18n } = useTranslation();
   const [logo, setLogo] = useState<string>('/logo_zh_latest.png');
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -137,7 +143,7 @@ function SideBar() {
         key: 'skills',
         name: t('skills') || '技能',
         isActive: pathname.startsWith('/construct/skills'),
-        icon: <ThunderboltOutlined style={{ fontSize: 20 }} />,
+        icon: <RocketOutlined style={{ fontSize: 20 }} />,
         path: '/construct/skills',
       },
       {
@@ -168,7 +174,10 @@ function SideBar() {
           router.push('/construct/app');
           setSettingsOpen(false);
         }}
-        className='flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors'
+        className={cls(
+          'flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors',
+          { 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400': pathname.startsWith('/construct/app') }
+        )}
       >
         <AppstoreOutlined className='text-blue-500' />
         <span>{t('app_management') || '应用管理'}</span>
@@ -178,7 +187,10 @@ function SideBar() {
           router.push('/construct/flow');
           setSettingsOpen(false);
         }}
-        className='flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors'
+        className={cls(
+          'flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors',
+          { 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400': pathname.startsWith('/construct/flow') }
+        )}
       >
         <ApartmentOutlined className='text-green-500' />
         <span>{t('awel_workflow') || 'AWEL 工作流'}</span>
@@ -188,7 +200,10 @@ function SideBar() {
           router.push('/construct/prompt');
           setSettingsOpen(false);
         }}
-        className='flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors'
+        className={cls(
+          'flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors',
+          { 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400': pathname.startsWith('/construct/prompt') }
+        )}
       >
         <EditOutlined className='text-orange-500' />
         <span>{t('prompts') || '提示词'}</span>
@@ -198,10 +213,26 @@ function SideBar() {
           router.push('/construct/dbgpts');
           setSettingsOpen(false);
         }}
-        className='flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors'
+        className={cls(
+          'flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors',
+          { 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400': pathname.startsWith('/construct/dbgpts') }
+        )}
       >
         <GlobalOutlined className='text-purple-500' />
         <span>{t('dbgpts_community') || 'DBGPTS 社区'}</span>
+      </div>
+      <div
+        onClick={() => {
+          router.push('/models_evaluation');
+          setSettingsOpen(false);
+        }}
+        className={cls(
+          'flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors',
+          { 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400': pathname === '/models_evaluation' }
+        )}
+      >
+        <LineChartOutlined className='text-red-500' />
+        <span>{t('models_evaluation') || '模型评测'}</span>
       </div>
     </div>
   );
@@ -258,9 +289,9 @@ function SideBar() {
               arrow={false}
               overlayInnerStyle={{ padding: 0, borderRadius: 12, overflow: 'hidden' }}
             >
-              <Tooltip title={t('settings') || '设置'} placement='right'>
-                <div className={smallMenuItemStyle()}>
-                  <SettingOutlined />
+              <Tooltip title={t('construct') || '应用管理'} placement='right'>
+                <div className={smallMenuItemStyle(isSettingsActive)}>
+                  <AppstoreOutlined />
                 </div>
               </Tooltip>
             </Popover>
@@ -310,9 +341,9 @@ function SideBar() {
           <Link
             href={item.path}
             className={cls(
-              'flex items-center w-full h-12 px-4 cursor-pointer hover:bg-[#F1F5F9] dark:hover:bg-theme-dark hover:rounded-xl',
+              'flex items-center w-full h-12 px-4 cursor-pointer hover:bg-blue-50/50 dark:hover:bg-blue-900/10 hover:rounded-xl',
               {
-                'bg-white rounded-xl dark:bg-black': item.isActive,
+                'bg-blue-50 rounded-xl text-blue-600 dark:bg-blue-900/20 dark:text-blue-400': item.isActive,
               },
             )}
             key={item.key}
@@ -331,11 +362,14 @@ function SideBar() {
           arrow={false}
           overlayInnerStyle={{ padding: 0, borderRadius: 12, overflow: 'hidden' }}
         >
-          <div className='flex items-center w-full h-12 px-4 cursor-pointer hover:bg-[#F1F5F9] dark:hover:bg-theme-dark hover:rounded-xl'>
+          <div className={cls(
+            'flex items-center w-full h-12 px-4 cursor-pointer hover:bg-blue-50/50 dark:hover:bg-blue-900/10 hover:rounded-xl',
+            { 'bg-blue-50 rounded-xl text-blue-600 dark:bg-blue-900/20 dark:text-blue-400': isSettingsActive }
+          )}>
             <div className='mr-3'>
-              <SettingOutlined style={{ fontSize: 20 }} />
+              <AppstoreOutlined style={{ fontSize: 20 }} />
             </div>
-            <span className='text-sm'>{t('settings') || '设置'}</span>
+            <span className='text-sm'>{t('construct') || '应用管理'}</span>
           </div>
         </Popover>
       </div>
