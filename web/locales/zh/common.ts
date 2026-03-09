@@ -222,6 +222,7 @@ export const CommonZh: Resources['translation'] = {
   explore: '探索广场',
   new_task: '新建任务',
   all_tasks: '所有任务',
+  view_all: '查看全部',
   no_tasks: '暂无历史任务',
   Discover_more: '发现更多',
   sdk_insert: 'SDK接入',

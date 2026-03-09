@@ -16,8 +16,8 @@ import Icon, {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   MessageOutlined,
-  MoreOutlined,
   PlusOutlined,
+  RightOutlined,
   SettingOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons';
@@ -346,9 +346,9 @@ function SideBar() {
           <span className='text-xs font-semibold text-gray-400 uppercase tracking-wider'>
             {t('all_tasks')}
           </span>
-          <Link href='/conversations'>
-            <Tooltip title='查看全部'>
-              <MoreOutlined className='text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer transition-colors text-sm' />
+          <Link href='/conversations' className='inline-flex items-center'>
+            <Tooltip title={t('view_all')}>
+              <RightOutlined className='text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer transition-colors text-xs leading-none' />
             </Tooltip>
           </Link>
         </div>

@@ -215,6 +215,7 @@ export const CommonEn = {
   explore: 'Explore',
   new_task: 'New Task',
   all_tasks: 'All Tasks',
+  view_all: 'View All',
   no_tasks: 'No history tasks',
   Discover_more: 'Discove more',
   sdk_insert: 'SDK Insert',
