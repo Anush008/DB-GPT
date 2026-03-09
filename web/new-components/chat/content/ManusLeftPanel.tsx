@@ -342,6 +342,7 @@ const SkillCompactCard: React.FC<{
   onClick?: () => void;
   onDownload?: () => void;
 }> = memo(({ skillName, onClick, onDownload }) => {
+  const { t } = useTranslation();
   const [downloading, setDownloading] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
   return (
@@ -356,7 +357,7 @@ const SkillCompactCard: React.FC<{
         <div className='flex items-center gap-2'>
           <span className='text-sm font-semibold text-gray-800 dark:text-gray-200 truncate'>{skillName}</span>
           <span className='flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-medium'>
-            技能
+            {t('chat:skill_label')}
           </span>
         </div>
       </div>
@@ -383,19 +384,19 @@ const SkillCompactCard: React.FC<{
             e.stopPropagation();
             if (!isAdded) {
               setIsAdded(true);
-              message.success(`技能 "${skillName}" 已添加到我的技能`);
+              message.success(t('skill_added_success', { skillName }));
             }
           }}
         >
           {isAdded ? (
             <>
               <CheckOutlined className='text-[10px]' />
-              已添加
+              {t('added')}
             </>
           ) : (
             <>
               <PlusOutlined className='text-[10px]' />
-              添加
+              {t('Add')}
             </>
           )}
         </button>
@@ -471,8 +472,7 @@ const StepCard: React.FC<{
     const timer = setTimeout(() => setIsVisible(true), 50);
     return () => clearTimeout(timer);
   }, []);
-  // Compact pill for "思考中" thinking steps
-  if (step.title === '思考中' && step.status === 'running') {
+  if (step.title === t('chat:thinking') && step.status === 'running') {
     return (
       <div
         onClick={onClick}
@@ -844,7 +844,7 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
         {!assistantText && sections.length > 0 && (
           <div className='flex items-center gap-1.5 text-xs text-gray-400'>
             <CheckCircleFilled className='text-emerald-500' />
-            <span>{sections.length} 个步骤已完成</span>
+            <span>{t('chat:steps_completed_count', { count: sections.length })}</span>
           </div>
         )}
       </div>
@@ -896,7 +896,7 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
                     <div className='text-sm font-medium text-gray-800 dark:text-gray-200 truncate'>
                       {attachedSkill.name}
                     </div>
-                    <div className='text-[11px] text-gray-400 dark:text-gray-500'>技能</div>
+                      <div className='text-[11px] text-gray-400 dark:text-gray-500'>{t('chat:skill_label')}</div>
                   </div>
                 </div>
               )}
@@ -909,7 +909,9 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
                     <div className='text-sm font-medium text-gray-800 dark:text-gray-200 truncate'>
                       {attachedDb.db_name}
                     </div>
-                    <div className='text-[11px] text-gray-400 dark:text-gray-500'>{attachedDb.db_type || '数据库'}</div>
+                      <div className='text-[11px] text-gray-400 dark:text-gray-500'>
+                        {attachedDb.db_type || t('chat:database_label')}
+                      </div>
                   </div>
                 </div>
               )}
@@ -938,10 +940,10 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
             {isWorking ? (
               <div className='flex items-center gap-2'>
                 <LoadingOutlined spin className='text-blue-500' />
-                <span className='text-sm text-blue-600 dark:text-blue-400'>DB-GPT 正在思考 ···</span>
+                <span className='text-sm text-blue-600 dark:text-blue-400'>{t('chat:db_gpt_thinking')}</span>
               </div>
             ) : (
-              <span className='text-sm'>等待开始...</span>
+                <span className='text-sm'>{t('chat:waiting_to_start')}</span>
             )}
             {isWorking && stepThoughts?.[activeStepId || 'initial'] && (
               <ThoughtBubble text={stepThoughts[activeStepId || 'initial']} />
@@ -953,7 +955,7 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
           <div className='px-4 py-3 mt-2 rounded-lg bg-blue-50/50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 space-y-2'>
             <div className='flex items-center gap-2'>
               <LoadingOutlined spin className='text-blue-500' />
-              <span className='text-sm text-blue-600 dark:text-blue-400'>DB-GPT 正在思考 ···</span>
+              <span className='text-sm text-blue-600 dark:text-blue-400'>{t('chat:db_gpt_thinking')}</span>
             </div>
             {stepThoughts?.[activeStepId || 'initial'] && (
               <ThoughtBubble text={stepThoughts[activeStepId || 'initial']} />
@@ -1002,14 +1004,14 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
                   <div className='w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-gray-50 dark:bg-gray-800'>
                     <FolderOpenOutlined className='text-gray-500 text-base' />
                   </div>
-                  <span className='text-sm text-gray-600 dark:text-gray-300'>查看此任务中的所有文件</span>
+                  <span className='text-sm text-gray-600 dark:text-gray-300'>{t('chat:view_all_task_files')}</span>
                 </div>
               )}
             </div>
 
             <div className='flex items-center gap-1.5 mt-5'>
               <CheckOutlined className='text-xs text-emerald-500' />
-              <span className='text-sm text-emerald-600 dark:text-emerald-400 font-medium'>任务已完成</span>
+              <span className='text-sm text-emerald-600 dark:text-emerald-400 font-medium'>{t('chat:task_completed')}</span>
             </div>
           </div>
         )}
