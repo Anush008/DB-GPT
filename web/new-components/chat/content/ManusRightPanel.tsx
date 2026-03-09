@@ -1233,7 +1233,7 @@ const SkillCardRenderer: React.FC<{
     return (
       <div className='flex flex-col items-center justify-center py-16 text-gray-400'>
         <LoadingOutlined className='text-3xl text-indigo-500 mb-4' />
-        <span className='text-sm'>{t('chat:load_skill')}...</span>
+        <span className='text-sm'>{t('load_skill')}...</span>
       </div>
     );
   }
@@ -1261,7 +1261,7 @@ const SkillCardRenderer: React.FC<{
                 <div className='flex items-center gap-2'>
                   <span className='text-sm font-semibold text-gray-800 dark:text-gray-200 truncate'>{displayName}</span>
                   <span className='flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-medium'>
-                    {t('chat:skill_label')}
+                    {t('skill_label')}
                   </span>
                 </div>
                 {description && (
@@ -1332,7 +1332,7 @@ const SkillCardRenderer: React.FC<{
             <div className='flex items-center gap-2'>
               <span className='text-sm font-semibold text-gray-800 dark:text-gray-200 truncate'>{displayName}</span>
               <span className='text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-medium'>
-                {t('chat:skill_label')}
+                {t('skill_label')}
               </span>
             </div>
           </div>
@@ -1599,7 +1599,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
   return (
     <div className='relative flex flex-col h-full bg-[#f8f9fc] dark:bg-[#0d0e11]'>
       {onCollapse && (
-        <Tooltip title={t('chat:collapse_panel')} placement='left'>
+        <Tooltip title={t('collapse_panel')} placement='left'>
           <button
             onClick={() => onCollapse()}
             className='absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 w-6 h-12 flex items-center justify-center bg-white dark:bg-[#1a1b1e] border border-gray-200 dark:border-gray-700 rounded-full shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-md transition-all text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
@@ -1619,14 +1619,14 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
           </div>
           <div className='flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 font-medium'>
             <DesktopOutlined className='text-gray-500' />
-            <span>{terminalTitle || t('chat:db_gpt_computer')}</span>
+            <span>{terminalTitle || t('db_gpt_computer')}</span>
             {isRunning && <LoadingOutlined spin className='text-blue-500 ml-1' />}
           </div>
         </div>
 
         <div className='flex items-center gap-1'>
           {panelView === 'html-preview' && previewArtifact && (
-            <Tooltip title={t('chat:export_pdf')}>
+            <Tooltip title={t('export_pdf')}>
               <Button
                 type='text'
                 size='small'
@@ -1634,13 +1634,13 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
                 onClick={handleExportPdf}
                 className='text-gray-500 hover:text-blue-500'
               >
-                {t('chat:export_pdf')}
+                {t('export_pdf')}
               </Button>
             </Tooltip>
           )}
 
           {activeStep && onRerun && activeStep.status === 'completed' && (
-            <Tooltip title={t('chat:rerun')}>
+            <Tooltip title={t('rerun')}>
               <Button
                 type='text'
                 size='small'
@@ -1648,13 +1648,13 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
                 onClick={onRerun}
                 className='text-gray-500 hover:text-blue-500'
               >
-                {t('chat:rerun')}
+                {t('rerun')}
               </Button>
             </Tooltip>
           )}
 
           {onShare && (
-            <Tooltip title={t('chat:share_conversation_tooltip')}>
+            <Tooltip title={t('share_conversation_tooltip')}>
               <Button
                 type='text'
                 size='small'
@@ -1662,7 +1662,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
                 onClick={onShare}
                 className='text-blue-500 hover:text-blue-600'
               >
-                {t('chat:share_conversation')}
+                {t('share_conversation')}
               </Button>
             </Tooltip>
           )}
@@ -1682,7 +1682,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
             )}
           >
             <DesktopOutlined className='mr-1.5' />
-            {t('chat:execution_steps')}
+            {t('execution_steps')}
             {panelView === 'execution' && (
               <div className='absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900 dark:bg-gray-100 rounded-full' />
             )}
@@ -1698,7 +1698,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
               )}
             >
               <FolderOpenOutlined className='mr-1.5' />
-              {t('chat:task_files')}
+              {t('task_files')}
               <span className='ml-1.5 text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-500 px-1.5 py-0.5 rounded-full'>
                 {artifacts.length}
               </span>
@@ -1735,7 +1735,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
               )}
             >
               <EyeOutlined className='mr-1.5' />
-              {previewArtifact.name || t('chat:web_preview')}
+              {previewArtifact.name || t('web_preview')}
               {panelView === 'html-preview' && (
                 <div className='absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900 dark:bg-gray-100 rounded-full' />
               )}
@@ -1941,7 +1941,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
                                       <div className='text-sm font-semibold text-gray-800 dark:text-gray-200 truncate'>
                                         {skillDisplayName}
                                       </div>
-                <div className='text-[11px] text-gray-400 dark:text-gray-500'>{t('chat:skill_label')}</div>
+                <div className='text-[11px] text-gray-400 dark:text-gray-500'>{t('skill_label')}</div>
                                     </div>
                                   </div>
                                   {skillDescription && (

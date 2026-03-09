@@ -156,23 +156,22 @@ const getStepIcon = (type: StepType, status: StepStatus) => {
   }
 };
 
-// Get step type label in Chinese
 const getTypeLabel = (type: StepType, t: any): string => {
   const labels: Record<StepType, string> = {
-    read: '读取文件',
-    edit: '编辑文件',
-    write: '写入文件',
-    bash: '执行命令',
-    grep: '搜索内容',
-    glob: '查找文件',
-    task: '执行任务',
-    skill: t('chat:load_skill') || '加载技能',
-    sql: 'SQL查询',
-    python: 'Python',
-    html: 'HTML',
-    other: '操作',
+    read: t('step_type_read'),
+    edit: t('step_type_edit'),
+    write: t('step_type_write'),
+    bash: t('step_type_bash'),
+    grep: t('step_type_grep'),
+    glob: t('step_type_glob'),
+    task: t('step_type_task'),
+    skill: t('load_skill'),
+    sql: t('step_type_sql'),
+    python: t('step_type_python'),
+    html: t('step_type_html'),
+    other: t('step_type_other'),
   };
-  return labels[type] || '操作';
+  return labels[type] || t('step_type_other');
 };
 
 // Get icon background color based on type
@@ -200,16 +199,16 @@ const formatFileSize = (bytes: number): string => {
   return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
 };
 
-const getFileTypeLabel = (fileName: string, mimeType?: string): string => {
+const getFileTypeLabel = (fileName: string, t: any, mimeType?: string): string => {
   const ext = fileName.toLowerCase().split('.').pop() || '';
   if (['xlsx', 'xls'].includes(ext) || mimeType?.includes('spreadsheet') || mimeType?.includes('excel'))
-    return '电子表格';
-  if (ext === 'csv' || mimeType?.includes('csv')) return '电子表格';
-  if (ext === 'pdf' || mimeType?.includes('pdf')) return 'PDF';
-  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext) || mimeType?.includes('image')) return '图片';
-  if (['doc', 'docx'].includes(ext) || mimeType?.includes('word')) return 'Word 文档';
-  if (['txt', 'md'].includes(ext) || mimeType?.includes('text')) return '文本文件';
-  return '文件';
+    return t('file_type_spreadsheet');
+  if (ext === 'csv' || mimeType?.includes('csv')) return t('file_type_spreadsheet');
+  if (ext === 'pdf' || mimeType?.includes('pdf')) return t('file_type_pdf');
+  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext) || mimeType?.includes('image')) return t('file_type_image');
+  if (['doc', 'docx'].includes(ext) || mimeType?.includes('word')) return t('file_type_word');
+  if (['txt', 'md'].includes(ext) || mimeType?.includes('text')) return t('file_type_text');
+  return t('file_type_generic');
 };
 
 const getFileIconElement = (fileName: string, mimeType?: string) => {
@@ -255,19 +254,18 @@ const getArtifactIcon = (artifact: ArtifactItem) => {
   }
 };
 
-// Get artifact type label
-const getArtifactTypeLabel = (artifact: ArtifactItem): string => {
+const getArtifactTypeLabel = (artifact: ArtifactItem, t: any): string => {
   const labels: Record<string, string> = {
-    file: '文件',
-    html: '网页报告',
-    table: '数据表',
-    chart: '图表',
-    image: '图片',
-    code: '代码',
-    markdown: '文档',
-    summary: '总结',
+    file: t('artifact_type_file'),
+    html: t('artifact_type_html'),
+    table: t('artifact_type_table'),
+    chart: t('artifact_type_chart'),
+    image: t('artifact_type_image'),
+    code: t('artifact_type_code'),
+    markdown: t('artifact_type_markdown'),
+    summary: t('artifact_type_summary'),
   };
-  return labels[artifact.type] || '产物';
+  return labels[artifact.type] || t('artifact_type_generic');
 };
 
 // Get icon background for artifact type
@@ -291,6 +289,7 @@ const ArtifactCard: React.FC<{
   onClick?: () => void;
   onDownload?: () => void;
 }> = memo(({ artifact, onClick, onDownload }) => {
+  const { t } = useTranslation();
   return (
     <div
       onClick={onClick}
@@ -307,7 +306,7 @@ const ArtifactCard: React.FC<{
       <div className='min-w-0 flex-1'>
         <div className='text-sm font-medium text-gray-800 dark:text-gray-200 truncate'>{artifact.name}</div>
         <div className='text-[11px] text-gray-400 dark:text-gray-500 flex items-center gap-1.5'>
-          <span>{getArtifactTypeLabel(artifact)}</span>
+          <span>{getArtifactTypeLabel(artifact, t)}</span>
           {artifact.size != null && (
             <>
               <span className='text-gray-300 dark:text-gray-600'>·</span>
@@ -317,7 +316,7 @@ const ArtifactCard: React.FC<{
         </div>
       </div>
       {artifact.downloadable && (
-        <Tooltip title='下载'>
+        <Tooltip title={t('download')}>
           <Button
             type='text'
             size='small'
@@ -357,12 +356,12 @@ const SkillCompactCard: React.FC<{
         <div className='flex items-center gap-2'>
           <span className='text-sm font-semibold text-gray-800 dark:text-gray-200 truncate'>{skillName}</span>
           <span className='flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-medium'>
-            {t('chat:skill_label')}
+            {t('skill_label')}
           </span>
         </div>
       </div>
       <div className='flex items-center gap-2 flex-shrink-0'>
-        <Tooltip title='下载为 ZIP'>
+        <Tooltip title={t('download_as_zip')}>
           <button
             className='flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:border-gray-400 dark:hover:border-gray-500 transition-colors'
             onClick={e => {
@@ -396,7 +395,7 @@ const SkillCompactCard: React.FC<{
           ) : (
             <>
               <PlusOutlined className='text-[10px]' />
-              {t('Add')}
+              {t('add')}
             </>
           )}
         </button>
@@ -472,7 +471,10 @@ const StepCard: React.FC<{
     const timer = setTimeout(() => setIsVisible(true), 50);
     return () => clearTimeout(timer);
   }, []);
-  if (step.title === t('chat:thinking') && step.status === 'running') {
+  const isThinkingStep =
+    step.status === 'running' &&
+    (step.title === t('thinking') || step.title === '思考中' || step.title === '正在思考中' || step.title?.toLowerCase() === 'thinking');
+  if (isThinkingStep) {
     return (
       <div
         onClick={onClick}
@@ -491,7 +493,7 @@ const StepCard: React.FC<{
           <span className='animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75' />
           <span className='relative inline-flex rounded-full h-2.5 w-2.5 bg-gradient-to-r from-blue-400 to-cyan-400' />
         </span>
-        <span className='text-sm text-gray-700 dark:text-gray-300'>{t('chat:thinking')}</span>
+        <span className='text-sm text-gray-700 dark:text-gray-300'>{t('thinking')}</span>
       </div>
     );
   }
@@ -844,7 +846,7 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
         {!assistantText && sections.length > 0 && (
           <div className='flex items-center gap-1.5 text-xs text-gray-400'>
             <CheckCircleFilled className='text-emerald-500' />
-            <span>{t('chat:steps_completed_count', { count: sections.length })}</span>
+            <span>{t('steps_completed_count', { count: sections.length })}</span>
           </div>
         )}
       </div>
@@ -867,7 +869,7 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
                       {attachedFile.name}
                     </div>
                     <div className='text-[11px] text-gray-400 dark:text-gray-500'>
-                      {getFileTypeLabel(attachedFile.name, attachedFile.type)} · {formatFileSize(attachedFile.size)}
+                      {getFileTypeLabel(attachedFile.name, t, attachedFile.type)} · {formatFileSize(attachedFile.size)}
                     </div>
                   </div>
                 </div>
@@ -896,7 +898,7 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
                     <div className='text-sm font-medium text-gray-800 dark:text-gray-200 truncate'>
                       {attachedSkill.name}
                     </div>
-                      <div className='text-[11px] text-gray-400 dark:text-gray-500'>{t('chat:skill_label')}</div>
+                      <div className='text-[11px] text-gray-400 dark:text-gray-500'>{t('skill_label')}</div>
                   </div>
                 </div>
               )}
@@ -910,7 +912,7 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
                       {attachedDb.db_name}
                     </div>
                       <div className='text-[11px] text-gray-400 dark:text-gray-500'>
-                        {attachedDb.db_type || t('chat:database_label')}
+                        {attachedDb.db_type || t('database_label')}
                       </div>
                   </div>
                 </div>
@@ -940,10 +942,10 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
             {isWorking ? (
               <div className='flex items-center gap-2'>
                 <LoadingOutlined spin className='text-blue-500' />
-                <span className='text-sm text-blue-600 dark:text-blue-400'>{t('chat:db_gpt_thinking')}</span>
+                <span className='text-sm text-blue-600 dark:text-blue-400'>{t('db_gpt_thinking')}</span>
               </div>
             ) : (
-                <span className='text-sm'>{t('chat:waiting_to_start')}</span>
+                <span className='text-sm'>{t('waiting_to_start')}</span>
             )}
             {isWorking && stepThoughts?.[activeStepId || 'initial'] && (
               <ThoughtBubble text={stepThoughts[activeStepId || 'initial']} />
@@ -955,7 +957,7 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
           <div className='px-4 py-3 mt-2 rounded-lg bg-blue-50/50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 space-y-2'>
             <div className='flex items-center gap-2'>
               <LoadingOutlined spin className='text-blue-500' />
-              <span className='text-sm text-blue-600 dark:text-blue-400'>{t('chat:db_gpt_thinking')}</span>
+              <span className='text-sm text-blue-600 dark:text-blue-400'>{t('db_gpt_thinking')}</span>
             </div>
             {stepThoughts?.[activeStepId || 'initial'] && (
               <ThoughtBubble text={stepThoughts[activeStepId || 'initial']} />
@@ -1004,14 +1006,14 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
                   <div className='w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-gray-50 dark:bg-gray-800'>
                     <FolderOpenOutlined className='text-gray-500 text-base' />
                   </div>
-                  <span className='text-sm text-gray-600 dark:text-gray-300'>{t('chat:view_all_task_files')}</span>
+                  <span className='text-sm text-gray-600 dark:text-gray-300'>{t('view_all_task_files')}</span>
                 </div>
               )}
             </div>
 
             <div className='flex items-center gap-1.5 mt-5'>
               <CheckOutlined className='text-xs text-emerald-500' />
-              <span className='text-sm text-emerald-600 dark:text-emerald-400 font-medium'>{t('chat:task_completed')}</span>
+              <span className='text-sm text-emerald-600 dark:text-emerald-400 font-medium'>{t('task_completed')}</span>
             </div>
           </div>
         )}

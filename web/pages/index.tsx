@@ -410,7 +410,14 @@ const convertToManusFormat = (
     const group = phaseGroups[key];
     sections.push({
       id: `section-${key}`,
-      title: key === '__default__' ? (t ? t('chat:execution_steps') : 'Execution Steps') : key,
+      title:
+        key === '__default__'
+          ? t
+            ? t('execution_steps')
+            : 'Execution Steps'
+          : t
+            ? (t as any)(key, { defaultValue: key })
+            : key,
       isCompleted: group.every(s => s.status === 'completed'),
       steps: group,
     });
