@@ -85,6 +85,14 @@ export type UserParamResponse = {
 
 export type DialogueListResponse = IChatDialogueSchema[];
 
+export type PaginationResult<T> = {
+  items: T[];
+  total_count: number;
+  total_pages: number;
+  page: number;
+  page_size: number;
+};
+
 export type IChatDialogueMessageSchema = {
   role: 'human' | 'view' | 'system' | 'ai';
   context: string;

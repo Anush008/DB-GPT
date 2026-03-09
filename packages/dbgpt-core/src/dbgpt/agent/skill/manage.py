@@ -419,7 +419,9 @@ class SkillManager(BaseComponent):
             ]
 
             if error_output:
-                chunks.append({"output_type": "text", "content": f"Error: {error_output}"})
+                chunks.append(
+                    {"output_type": "text", "content": f"Error: {error_output}"}
+                )
 
             if output:
                 chunks.append({"output_type": "text", "content": output})
@@ -438,7 +440,9 @@ class SkillManager(BaseComponent):
                 ensure_ascii=False,
             )
 
-    def get_skill_script_file(self, skill_name: str, script_file_name: str) -> Optional[str]:
+    def get_skill_script_file(
+        self, skill_name: str, script_file_name: str
+    ) -> Optional[str]:
         """Read a script file from skill's scripts directory.
 
         Args:
@@ -481,7 +485,9 @@ class SkillManager(BaseComponent):
 
         return references
 
-    def get_skill_reference_file(self, skill_name: str, ref_file_name: str) -> Optional[str]:
+    def get_skill_reference_file(
+        self, skill_name: str, ref_file_name: str
+    ) -> Optional[str]:
         """Read a specific reference file from skill's references directory.
 
         Args:
@@ -523,6 +529,18 @@ class SkillManager(BaseComponent):
         if not skills_dir:
             skills_dir = "skills"
 
+        # Search candidate subdirectories: direct, user/, claude/, project/, etc.
+        subdirs = ["", "user", "claude", "project"]
+        for subdir in subdirs:
+            candidate = (
+                os.path.join(skills_dir, subdir, skill_name)
+                if subdir
+                else os.path.join(skills_dir, skill_name)
+            )
+            if os.path.isdir(candidate):
+                return candidate
+
+        # Fallback: return direct path even if it doesn't exist yet
         return os.path.join(skills_dir, skill_name)
 
     async def get_skill_resource(
@@ -553,7 +571,16 @@ class SkillManager(BaseComponent):
         import os
 
         # Image file extensions that are not supported
-        IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".svg", ".ico"}
+        IMAGE_EXTENSIONS = {
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".gif",
+            ".bmp",
+            ".webp",
+            ".svg",
+            ".ico",
+        }
 
         # Normalize the path
         resource_path = resource_path.lstrip("/\\")
@@ -585,7 +612,10 @@ class SkillManager(BaseComponent):
             real_skill_path = os.path.realpath(skill_path)
             if not real_path.startswith(real_skill_path):
                 return json.dumps(
-                    {"error": True, "message": f"Invalid resource path: {resource_path}"},
+                    {
+                        "error": True,
+                        "message": f"Invalid resource path: {resource_path}",
+                    },
                     ensure_ascii=False,
                 )
         except Exception as e:
@@ -601,13 +631,19 @@ class SkillManager(BaseComponent):
         # Otherwise, read the file content
         if not os.path.exists(full_path):
             return json.dumps(
-                {"error": True, "message": f"Resource '{resource_path}' not found in skill '{skill_name}'"},
+                {
+                    "error": True,
+                    "message": f"Resource '{resource_path}' not found in skill '{skill_name}'",
+                },
                 ensure_ascii=False,
             )
 
         if os.path.isdir(full_path):
             return json.dumps(
-                {"error": True, "message": f"'{resource_path}' is a directory, not a file"},
+                {
+                    "error": True,
+                    "message": f"'{resource_path}' is a directory, not a file",
+                },
                 ensure_ascii=False,
             )
 
@@ -624,7 +660,10 @@ class SkillManager(BaseComponent):
             )
         except UnicodeDecodeError:
             return json.dumps(
-                {"error": True, "message": f"Cannot read '{resource_path}': binary file not supported"},
+                {
+                    "error": True,
+                    "message": f"Cannot read '{resource_path}': binary file not supported",
+                },
                 ensure_ascii=False,
             )
         except Exception as e:
@@ -697,9 +736,7 @@ class SkillManager(BaseComponent):
 
         func_node = func_defs[main_func_name]
         # Get parameter names (skip 'self' for methods)
-        param_names = [
-            arg.arg for arg in func_node.args.args if arg.arg != "self"
-        ]
+        param_names = [arg.arg for arg in func_node.args.args if arg.arg != "self"]
 
         if len(param_names) == 1:
             param_name = param_names[0]
@@ -735,7 +772,14 @@ class SkillManager(BaseComponent):
 
         if not os.path.exists(script_path):
             return json.dumps(
-                {"chunks": [{"output_type": "text", "content": f"Script file not found: {script_path}"}]},
+                {
+                    "chunks": [
+                        {
+                            "output_type": "text",
+                            "content": f"Script file not found: {script_path}",
+                        }
+                    ]
+                },
                 ensure_ascii=False,
             )
 
@@ -744,7 +788,14 @@ class SkillManager(BaseComponent):
                 code = f.read()
         except Exception as e:
             return json.dumps(
-                {"chunks": [{"output_type": "text", "content": f"Error reading script: {str(e)}"}]},
+                {
+                    "chunks": [
+                        {
+                            "output_type": "text",
+                            "content": f"Error reading script: {str(e)}",
+                        }
+                    ]
+                },
                 ensure_ascii=False,
             )
 
@@ -754,17 +805,18 @@ class SkillManager(BaseComponent):
         if language == "python":
             adapted_args = self._adapt_args_for_script(code, args)
             args_repr = repr(adapted_args)
-            wrapper_code = f'''import sys
+            wrapper_code = f"""import sys
 import json
 
 sys.argv = ["script", json.dumps({args_repr})]
 __name__ = "__main__"
 
 {code}
-'''
+"""
             exec_code = wrapper_code
         else:
             from string import Template
+
             template = Template(code)
             exec_code = template.safe_substitute(**args)
 
@@ -772,21 +824,39 @@ __name__ = "__main__"
             code_server = await get_code_server(self.system_app)
             result = await code_server.exec(exec_code, language)
 
-            logs = result.logs.decode("utf-8") if isinstance(result.logs, bytes) else str(result.logs or "")
+            logs = (
+                result.logs.decode("utf-8")
+                if isinstance(result.logs, bytes)
+                else str(result.logs or "")
+            )
             exit_code = result.exit_code
 
             chunks = []
             if logs:
                 chunks.append({"output_type": "text", "content": logs})
             if exit_code != 0:
-                chunks.append({"output_type": "text", "content": f"Exit code: {exit_code}"})
+                chunks.append(
+                    {"output_type": "text", "content": f"Exit code: {exit_code}"}
+                )
             if not chunks:
-                chunks.append({"output_type": "text", "content": "Script executed successfully (no output)"})
+                chunks.append(
+                    {
+                        "output_type": "text",
+                        "content": "Script executed successfully (no output)",
+                    }
+                )
 
             return json.dumps({"chunks": chunks}, ensure_ascii=False)
         except Exception as e:
             return json.dumps(
-                {"chunks": [{"output_type": "text", "content": f"Script execution failed: {str(e)}"}]},
+                {
+                    "chunks": [
+                        {
+                            "output_type": "text",
+                            "content": f"Script execution failed: {str(e)}",
+                        }
+                    ]
+                },
                 ensure_ascii=False,
             )
 
@@ -805,18 +875,34 @@ __name__ = "__main__"
         skill_path = self._get_skill_path(skill_name)
         if not skill_path:
             return json.dumps(
-                {"chunks": [{"output_type": "text", "content": f"Skill '{skill_name}' not found"}]},
+                {
+                    "chunks": [
+                        {
+                            "output_type": "text",
+                            "content": f"Skill '{skill_name}' not found",
+                        }
+                    ]
+                },
                 ensure_ascii=False,
             )
 
         script_file_name = script_file_name.lstrip("/\\")
-        if script_file_name.startswith("scripts/") or script_file_name.startswith("scripts\\"):
+        if script_file_name.startswith("scripts/") or script_file_name.startswith(
+            "scripts\\"
+        ):
             script_file_name = script_file_name[8:]
 
         script_path = os.path.join(skill_path, "scripts", script_file_name)
         if not os.path.exists(script_path):
             return json.dumps(
-                {"chunks": [{"output_type": "text", "content": f"Script file '{script_file_name}' not found"}]},
+                {
+                    "chunks": [
+                        {
+                            "output_type": "text",
+                            "content": f"Script file '{script_file_name}' not found",
+                        }
+                    ]
+                },
                 ensure_ascii=False,
             )
 
@@ -825,18 +911,19 @@ __name__ = "__main__"
 
         adapted_args = self._adapt_args_for_script(code, args)
         args_repr = repr(adapted_args)
-        wrapper_code = f'''import sys
+        wrapper_code = f"""import sys
 import json
 
 sys.argv = ["script", json.dumps({args_repr})]
 __name__ = "__main__"
 
 {code}
-'''
+"""
 
         try:
             import sys
             import tempfile
+
             _IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"}
 
             scripts_dir = os.path.dirname(script_path)
@@ -868,9 +955,7 @@ __name__ = "__main__"
                     cwd=work_dir,
                     env=env,
                 )
-                stdout, stderr = await asyncio.wait_for(
-                    proc.communicate(), timeout=120
-                )
+                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
                 output_text = stdout.decode("utf-8", errors="replace")
                 error_text = stderr.decode("utf-8", errors="replace")
                 exit_code = proc.returncode or 0
@@ -882,13 +967,37 @@ __name__ = "__main__"
                     pass
             chunks = []
             if output_text.strip():
-                chunks.append({"output_type": "text", "content": output_text.strip()})
+                # If the script's stdout is already a valid JSON {"chunks": [...]}
+                # structure, use it directly to avoid double-encoding the content
+                # (which would cause JSON string values like CHART_DATA_JSON to
+                # have their quotes escaped as \" when later injected into HTML).
+                try:
+                    parsed_output = json.loads(output_text.strip())
+                    if isinstance(parsed_output, dict) and "chunks" in parsed_output:
+                        chunks = parsed_output["chunks"]
+                    else:
+                        chunks.append(
+                            {"output_type": "text", "content": output_text.strip()}
+                        )
+                except (json.JSONDecodeError, ValueError):
+                    chunks.append(
+                        {"output_type": "text", "content": output_text.strip()}
+                    )
             if exit_code != 0 and error_text.strip():
-                chunks.append({"output_type": "text", "content": f"[ERROR] {error_text.strip()}"})
+                chunks.append(
+                    {"output_type": "text", "content": f"[ERROR] {error_text.strip()}"}
+                )
             if exit_code != 0:
-                chunks.append({"output_type": "text", "content": f"Exit code: {exit_code}"})
+                chunks.append(
+                    {"output_type": "text", "content": f"Exit code: {exit_code}"}
+                )
             if not chunks:
-                chunks.append({"output_type": "text", "content": "Script executed successfully (no output)"})
+                chunks.append(
+                    {
+                        "output_type": "text",
+                        "content": "Script executed successfully (no output)",
+                    }
+                )
             # Scan work_dir for NEW image files generated by this run.
             # Return their absolute paths so the caller can copy them
             # to the static serving directory.
@@ -897,19 +1006,35 @@ __name__ = "__main__"
                     ext = os.path.splitext(fname)[1].lower()
                     full_path = os.path.join(root, fname)
                     if ext in _IMAGE_EXTS and full_path not in pre_existing_images:
-                        chunks.append({
-                            "output_type": "image",
-                            "content": full_path,
-                        })
+                        chunks.append(
+                            {
+                                "output_type": "image",
+                                "content": full_path,
+                            }
+                        )
             return json.dumps({"chunks": chunks}, ensure_ascii=False)
         except asyncio.TimeoutError:
             return json.dumps(
-                {"chunks": [{"output_type": "text", "content": "Script execution timed out (120s limit)"}]},
+                {
+                    "chunks": [
+                        {
+                            "output_type": "text",
+                            "content": "Script execution timed out (120s limit)",
+                        }
+                    ]
+                },
                 ensure_ascii=False,
             )
         except Exception as e:
             return json.dumps(
-                {"chunks": [{"output_type": "text", "content": f"Script execution failed: {str(e)}"}]},
+                {
+                    "chunks": [
+                        {
+                            "output_type": "text",
+                            "content": f"Script execution failed: {str(e)}",
+                        }
+                    ]
+                },
                 ensure_ascii=False,
             )
 

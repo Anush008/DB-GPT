@@ -220,6 +220,10 @@ export const CommonZh: Resources['translation'] = {
   used_apps: '最近使用',
   app_in_mind: '没有心仪的应用？去',
   explore: '探索广场',
+  new_task: '新建任务',
+  all_tasks: '所有任务',
+  view_all: '查看全部',
+  no_tasks: '暂无历史任务',
   Discover_more: '发现更多',
   sdk_insert: 'SDK接入',
   my_apps: '我的应用',
@@ -449,4 +453,6 @@ export const CommonZh: Resources['translation'] = {
   evaluation_env_test: '测试集',
   evaluation_env_dev_tooltip: '用于本地开发、验证和调试的数据集',
   evaluation_env_test_tooltip: '用于正式评测打榜的数据集,结果用于评测集打榜排名',
+  home_title: 'DB-GPT AI数据助理',
+  home_subtitle: 'Agentic Data Driven Decisions',
 } as const;

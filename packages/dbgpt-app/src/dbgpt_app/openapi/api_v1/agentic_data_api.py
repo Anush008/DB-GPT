@@ -38,6 +38,33 @@ if TYPE_CHECKING:
 REACT_AGENT_MEMORY_CACHE: Dict[str, "GptsMemory"] = {}
 
 DEFAULT_SKILLS_DIR = resolve_root_path("skills") or "skills"
+AUTO_DATA_MARKER_PATTERN = re.compile(
+    r"###([A-Z0-9_]+)_START###\s*(.*?)\s*###\1_END###", re.DOTALL
+)
+
+
+def _extract_auto_data_markers(text: str) -> tuple[str, Dict[str, str]]:
+    """Extract generic marker blocks from script output text.
+
+    Marker format:
+        ###KEY_START###...###KEY_END###
+    """
+
+    if not text or "###" not in text:
+        return text, {}
+
+    extracted: Dict[str, str] = {}
+
+    def _replace(match: re.Match) -> str:
+        key = match.group(1)
+        value = match.group(2).strip()
+        if value:
+            extracted[key] = value
+        return ""
+
+    cleaned = AUTO_DATA_MARKER_PATTERN.sub(_replace, text)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned).strip()
+    return cleaned, extracted
 
 
 async def _execute_skill_script_impl(
@@ -440,7 +467,7 @@ async def _react_agent_stream(
     from dbgpt.agent.resource import ResourcePack, ToolPack, tool
     from dbgpt.agent.resource.base import AgentResource, ResourceType
     from dbgpt.agent.resource.manage import get_resource_manager
-    from dbgpt.agent.util.llm.llm import LLMConfig
+    from dbgpt.agent.util.llm.llm import LLMConfig, LLMStrategyType
     from dbgpt.agent.util.react_parser import ReActOutputParser
     from dbgpt.core import StorageConversation
     from dbgpt.model.cluster.client import DefaultLLMClient
@@ -1725,10 +1752,31 @@ print(json.dumps(summary, ensure_ascii=False))
                         + "\n".join(f"  - {url}" for url in all_images)
                     )
                     chunks.append({"output_type": "text", "content": img_summary})
-                # Special handling for calculate_ratios.py output:
-                # Store its output in react_state so html_interpreter can use
-                # it automatically. This prevents the LLM from having to echo
-                # back 30 keys of data in JSON
+                auto_data = react_state.get("auto_data")
+                if not isinstance(auto_data, dict):
+                    auto_data = {}
+                    react_state["auto_data"] = auto_data
+                filtered_chunks = []
+                for chunk in chunks:
+                    if chunk.get("output_type") != "text":
+                        filtered_chunks.append(chunk)
+                        continue
+                    content = chunk.get("content") or ""
+                    cleaned, extracted = _extract_auto_data_markers(content)
+                    if extracted:
+                        auto_data.update(extracted)
+                        logger.info(
+                            "execute_skill_script_file: captured auto_data keys=%s",
+                            sorted(extracted.keys()),
+                        )
+                    if cleaned:
+                        chunk["content"] = cleaned
+                        filtered_chunks.append(chunk)
+                    elif not extracted:
+                        filtered_chunks.append(chunk)
+                chunks = filtered_chunks
+
+                # Compatibility path for existing financial-report skill.
                 if script_file_name == "calculate_ratios.py":
                     for chunk in chunks:
                         if chunk.get("output_type") == "text":
@@ -1854,10 +1902,14 @@ print(json.dumps(summary, ensure_ascii=False))
                         replacements = {}
             if not isinstance(replacements, dict):
                 replacements = {}
+            auto_data = react_state.get("auto_data", {})
+            if isinstance(auto_data, dict):
+                replacements = {**auto_data, **replacements}
+
             # Merge LLM replacements with ratio_data from calculate_ratios.py
             ratio_data = react_state.get("ratio_data", {})
             if isinstance(ratio_data, dict):
-                # LLM's data overwrites ratio_data if keys overlap
+                # auto_data / LLM data overwrites ratio_data if keys overlap
                 merged = {**ratio_data, **replacements}
                 replacements = merged
 
@@ -1877,7 +1929,7 @@ print(json.dumps(summary, ensure_ascii=False))
 
             def _replace_placeholder(m):
                 key = m.group(1)
-                return str(replacements.get(key, "NA"))
+                return str(replacements.get(key, ""))
 
             html = re.sub(r"\{\{([A-Z_0-9]+)\}\}", _replace_placeholder, raw_template)
             if not title or title == "Report":
@@ -1936,8 +1988,13 @@ print(json.dumps(summary, ensure_ascii=False))
                 )
 
         # ── Mode 3: inline html ──────────────────────────────────────
-        # Unescape literal \n sequences that LLM may produce
-        if html and isinstance(html, str):
+        # Unescape literal \n sequences that LLM may produce.
+        # IMPORTANT: Only apply this unescape when html was provided directly
+        # (inline mode).  Template mode (Mode 1) and file mode (Mode 2) produce
+        # real HTML that already contains actual newlines and may contain JS
+        # regex literals like /\\n/ which must NOT be collapsed into real
+        # newlines — doing so corrupts the JS and breaks chart rendering.
+        if html and isinstance(html, str) and not template_path and not file_path:
             if "\\n" in html:
                 html = html.replace("\\n", "\n")
             if "\\t" in html:
@@ -2078,7 +2135,16 @@ print(json.dumps(summary, ensure_ascii=False))
         ).create(),
         auto_convert_message=True,
     )
-    llm_config = LLMConfig(llm_client=llm_client)
+    # If user specified a model_name, use Priority strategy to ensure the
+    # agent uses the requested model instead of picking the first available one.
+    if dialogue.model_name:
+        llm_config = LLMConfig(
+            llm_client=llm_client,
+            llm_strategy=LLMStrategyType.Priority,
+            strategy_context=json.dumps([dialogue.model_name]),
+        )
+    else:
+        llm_config = LLMConfig(llm_client=llm_client)
 
     conv_id = dialogue.conv_uid or str(uuid.uuid4())
     react_state["conv_id"] = conv_id

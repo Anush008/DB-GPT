@@ -14,6 +14,7 @@ import {
   IChatDialogueSchema,
   IDB,
   NewDialogueParam,
+  PaginationResult,
   SceneResponse,
   UserParam,
   UserParamResponse,
@@ -103,6 +104,16 @@ export const postDbRefresh = (data: PostDbRefreshParams) => {
 /** Chat Page */
 export const getDialogueList = () => {
   return GET<null, DialogueListResponse>('/api/v1/chat/dialogue/list');
+};
+export const getDialogueListPaged = (
+  data: { chat_mode?: string; user_name?: string; sys_code?: string },
+  page = 1,
+  page_size = 20,
+) => {
+  return POST<typeof data, PaginationResult<IChatDialogueSchema>>(
+    `/api/v1/chat/dialogue/query_page?page=${page}&page_size=${page_size}`,
+    data,
+  );
 };
 export const getUsableModels = () => {
   return GET<null, Array<string>>('/api/v1/model/types');

@@ -213,6 +213,10 @@ export const CommonEn = {
   used_apps: 'Used Apps',
   app_in_mind: "Don't have an app in mind? to",
   explore: 'Explore',
+  new_task: 'New Task',
+  all_tasks: 'All Tasks',
+  view_all: 'View All',
+  no_tasks: 'No history tasks',
   Discover_more: 'Discove more',
   sdk_insert: 'SDK Insert',
   my_apps: 'My Apps',
@@ -446,4 +450,6 @@ export const CommonEn = {
   evaluation_env_test: 'Test Set',
   evaluation_env_dev_tooltip: 'Dataset for local development, validation and debugging',
   evaluation_env_test_tooltip: 'Dataset for official evaluation and leaderboard ranking',
+  home_title: 'DB-GPT AI Assistant',
+  home_subtitle: 'Agentic Data Driven Decisions',
 } as const;
