@@ -16,6 +16,7 @@ import Icon, {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   MessageOutlined,
+  MoreOutlined,
   PlusOutlined,
   SettingOutlined,
   ThunderboltOutlined,
@@ -341,8 +342,15 @@ function SideBar() {
 
       {/* All Tasks Section */}
       <div className='mt-4 mb-2 px-1'>
-        <div className='text-xs font-semibold text-gray-400 uppercase tracking-wider'>
-          {t('all_tasks')}
+        <div className='flex items-center justify-between'>
+          <span className='text-xs font-semibold text-gray-400 uppercase tracking-wider'>
+            {t('all_tasks')}
+          </span>
+          <Link href='/conversations'>
+            <Tooltip title='查看全部'>
+              <MoreOutlined className='text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer transition-colors text-sm' />
+            </Tooltip>
+          </Link>
         </div>
       </div>
       <div className='flex-1 overflow-y-auto min-h-0'>
