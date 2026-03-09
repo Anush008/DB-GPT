@@ -2490,14 +2490,14 @@ const Playground: NextPage = () => {
                               }}
                               trigger={['click']}
                             >
-                              <Tooltip title='Add Context (File, DB, Knowledge)'>
-                                <Button
-                                  type='text'
-                                  shape='circle'
-                                  size='small'
-                                  icon={<PlusOutlined />}
-                                  className='flex items-center justify-center text-gray-500 hover:text-violet-600 bg-gradient-to-b from-white to-gray-50 dark:from-[#2a2b2f] dark:to-[#1e1f24] dark:text-gray-300 border border-gray-200/80 dark:border-white/10 shadow-[0_1px_2px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,1)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.05)] hover:-translate-y-[0.5px] hover:shadow-[0_2px_4px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,1)] dark:hover:border-white/20 transition-all flex-shrink-0'
-                                />
+                               <Tooltip title={t('add_context')}>
+                                 <Button
+                                   type='text'
+                                   shape='circle'
+                                   size='small'
+                                   icon={<PlusOutlined />}
+                                   className='flex items-center justify-center text-gray-500 hover:text-violet-600 bg-gradient-to-b from-white to-gray-50 dark:from-[#2a2b2f] dark:to-[#1e1f24] dark:text-gray-300 border border-gray-200/80 dark:border-white/10 shadow-[0_1px_2px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,1)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.05)] hover:-translate-y-[0.5px] hover:shadow-[0_2px_4px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,1)] dark:hover:border-white/20 transition-all flex-shrink-0'
+                                 />
                               </Tooltip>
                             </Dropdown>
 
@@ -2513,7 +2513,7 @@ const Playground: NextPage = () => {
                                 <div className='w-[320px] bg-white dark:bg-[#2c2d31] rounded-xl shadow-xl overflow-hidden'>
                                   <div className='p-3 border-b border-gray-100 dark:border-gray-700'>
                                     <Input
-                                      placeholder={t('search_skill') || '搜索技能'}
+                                       placeholder={t('search_skill')}
                                       prefix={<SearchOutlined className='text-gray-400' />}
                                       value={skillSearchQuery}
                                       onChange={e => setSkillSearchQuery(e.target.value)}
@@ -2608,7 +2608,7 @@ const Playground: NextPage = () => {
                                 </div>
                               }
                             >
-                              <Tooltip title={selectedSkill ? `技能：${selectedSkill.name}` : '选择技能'}>
+                               <Tooltip title={selectedSkill ? t('skill_selected', { name: selectedSkill.name }) : t('select_skill')}>
                                 <Button
                                   type='text'
                                   shape='circle'
@@ -2661,12 +2661,12 @@ const Playground: NextPage = () => {
 
                           <div className='flex items-center gap-3'>
                             {/* Voice Button */}
-                            <Tooltip title='语音输入'>
+                            <Tooltip title={t('voice_input')}>
                               <Button
                                 type='text'
                                 shape='circle'
                                 icon={<AudioOutlined className='text-gray-500 text-[18px]' />}
-                                onClick={() => message.info('语音输入即将上线')}
+                                onClick={() => message.info(t('voice_input_coming_soon'))}
                                 className='flex-shrink-0 h-9 w-9 transition-all duration-200 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800'
                               />
                             </Tooltip>
@@ -2715,7 +2715,7 @@ const Playground: NextPage = () => {
 
                 {rightPanelCollapsed && (
                   <div className='absolute right-0 top-1/2 -translate-y-1/2 z-10'>
-                    <Tooltip title='展开面板'>
+                    <Tooltip title={t('expand_panel')}>
                       <Button
                         type='text'
                         shape='circle'
@@ -2902,7 +2902,7 @@ const Playground: NextPage = () => {
                             }}
                             trigger={['click']}
                           >
-                            <Tooltip title='添加'>
+                            <Tooltip title={t('add_context')}>
                               <Button
                                 type='text'
                                 shape='circle'
@@ -3020,7 +3020,13 @@ const Playground: NextPage = () => {
                               </div>
                             }
                           >
-                            <Tooltip title={selectedSkill ? `技能：${selectedSkill.name}` : '选择技能'}>
+                              <Tooltip
+                                title={
+                                  selectedSkill
+                                    ? t('skill_selected', { name: selectedSkill.name })
+                                    : t('select_skill')
+                                }
+                              >
                               <Button
                                 type='text'
                                 shape='circle'
@@ -3144,7 +3150,13 @@ const Playground: NextPage = () => {
                               </div>
                             }
                           >
-                            <Tooltip title={selectedDb ? `数据库：${selectedDb.db_name}` : '选择数据库'}>
+                            <Tooltip
+                              title={
+                                selectedDb
+                                  ? t('database_selected', { name: selectedDb.db_name })
+                                  : t('select_database')
+                              }
+                            >
                               <Button
                                 type='text'
                                 shape='circle'
@@ -3263,7 +3275,13 @@ const Playground: NextPage = () => {
                               </div>
                             }
                           >
-                            <Tooltip title={selectedKnowledge ? `知识库：${selectedKnowledge.name}` : '选择知识库'}>
+                            <Tooltip
+                              title={
+                                selectedKnowledge
+                                  ? t('knowledge_selected', { name: selectedKnowledge.name })
+                                  : t('select_knowledge')
+                              }
+                            >
                               <Button
                                 type='text'
                                 shape='circle'
