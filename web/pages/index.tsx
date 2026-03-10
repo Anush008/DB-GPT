@@ -2233,7 +2233,7 @@ const Playground: NextPage = () => {
           {/* Top Header */}
           <div className='h-16 flex-shrink-0 flex items-center justify-between px-8 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-[#111217]/80 backdrop-blur z-20'>
             <div className='flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 px-2 py-1 rounded-md'>
-              <span>DB-GPT</span>
+              <span>{t('home_title')}</span>
             </div>
             <div className='flex items-center gap-4'>
               {selectedDb && (
@@ -2490,14 +2490,14 @@ const Playground: NextPage = () => {
                               }}
                               trigger={['click']}
                             >
-                               <Tooltip title={t('add_context')}>
-                                 <Button
-                                   type='text'
-                                   shape='circle'
-                                   size='small'
-                                   icon={<PlusOutlined />}
-                                   className='flex items-center justify-center text-gray-500 hover:text-violet-600 bg-gradient-to-b from-white to-gray-50 dark:from-[#2a2b2f] dark:to-[#1e1f24] dark:text-gray-300 border border-gray-200/80 dark:border-white/10 shadow-[0_1px_2px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,1)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.05)] hover:-translate-y-[0.5px] hover:shadow-[0_2px_4px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,1)] dark:hover:border-white/20 transition-all flex-shrink-0'
-                                 />
+                              <Tooltip title={t('add_context')}>
+                                <Button
+                                  type='text'
+                                  shape='circle'
+                                  size='small'
+                                  icon={<PlusOutlined />}
+                                  className='flex items-center justify-center text-gray-500 hover:text-violet-600 bg-gradient-to-b from-white to-gray-50 dark:from-[#2a2b2f] dark:to-[#1e1f24] dark:text-gray-300 border border-gray-200/80 dark:border-white/10 shadow-[0_1px_2px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,1)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.05)] hover:-translate-y-[0.5px] hover:shadow-[0_2px_4px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,1)] dark:hover:border-white/20 transition-all flex-shrink-0'
+                                />
                               </Tooltip>
                             </Dropdown>
 
@@ -2513,7 +2513,7 @@ const Playground: NextPage = () => {
                                 <div className='w-[320px] bg-white dark:bg-[#2c2d31] rounded-xl shadow-xl overflow-hidden'>
                                   <div className='p-3 border-b border-gray-100 dark:border-gray-700'>
                                     <Input
-                                       placeholder={t('search_skill')}
+                                      placeholder={t('search_skill')}
                                       prefix={<SearchOutlined className='text-gray-400' />}
                                       value={skillSearchQuery}
                                       onChange={e => setSkillSearchQuery(e.target.value)}
@@ -2531,7 +2531,7 @@ const Playground: NextPage = () => {
                                           skill.description.toLowerCase().includes(skillSearchQuery.toLowerCase()),
                                       )
                                       .map(skill => (
-                                         <div
+                                        <div
                                           key={skill.id}
                                           onClick={() => {
                                             if (selectedSkill?.id === skill.id) {
@@ -2608,7 +2608,11 @@ const Playground: NextPage = () => {
                                 </div>
                               }
                             >
-                               <Tooltip title={selectedSkill ? t('skill_selected', { name: selectedSkill.name }) : t('select_skill')}>
+                              <Tooltip
+                                title={
+                                  selectedSkill ? t('skill_selected', { name: selectedSkill.name }) : t('select_skill')
+                                }
+                              >
                                 <Button
                                   type='text'
                                   shape='circle'
@@ -2787,18 +2791,16 @@ const Playground: NextPage = () => {
             // Welcome Mode: Display Hero Section
             <div className='flex-1 flex flex-col items-center justify-center px-6 py-4 pb-20 overflow-y-auto'>
               <div className='w-full max-w-[860px] flex flex-col items-center animate-fade-in-up'>
-                <div className='flex flex-col items-center mb-8'>
-                  <div className='px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 text-xs font-semibold rounded-full'>
-                    {t('home_title')}
-                  </div>
-                </div>
-
-                <h1 className='text-4xl md:text-5xl font-serif text-gray-900 dark:text-gray-100 mb-12 text-center flex items-center gap-4'>
+                <h1 className='text-4xl md:text-5xl font-serif text-gray-900 dark:text-gray-100 mb-4 text-center flex items-center gap-4'>
                   <div className='w-12 h-12 rounded-xl bg-white dark:bg-[#1a1b1e] shadow-md flex items-center justify-center flex-shrink-0'>
                     <Image src='/LOGO_SMALL.png' alt='DB-GPT' width={32} height={32} className='object-contain' />
                   </div>
-                  Agentic Data Driven Decisions
+                  {t('home_title')}
                 </h1>
+
+                <p className='text-sm md:text-base text-gray-400 dark:text-gray-500 tracking-[0.2em] font-light mb-10'>
+                  {t('home_subtitle')}
+                </p>
 
                 {/* Input Box Container - Premium Layered Style */}
                 <div className='w-full relative'>
@@ -2943,7 +2945,7 @@ const Playground: NextPage = () => {
                                         skill.description.toLowerCase().includes(skillSearchQuery.toLowerCase()),
                                     )
                                     .map(skill => (
-                                       <div
+                                      <div
                                         key={skill.id}
                                         onClick={() => {
                                           if (selectedSkill?.id === skill.id) {
@@ -3020,13 +3022,11 @@ const Playground: NextPage = () => {
                               </div>
                             }
                           >
-                              <Tooltip
-                                title={
-                                  selectedSkill
-                                    ? t('skill_selected', { name: selectedSkill.name })
-                                    : t('select_skill')
-                                }
-                              >
+                            <Tooltip
+                              title={
+                                selectedSkill ? t('skill_selected', { name: selectedSkill.name }) : t('select_skill')
+                              }
+                            >
                               <Button
                                 type='text'
                                 shape='circle'
@@ -3152,9 +3152,7 @@ const Playground: NextPage = () => {
                           >
                             <Tooltip
                               title={
-                                selectedDb
-                                  ? t('database_selected', { name: selectedDb.db_name })
-                                  : t('select_database')
+                                selectedDb ? t('database_selected', { name: selectedDb.db_name }) : t('select_database')
                               }
                             >
                               <Button
@@ -3440,14 +3438,11 @@ const Playground: NextPage = () => {
           {/* Footer Promo - Only show when no messages */}
           {messages.length === 0 && (
             <div className='absolute bottom-6 left-0 right-0 flex justify-center'>
-              <div className='bg-gray-50 dark:bg-[#2c2d31] px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center gap-4 shadow-sm cursor-pointer hover:bg-gray-100'>
-                <div className='w-8 h-8 bg-black rounded-lg text-white flex items-center justify-center font-serif italic'>
-                  D
-                </div>
-                <div className='flex flex-col'>
-                  <span className='text-xs font-bold text-gray-800 dark:text-gray-200'>Data-Driven Decisions</span>
-                  <span className='text-[10px] text-gray-500'>Empower your business with AI analytics</span>
-                </div>
+              <div className='bg-white/60 dark:bg-[#1e1f24]/60 backdrop-blur-sm px-5 py-2.5 rounded-full border border-gray-100 dark:border-gray-700/50 flex items-center gap-3 shadow-sm cursor-pointer hover:shadow-md hover:bg-white/90 dark:hover:bg-[#1e1f24]/90 transition-all duration-300'>
+                <Image src='/LOGO_SMALL.png' alt='DB-GPT' width={22} height={22} className='object-contain' />
+                <span className='text-xs font-medium text-gray-600 dark:text-gray-300 tracking-wide'>{t('home_subtitle')}</span>
+                <span className='text-[10px] text-gray-400 dark:text-gray-500'>·</span>
+                <span className='text-[10px] text-gray-400 dark:text-gray-500'>{t('home_title')}</span>
               </div>
             </div>
           )}

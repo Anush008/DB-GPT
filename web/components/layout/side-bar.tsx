@@ -6,20 +6,15 @@ import UserBar from '@/new-components/layout/UserBar';
 import type { IChatDialogueSchema } from '@/types/chat';
 import { STORAGE_LANG_KEY, STORAGE_THEME_KEY } from '@/utils/constants/index';
 import Icon, {
-  ApartmentOutlined,
-  AppstoreOutlined,
-  BookOutlined,
-  DatabaseOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  GlobalOutlined,
-  LineChartOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
-  MessageOutlined,
-  PlusOutlined,
-  RightOutlined,
-  RocketOutlined,
+    ApartmentOutlined, AppstoreOutlined,
+    DeleteOutlined,
+    EditOutlined,
+    GlobalOutlined,
+    LineChartOutlined,
+    MenuFoldOutlined,
+    MenuUnfoldOutlined,
+    MessageOutlined, PlusOutlined,
+    RightOutlined,
 } from '@ant-design/icons';
 import { Popover, Skeleton, Tooltip, message } from 'antd';
 import cls from 'classnames';
@@ -28,13 +23,14 @@ import 'moment/locale/zh-cn';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 type RouteItem = {
   key: string;
   name: string;
-  icon: ReactNode;
+  iconSrc: string;
+  activeIconSrc?: string;
   path: string;
   isActive?: boolean;
 };
@@ -45,10 +41,27 @@ function smallMenuItemStyle(active?: boolean) {
   }`;
 }
 
+function SidebarPictureIcon({
+  src,
+  activeSrc,
+  active,
+  alt,
+  size = 32,
+}: {
+  src: string;
+  activeSrc?: string;
+  active?: boolean;
+  alt: string;
+  size?: number;
+}) {
+  return <Image src={active && activeSrc ? activeSrc : src} alt={alt} width={size} height={size} />;
+}
+
 function SideBar() {
   const { isMenuExpand, setIsMenuExpand, mode, setMode } = useContext(ChatContext);
   const router = useRouter();
   const { pathname } = router;
+  const isNewTaskActive = pathname === '/';
   const isSettingsActive =
     pathname.startsWith('/construct/app') ||
     pathname.startsWith('/construct/flow') ||
@@ -128,36 +141,32 @@ function SideBar() {
         key: 'explore',
         name: t('explore'),
         isActive: pathname === '/',
-        icon: (
-          <Image
-            key='image_explore'
-            src={pathname === '/' ? '/pictures/explore_active.png' : '/pictures/explore.png'}
-            alt='explore_image'
-            width={40}
-            height={40}
-          />
-        ),
+        iconSrc: '/pictures/explore.png',
+        activeIconSrc: '/pictures/explore_active.png',
         path: '/',
       },
       {
         key: 'skills',
-        name: t('skills') || '技能',
+        name: t('skills'),
         isActive: pathname.startsWith('/construct/skills'),
-        icon: <RocketOutlined style={{ fontSize: 20 }} />,
+        iconSrc: '/pictures/skills.svg',
+        activeIconSrc: '/pictures/skills_active.svg',
         path: '/construct/skills',
       },
       {
         key: 'datasources',
-        name: t('datasources') || '数据源',
+        name: t('datasources'),
         isActive: pathname.startsWith('/construct/database'),
-        icon: <DatabaseOutlined style={{ fontSize: 20 }} />,
+        iconSrc: '/pictures/datasource.svg',
+        activeIconSrc: '/pictures/datasource_active.svg',
         path: '/construct/database',
       },
       {
         key: 'knowledge',
-        name: t('knowledge') || '知识库',
+        name: t('knowledge'),
         isActive: pathname.startsWith('/construct/knowledge'),
-        icon: <BookOutlined style={{ fontSize: 20 }} />,
+        iconSrc: '/pictures/knowledge_sidebar.svg',
+        activeIconSrc: '/pictures/knowledge_sidebar_active.svg',
         path: '/construct/knowledge',
       },
     ];
@@ -167,7 +176,7 @@ function SideBar() {
   const settingsContent = (
     <div className='w-56 py-1'>
       <div className='px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider'>
-        {t('management') || '管理'}
+        {t('management')}
       </div>
       <div
         onClick={() => {
@@ -176,11 +185,13 @@ function SideBar() {
         }}
         className={cls(
           'flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors',
-          { 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400': pathname.startsWith('/construct/app') }
+          {
+            'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400': pathname.startsWith('/construct/app'),
+          },
         )}
       >
         <AppstoreOutlined className='text-blue-500' />
-        <span>{t('app_management') || '应用管理'}</span>
+        <span>{t('app_management')}</span>
       </div>
       <div
         onClick={() => {
@@ -189,11 +200,13 @@ function SideBar() {
         }}
         className={cls(
           'flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors',
-          { 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400': pathname.startsWith('/construct/flow') }
+          {
+            'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400': pathname.startsWith('/construct/flow'),
+          },
         )}
       >
         <ApartmentOutlined className='text-green-500' />
-        <span>{t('awel_workflow') || 'AWEL 工作流'}</span>
+        <span>{t('awel_workflow')}</span>
       </div>
       <div
         onClick={() => {
@@ -202,11 +215,13 @@ function SideBar() {
         }}
         className={cls(
           'flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors',
-          { 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400': pathname.startsWith('/construct/prompt') }
+          {
+            'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400': pathname.startsWith('/construct/prompt'),
+          },
         )}
       >
         <EditOutlined className='text-orange-500' />
-        <span>{t('prompts') || '提示词'}</span>
+        <span>{t('prompts')}</span>
       </div>
       <div
         onClick={() => {
@@ -215,11 +230,13 @@ function SideBar() {
         }}
         className={cls(
           'flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors',
-          { 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400': pathname.startsWith('/construct/dbgpts') }
+          {
+            'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400': pathname.startsWith('/construct/dbgpts'),
+          },
         )}
       >
         <GlobalOutlined className='text-purple-500' />
-        <span>{t('dbgpts_community') || 'DBGPTS 社区'}</span>
+        <span>{t('dbgpts_community')}</span>
       </div>
       <div
         onClick={() => {
@@ -228,11 +245,13 @@ function SideBar() {
         }}
         className={cls(
           'flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors',
-          { 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400': pathname === '/models_evaluation' }
+          {
+            'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400': pathname === '/models_evaluation',
+          },
         )}
       >
         <LineChartOutlined className='text-red-500' />
-        <span>{t('models_evaluation') || '模型评测'}</span>
+        <span>{t('models_evaluation')}</span>
       </div>
     </div>
   );
@@ -273,7 +292,14 @@ function SideBar() {
             {functions.map(item => (
               <Link key={item.key} className='h-12 flex items-center' href={item.path}>
                 <Tooltip title={item.name} placement='right'>
-                  <div className={smallMenuItemStyle(item.isActive)}>{item.icon}</div>
+                  <div className={smallMenuItemStyle(item.isActive)}>
+                    <SidebarPictureIcon
+                      src={item.iconSrc}
+                      activeSrc={item.activeIconSrc}
+                      active={item.isActive}
+                      alt={`${item.key}_icon`}
+                    />
+                  </div>
                 </Tooltip>
               </Link>
             ))}
@@ -289,9 +315,14 @@ function SideBar() {
               arrow={false}
               overlayInnerStyle={{ padding: 0, borderRadius: 12, overflow: 'hidden' }}
             >
-              <Tooltip title={t('construct') || '应用管理'} placement='right'>
+              <Tooltip title={t('construct')} placement='right'>
                 <div className={smallMenuItemStyle(isSettingsActive)}>
-                  <AppstoreOutlined />
+                  <SidebarPictureIcon
+                    src='/pictures/app.png'
+                    activeSrc='/pictures/app_active.png'
+                    active={isSettingsActive}
+                    alt='construct_icon_collapsed'
+                  />
                 </div>
               </Tooltip>
             </Popover>
@@ -348,7 +379,14 @@ function SideBar() {
             )}
             key={item.key}
           >
-            <div className='mr-3'>{item.icon}</div>
+            <div className='mr-3'>
+              <SidebarPictureIcon
+                src={item.iconSrc}
+                activeSrc={item.activeIconSrc}
+                active={item.isActive}
+                alt={`${item.key}_icon`}
+              />
+            </div>
             <span className='text-sm'>{item.name}</span>
           </Link>
         ))}
@@ -362,14 +400,21 @@ function SideBar() {
           arrow={false}
           overlayInnerStyle={{ padding: 0, borderRadius: 12, overflow: 'hidden' }}
         >
-          <div className={cls(
-            'flex items-center w-full h-12 px-4 cursor-pointer hover:bg-blue-50/50 dark:hover:bg-blue-900/10 hover:rounded-xl',
-            { 'bg-blue-50 rounded-xl text-blue-600 dark:bg-blue-900/20 dark:text-blue-400': isSettingsActive }
-          )}>
+          <div
+            className={cls(
+              'flex items-center w-full h-12 px-4 cursor-pointer hover:bg-blue-50/50 dark:hover:bg-blue-900/10 hover:rounded-xl',
+              { 'bg-blue-50 rounded-xl text-blue-600 dark:bg-blue-900/20 dark:text-blue-400': isSettingsActive },
+            )}
+          >
             <div className='mr-3'>
-              <AppstoreOutlined style={{ fontSize: 20 }} />
+              <SidebarPictureIcon
+                src='/pictures/app.png'
+                activeSrc='/pictures/app_active.png'
+                active={isSettingsActive}
+                alt='construct_icon'
+              />
             </div>
-            <span className='text-sm'>{t('construct') || '应用管理'}</span>
+            <span className='text-sm'>{t('construct')}</span>
           </div>
         </Popover>
       </div>
@@ -377,9 +422,7 @@ function SideBar() {
       {/* All Tasks Section */}
       <div className='mt-4 mb-2 px-1'>
         <div className='flex items-center justify-between'>
-          <span className='text-xs font-semibold text-gray-400 uppercase tracking-wider'>
-            {t('all_tasks')}
-          </span>
+          <span className='text-xs font-semibold text-gray-400 uppercase tracking-wider'>{t('all_tasks')}</span>
           <Link href='/conversations' className='inline-flex items-center'>
             <Tooltip title={t('view_all')}>
               <RightOutlined className='text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer transition-colors text-xs leading-none' />
