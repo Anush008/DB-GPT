@@ -27,6 +27,7 @@ import { Button, Tooltip, message } from 'antd';
 import { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // ---------------------------------------------------------------------------
 // Types mirroring index.tsx
@@ -347,25 +348,8 @@ function useReplayEngine(rounds: ReplayRound[], speed: number, autoPlay = false)
     for (let ri = stateRef.current.roundIndex; ri < rounds.length; ri++) {
       const round = rounds[ri];
 
-      // Skip already-finished rounds (defensive: if re-entered after restart)
+      // Restore already-finished rounds instantly
       if (ri < stateRef.current.roundIndex) continue;
-
-      // If this round's final summary was already shown (e.g. runLoop restarted
-      // after showing final but before advancing to next round), skip ahead.
-      if (ri === stateRef.current.roundIndex && stateRef.current.showFinalForRound) {
-        if (ri < rounds.length - 1) {
-          await delay(BASE_DELAYS.betweenRounds);
-          if (!playingRef.current) return;
-          setState(prev => ({
-            ...prev,
-            roundIndex: ri + 1,
-            visibleStepCount: 0,
-            activeStepId: null,
-            showFinalForRound: false,
-          }));
-        }
-        continue;
-      }
 
       for (let si = stateRef.current.visibleStepCount; si < round.steps.length; si++) {
         if (!playingRef.current) return; // paused
@@ -502,7 +486,7 @@ const SharePage: NextPage<SharePageProps> = ({
   const [speed, setSpeed] = useState(1);
   const [rightPanelView, setRightPanelView] = useState<PanelView>('execution');
 
-  const rounds = useMemo(() => (initMessages ? buildReplayRounds(initMessages) : []), [initMessages]);
+  const rounds = initMessages ? buildReplayRounds(initMessages) : [];
   const { state, playing, play, pause, jumpToRound, restart } = useReplayEngine(rounds, speed, true);
 
   // -------------------------------------------------------------------------

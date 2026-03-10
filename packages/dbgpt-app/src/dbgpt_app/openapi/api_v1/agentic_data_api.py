@@ -1363,7 +1363,14 @@ print(json.dumps(summary, ensure_ascii=False))
             {"output_type": "code", "content": code.strip()},
         ]
         if output_text.strip():
-            chunks.append({"output_type": "text", "content": output_text.strip()})
+            clean_output = output_text.strip()
+            max_out_len = 2000
+            if len(clean_output) > max_out_len:
+                clean_output = (
+                    clean_output[:max_out_len]
+                    + f"\n\n... [Output truncated, length: {len(clean_output)} chars. Only showing first {max_out_len} chars. If you generated HTML, the file is saved.]"
+                )
+            chunks.append({"output_type": "text", "content": clean_output})
         else:
             chunks.append(
                 {
@@ -2398,7 +2405,7 @@ Action Input: The JSON format of tool parameters
     )
 
     agent_builder = (
-        ReActAgent(max_retry_count=10)
+        ReActAgent(max_retry_count=30)
         .bind(context)
         .bind(agent_memory)
         .bind(llm_config)

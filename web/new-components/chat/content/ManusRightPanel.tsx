@@ -74,6 +74,8 @@ export interface ActiveStepInfo {
   subtitle?: string;
   status: StepStatus;
   detail?: string;
+  action?: string;
+  actionInput?: any;
 }
 
 export interface ManusRightPanelProps {
@@ -150,41 +152,42 @@ const getDbTypeInfo = (dbType?: string): { icon: React.ReactNode; label: string 
 
 // Get status badge
 const StatusBadge: React.FC<{ status: StepStatus }> = ({ status }) => {
+  const { t } = useTranslation();
   switch (status) {
     case 'running':
       return (
         <div className='flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 text-[10px] font-medium'>
           <LoadingOutlined spin className='text-xs' />
-          <span>运行中</span>
+          <span>{t('Status')}</span>
         </div>
       );
     case 'completed':
       return (
         <div className='flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 text-[10px] font-medium'>
           <CheckCircleFilled className='text-xs' />
-          <span>完成</span>
+          <span>{t('completed')}</span>
         </div>
       );
     case 'error':
       return (
         <div className='flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 text-[10px] font-medium'>
           <CloseCircleFilled className='text-xs' />
-          <span>错误</span>
+          <span>{t('Error_Message')}</span>
         </div>
       );
     default:
       return (
         <div className='flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-[10px] font-medium'>
-          <span>待执行</span>
+          <span>{t('Process')}</span>
         </div>
       );
   }
 };
 
 // Copy to clipboard helper
-const copyToClipboard = (text: string) => {
+const copyToClipboard = (text: string, successText: string) => {
   navigator.clipboard.writeText(text);
-  message.success('已复制到剪贴板');
+  message.success(successText);
 };
 
 const getArtifactFileIcon = (artifact: ArtifactItem) => {
@@ -1134,6 +1137,7 @@ const SkillCardRenderer: React.FC<{
   skillName: string;
   outputs: ExecutionOutput[];
 }> = memo(({ skillName, outputs: _outputs }) => {
+  const { t } = useTranslation();
   const [detailData, setDetailData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1218,7 +1222,7 @@ const SkillCardRenderer: React.FC<{
   const handleAddToSkills = useCallback(() => {
     if (!isAdded) {
       setIsAdded(true);
-      message.success(`技能 "${skillName}" 已添加到我的技能`);
+      message.success(t('skill_added_success', { skillName }));
     }
   }, [skillName, isAdded]);
 
@@ -1229,7 +1233,7 @@ const SkillCardRenderer: React.FC<{
     return (
       <div className='flex flex-col items-center justify-center py-16 text-gray-400'>
         <LoadingOutlined className='text-3xl text-indigo-500 mb-4' />
-        <span className='text-sm'>{t('chat:load_skill')}...</span>
+        <span className='text-sm'>{t('load_skill')}...</span>
       </div>
     );
   }
@@ -1257,7 +1261,7 @@ const SkillCardRenderer: React.FC<{
                 <div className='flex items-center gap-2'>
                   <span className='text-sm font-semibold text-gray-800 dark:text-gray-200 truncate'>{displayName}</span>
                   <span className='flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-medium'>
-                    技能
+                    {t('skill_label')}
                   </span>
                 </div>
                 {description && (
@@ -1286,7 +1290,7 @@ const SkillCardRenderer: React.FC<{
                 icon={isAdded ? <CheckOutlined className='text-[10px]' /> : <PlusOutlined className='text-[10px]' />}
                 onClick={handleAddToSkills}
               >
-                {isAdded ? '已添加' : '添加到我的技能'}
+                {isAdded ? t('added') : t('add_to_my_skills')}
               </Button>
             </div>
           </div>
@@ -1298,7 +1302,7 @@ const SkillCardRenderer: React.FC<{
         >
           <div className='flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400'>
             <FolderOpenOutlined className='text-amber-500' />
-            <span>查看技能文件</span>
+            <span>{t('view_skill_files')}</span>
             {detailData?.tree?.children && (
               <span className='text-gray-400'>({detailData.tree.children.length} 项)</span>
             )}
@@ -1328,7 +1332,7 @@ const SkillCardRenderer: React.FC<{
             <div className='flex items-center gap-2'>
               <span className='text-sm font-semibold text-gray-800 dark:text-gray-200 truncate'>{displayName}</span>
               <span className='text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-medium'>
-                技能
+                {t('skill_label')}
               </span>
             </div>
           </div>
@@ -1354,7 +1358,7 @@ const SkillCardRenderer: React.FC<{
             icon={isAdded ? <CheckOutlined className='text-[10px]' /> : <PlusOutlined className='text-[10px]' />}
             onClick={handleAddToSkills}
           >
-            {isAdded ? '已添加' : '添加到我的技能'}
+            {isAdded ? t('added') : t('add_to_my_skills')}
           </Button>
         </div>
       </div>
@@ -1595,7 +1599,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
   return (
     <div className='relative flex flex-col h-full bg-[#f8f9fc] dark:bg-[#0d0e11]'>
       {onCollapse && (
-        <Tooltip title='收起面板' placement='left'>
+        <Tooltip title={t('collapse_panel')} placement='left'>
           <button
             onClick={() => onCollapse()}
             className='absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 w-6 h-12 flex items-center justify-center bg-white dark:bg-[#1a1b1e] border border-gray-200 dark:border-gray-700 rounded-full shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-md transition-all text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
@@ -1615,14 +1619,14 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
           </div>
           <div className='flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 font-medium'>
             <DesktopOutlined className='text-gray-500' />
-            <span>{terminalTitle || t('chat:db_gpt_computer')}</span>
+            <span>{terminalTitle || t('db_gpt_computer')}</span>
             {isRunning && <LoadingOutlined spin className='text-blue-500 ml-1' />}
           </div>
         </div>
 
         <div className='flex items-center gap-1'>
           {panelView === 'html-preview' && previewArtifact && (
-            <Tooltip title='导出 PDF'>
+            <Tooltip title={t('export_pdf')}>
               <Button
                 type='text'
                 size='small'
@@ -1630,13 +1634,13 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
                 onClick={handleExportPdf}
                 className='text-gray-500 hover:text-blue-500'
               >
-                导出 PDF
+                {t('export_pdf')}
               </Button>
             </Tooltip>
           )}
 
           {activeStep && onRerun && activeStep.status === 'completed' && (
-            <Tooltip title='重新执行'>
+            <Tooltip title={t('rerun')}>
               <Button
                 type='text'
                 size='small'
@@ -1644,13 +1648,13 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
                 onClick={onRerun}
                 className='text-gray-500 hover:text-blue-500'
               >
-                重新执行
+                {t('rerun')}
               </Button>
             </Tooltip>
           )}
 
           {onShare && (
-            <Tooltip title='分享此对话'>
+            <Tooltip title={t('share_conversation_tooltip')}>
               <Button
                 type='text'
                 size='small'
@@ -1658,7 +1662,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
                 onClick={onShare}
                 className='text-blue-500 hover:text-blue-600'
               >
-                分享
+                {t('share_conversation')}
               </Button>
             </Tooltip>
           )}
@@ -1678,7 +1682,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
             )}
           >
             <DesktopOutlined className='mr-1.5' />
-            执行过程
+            {t('execution_steps')}
             {panelView === 'execution' && (
               <div className='absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900 dark:bg-gray-100 rounded-full' />
             )}
@@ -1694,7 +1698,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
               )}
             >
               <FolderOpenOutlined className='mr-1.5' />
-              任务文件
+              {t('task_files')}
               <span className='ml-1.5 text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-500 px-1.5 py-0.5 rounded-full'>
                 {artifacts.length}
               </span>
@@ -1731,7 +1735,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
               )}
             >
               <EyeOutlined className='mr-1.5' />
-              {previewArtifact.name || '网页预览'}
+              {previewArtifact.name || t('web_preview')}
               {panelView === 'html-preview' && (
                 <div className='absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900 dark:bg-gray-100 rounded-full' />
               )}
@@ -1937,7 +1941,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
                                       <div className='text-sm font-semibold text-gray-800 dark:text-gray-200 truncate'>
                                         {skillDisplayName}
                                       </div>
-                                      <div className='text-[11px] text-gray-400 dark:text-gray-500'>技能</div>
+                <div className='text-[11px] text-gray-400 dark:text-gray-500'>{t('skill_label')}</div>
                                     </div>
                                   </div>
                                   {skillDescription && (
@@ -1971,21 +1975,38 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
                           return null;
                         })()) ||
                       (activeStep.type === 'sql' &&
-                        activeStep.detail.includes('Action: sql_query') &&
+                        (activeStep.action === 'sql_query' ||
+                          (activeStep.detail && activeStep.detail.includes('Action: sql_query'))) &&
                         (() => {
-                          // Parse SQL from Action Input JSON
-                          const inputMatch = activeStep.detail.match(/Action Input:\s*({[\s\S]*?})(?:\n|$)/);
                           let sql = '';
-                          if (inputMatch) {
+                          if (activeStep.actionInput) {
                             try {
-                              const parsed = JSON.parse(inputMatch[1]);
-                              sql = parsed.sql || '';
+                              const parsed =
+                                typeof activeStep.actionInput === 'string'
+                                  ? JSON.parse(activeStep.actionInput)
+                                  : activeStep.actionInput;
+                              sql = parsed?.sql || '';
                             } catch {
-                              // fallback: extract raw sql string
-                              const rawMatch = inputMatch[1].match(/"sql"\s*:\s*"([\s\S]*?)"/);
+                              const rawMatch = String(activeStep.actionInput).match(/"sql"\s*:\s*"([\s\S]*?)"/);
                               if (rawMatch) sql = rawMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
                             }
                           }
+
+                          if (!sql && activeStep.detail) {
+                            // Parse SQL from Action Input JSON
+                            const inputMatch = activeStep.detail.match(/Action Input:\s*({[\s\S]*?})(?:\n|$)/);
+                            if (inputMatch) {
+                              try {
+                                const parsed = JSON.parse(inputMatch[1]);
+                                sql = parsed.sql || '';
+                              } catch {
+                                // fallback: extract raw sql string
+                                const rawMatch = inputMatch[1].match(/"sql"\s*:\s*"([\s\S]*?)"/);
+                                if (rawMatch) sql = rawMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+                              }
+                            }
+                          }
+
                           if (!sql) return null;
 
                           // Simple SQL keyword highlighting
@@ -2087,7 +2108,10 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
                                 </Tooltip>
                               </div>
                               {/* SQL code area */}
-                              <div className='bg-[#1e1e2e] dark:bg-[#0d0d11] overflow-x-auto'>
+                              <div
+                                className='bg-[#1e1e2e] dark:bg-[#0d0d11] overflow-auto'
+                                style={{ maxHeight: '400px' }}
+                              >
                                 <pre className='text-[13px] leading-6 font-mono text-gray-200 p-4 m-0 whitespace-pre-wrap break-words'>
                                   <code>{highlightSQL(sql)}</code>
                                 </pre>

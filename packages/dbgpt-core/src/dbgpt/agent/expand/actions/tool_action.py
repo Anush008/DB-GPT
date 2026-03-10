@@ -220,6 +220,14 @@ async def run_tool(
             observations=str(tool_result),
             terminate=is_terminal,
         )
+
+        return ActionOutput(
+            is_exe_success=response_success,
+            content=str(tool_result),
+            view=view,
+            observations=obs_str,
+            terminate=is_terminal,
+        )
     except Exception as e:
         logger.exception("Tool Action Run Failed！")
         return ActionOutput(
