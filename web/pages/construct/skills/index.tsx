@@ -210,7 +210,7 @@ function Skills() {
     for (const f of uploadFileList) {
       const rawFile = f.originFileObj;
       if (!rawFile) {
-        message.error(`${f.name}: \u6587\u4EF6\u65E0\u6548`);
+        message.error(`${f.name}: ${t('skills_file_invalid')}`);
         continue;
       }
       const formData = new FormData();
@@ -224,21 +224,21 @@ function Skills() {
         if (json?.success) {
           successCount++;
         } else {
-          message.error(`${f.name}: ${json?.err_msg || '\u4E0A\u4F20\u5931\u8D25'}`);
+          message.error(`${f.name}: ${json?.err_msg || t('skills_upload_failed')}`);
         }
       } catch (err) {
         console.error('[Skills] Upload error:', err);
-        message.error(`${f.name}: \u4E0A\u4F20\u5931\u8D25`);
+        message.error(`${f.name}: ${t('skills_upload_failed')}`);
       }
     }
     setUploading(false);
     if (successCount > 0) {
-      message.success(`\u6210\u529F\u4E0A\u4F20 ${successCount} \u4E2A\u6280\u80FD`);
+      message.success(t('skills_upload_success', { count: successCount }));
       setUploadOpen(false);
       setUploadFileList([]);
       refreshList();
     }
-  }, [uploadFileList, refreshList]);
+  }, [uploadFileList, refreshList, t]);
 
   const uploadProps: UploadProps = {
     multiple: true,
@@ -253,7 +253,7 @@ function Skills() {
         originFileObj: file as any,
       };
       setUploadFileList(prev => [...prev, entry]);
-      return false; // prevent auto upload
+      return false;
     },
     onRemove: file => {
       setUploadFileList(prev => prev.filter(f => f.uid !== file.uid));
@@ -266,8 +266,8 @@ function Skills() {
       icon: <CloudUploadOutlined />,
       label: (
         <div>
-          <div className='font-medium'>{'\u4E0A\u4F20\u6280\u80FD'}</div>
-          <div className='text-xs text-gray-400'>{'\u4E0A\u4F20 .zip\u3001.skill \u6216\u6587\u4EF6\u5939'}</div>
+          <div className='font-medium'>{t('skills_upload_skill')}</div>
+          <div className='text-xs text-gray-400'>{t('skills_upload_skill_desc')}</div>
         </div>
       ),
       onClick: () => setUploadOpen(true),
@@ -280,19 +280,15 @@ function Skills() {
         <div className='h-screen w-full p-4 md:p-6 overflow-y-auto'>
           {/* Header */}
           <div className='mb-6'>
-            <h1 className='text-2xl font-bold text-gray-900 dark:text-white mb-1'>{t('skills') || '\u6280\u80FD'}</h1>
-            <p className='text-sm text-gray-500 dark:text-gray-400'>
-              {
-                '\u4E3A\u60A8\u7684\u667A\u80FD\u4F53\u63D0\u4F9B\u9884\u5C01\u88C5\u4E14\u53EF\u91CD\u590D\u7684\u6700\u4F73\u5B9E\u8DF5\u4E0E\u5DE5\u5177'
-              }
-            </p>
+            <h1 className='text-2xl font-bold text-gray-900 dark:text-white mb-1'>{t('skills')}</h1>
+            <p className='text-sm text-gray-500 dark:text-gray-400'>{t('skills_page_subtitle')}</p>
           </div>
 
           {/* Controls bar */}
           <div className='flex items-center gap-3 mb-6'>
             <Input
               prefix={<SearchOutlined className='text-gray-400' />}
-              placeholder={'\u641C\u7D22\u6280\u80FD'}
+              placeholder={t('skills_search_placeholder')}
               value={searchValue}
               onChange={e => setSearchValue(e.target.value)}
               allowClear
@@ -303,13 +299,13 @@ function Skills() {
               color={officialOnly ? 'blue' : undefined}
               onClick={() => setOfficialOnly(!officialOnly)}
             >
-              {officialOnly ? '\u2713 ' : ''}
-              {'\u5B98\u65B9'}
+              {officialOnly ? '✓ ' : ''}
+              {t('skills_official_tag')}
             </Tag>
             <div className='flex-1' />
             <Dropdown menu={{ items: addMenuItems }} trigger={['click']}>
               <Button className='border-none text-white bg-button-gradient flex items-center' icon={<PlusOutlined />}>
-                {'\u6DFB\u52A0'} <DownOutlined className='ml-1 text-[10px]' />
+                {t('skills_add_btn')} <DownOutlined className='ml-1 text-[10px]' />
               </Button>
             </Dropdown>
           </div>
@@ -317,7 +313,7 @@ function Skills() {
           {/* Skill cards grid */}
           {filteredSkills.length === 0 && !listLoading ? (
             <div className='flex items-center justify-center h-60 text-gray-400 dark:text-gray-500'>
-              {'\u6682\u65E0\u6280\u80FD'}
+              {t('skills_empty')}
             </div>
           ) : (
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4 pb-12'>
@@ -348,7 +344,7 @@ function Skills() {
 
                   {/* Description */}
                   <p className='text-sm text-gray-500 dark:text-gray-400 line-clamp-2 min-h-[40px] mb-3'>
-                    {skill.description || '\u6682\u65E0\u63CF\u8FF0'}
+                    {skill.description || t('no_data')}
                   </p>
 
                   {/* Footer */}
@@ -356,13 +352,13 @@ function Skills() {
                     <div className='flex items-center gap-2'>
                       {skill.type === 'official' ? (
                         <Tag color='blue' className='text-xs m-0'>
-                          {'\u5B98\u65B9'}
+                          {t('skills_official_tag')}
                         </Tag>
                       ) : (
                         <span>@{skill.author || 'unknown'}</span>
                       )}
-                      <span>{'\u00B7'}</span>
-                      <span>{'\u66F4\u65B0\u4E8E 2026\u5E742\u67086\u65E5'}</span>
+                      <span>·</span>
+                      <span>{'更新于 2026年2月6日'}</span>
                     </div>
                     <div
                       className='opacity-0 group-hover:opacity-100 transition-opacity'
@@ -396,12 +392,12 @@ function Skills() {
               {selectedSkill?.name || ''}.skill
             </span>
             <Tag color='blue' className='text-xs'>
-              {'\u6280\u80FD'}
+              {t('skills_detail_tag')}
             </Tag>
           </div>
           <div className='flex items-center gap-2'>
             <Button type='default' size='small'>
-              {'\u8BD5\u7528\u4E00\u4E0B'}
+              {t('skills_try_btn')}
             </Button>
             <EllipsisOutlined className='p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer' />
             <CloseOutlined
@@ -425,7 +421,7 @@ function Skills() {
                   className='bg-transparent'
                 />
               ) : (
-                <div className='text-gray-400 text-sm text-center mt-8'>{'\u52A0\u8F7D\u4E2D...'}</div>
+                <div className='text-gray-400 text-sm text-center mt-8'>{t('skills_loading')}</div>
               )}
             </div>
 
@@ -462,7 +458,7 @@ function Skills() {
               ) : (
                 !detailLoading && (
                   <div className='flex items-center justify-center h-full text-gray-400'>
-                    {'\u9009\u62E9\u6587\u4EF6\u67E5\u770B\u5185\u5BB9'}
+                    {t('skills_select_file_tip')}
                   </div>
                 )
               )}
@@ -477,9 +473,9 @@ function Skills() {
           setUploadOpen(false);
           setUploadFileList([]);
         }}
-        title={'\u4E0A\u4F20\u6280\u80FD'}
-        okText={'\u4E0A\u4F20'}
-        cancelText={'\u53D6\u6D88'}
+        title={t('skills_upload_modal_title')}
+        okText={t('Upload')}
+        cancelText={t('cancel')}
         onOk={handleUpload}
         confirmLoading={uploading}
         okButtonProps={{ disabled: uploadFileList.length === 0 }}
@@ -490,10 +486,8 @@ function Skills() {
             <p className='ant-upload-drag-icon'>
               <InboxOutlined />
             </p>
-            <p className='text-base font-medium'>{'\u70B9\u51FB\u6216\u62D6\u62FD\u6587\u4EF6\u5230\u6B64\u5904'}</p>
-            <p className='text-sm text-gray-400 mt-1'>
-              {'\u652F\u6301 .zip\u3001.skill\u3001.md\u3001.yaml\u3001.json \u683C\u5F0F'}
-            </p>
+            <p className='text-base font-medium'>{t('skills_upload_dragger_text')}</p>
+            <p className='text-sm text-gray-400 mt-1'>{t('skills_upload_format_tip')}</p>
           </Upload.Dragger>
         </div>
       </Modal>
