@@ -41,10 +41,7 @@ function ConversationsPage() {
   }>();
 
   const { loading, run: fetchList } = useRequest(
-    async (page = 1) =>
-      await apiInterceptors(
-        getDialogueListPaged({ chat_mode: 'chat_react_agent' }, page, PAGE_SIZE),
-      ),
+    async (page = 1) => await apiInterceptors(getDialogueListPaged({ chat_mode: 'chat_react_agent' }, page, PAGE_SIZE)),
     {
       defaultParams: [1],
       onSuccess: data => {
@@ -92,9 +89,7 @@ function ConversationsPage() {
   return (
     <div className='flex flex-col h-full w-full dark:bg-gradient-dark bg-gradient-light'>
       <div className='flex items-center justify-between px-6 py-5 border-b border-gray-100 dark:border-gray-800'>
-        <h1 className='text-xl font-semibold text-gray-800 dark:text-gray-100'>
-          {t('all_tasks') || '所有任务'}
-        </h1>
+        <h1 className='text-xl font-semibold text-gray-800 dark:text-gray-100'>{t('all_tasks') || '所有任务'}</h1>
         <div className='flex items-center gap-3'>
           <Input
             variant='filled'

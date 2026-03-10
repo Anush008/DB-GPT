@@ -24,10 +24,10 @@ import {
   StepForwardOutlined,
 } from '@ant-design/icons';
 import { Button, Tooltip, message } from 'antd';
-import { GetServerSideProps, NextPage } from 'next';
+import { NextPage } from 'next';
 import Head from 'next/head';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useRouter } from 'next/router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 // ---------------------------------------------------------------------------
 // Types mirroring index.tsx
@@ -118,7 +118,7 @@ function buildArtifacts(
             downloadable: true,
           });
         }
-      } else if (output.output_type === 'file') {
+      } else if ((output.output_type as string) === 'file') {
         artifacts.push({
           id: `${roundId}-file-${step.id}-${oIdx}`,
           type: 'file',
@@ -469,25 +469,54 @@ function useReplayEngine(rounds: ReplayRound[], speed: number, autoPlay = false)
 // Page component
 // ---------------------------------------------------------------------------
 
-interface SharePageProps {
-  token: string;
-  messages?: Array<{ role: string; context: string; order: number }>;
-  firstQuestion?: string;
-  error?: string;
-}
+const SharePage: NextPage = () => {
+  const router = useRouter();
+  const { token } = router.query as { token?: string };
 
-const SharePage: NextPage<SharePageProps> = ({
-  token: _token,
-  messages: initMessages,
-  firstQuestion,
-  error: initError,
-}) => {
-  const [fetchError] = useState<string | null>(initError || null);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Array<{ role: string; context: string; order: number }> | null>(null);
+  const [firstQuestion, setFirstQuestion] = useState<string>('');
   const [speed, setSpeed] = useState(1);
   const [rightPanelView, setRightPanelView] = useState<PanelView>('execution');
 
-  const rounds = initMessages ? buildReplayRounds(initMessages) : [];
-  const { state, playing, play, pause, jumpToRound, restart } = useReplayEngine(rounds, speed, true);
+  useEffect(() => {
+    if (!token) return;
+    const apiBase = process.env.API_BASE_URL ?? 'http://127.0.0.1:5670';
+    setLoading(true);
+    fetch(`${apiBase}/api/v1/chat/share/${token}`)
+      .then(res => {
+        if (!res.ok) {
+          setFetchError(`分享链接无效或已过期 (${res.status})`);
+          setLoading(false);
+          return null;
+        }
+        return res.json();
+      })
+      .then(json => {
+        if (!json) return;
+        const rawMessages = json?.data?.messages ?? null;
+        if (!Array.isArray(rawMessages)) {
+          setFetchError('数据格式错误');
+          setLoading(false);
+          return;
+        }
+        setMessages(rawMessages);
+        setFirstQuestion(rawMessages.find((m: any) => m.role === 'human')?.context ?? '');
+        setLoading(false);
+      })
+      .catch((err: any) => {
+        setFetchError(err?.message || '加载失败');
+        setLoading(false);
+      });
+  }, [token]);
+
+  const rounds = messages ? buildReplayRounds(messages) : [];
+  const { state, playing, play, pause, jumpToRound, restart } = useReplayEngine(
+    rounds,
+    speed,
+    !loading && rounds.length > 0,
+  );
 
   // -------------------------------------------------------------------------
   // Derive display data from replay state
@@ -562,6 +591,17 @@ const SharePage: NextPage<SharePageProps> = ({
   // -------------------------------------------------------------------------
   // Render
   // -------------------------------------------------------------------------
+
+  if (loading) {
+    return (
+      <div className='flex items-center justify-center h-screen bg-white dark:bg-[#111217]'>
+        <div className='text-center space-y-3'>
+          <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto' />
+          <p className='text-gray-400'>加载中...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (fetchError || rounds.length === 0) {
     return (
@@ -765,26 +805,6 @@ const SharePage: NextPage<SharePageProps> = ({
       </div>
     </>
   );
-};
-
-export const getServerSideProps: GetServerSideProps = async context => {
-  const { token } = context.params as { token: string };
-  const apiBase = process.env.API_BASE_URL ?? 'http://127.0.0.1:5670';
-  try {
-    const res = await fetch(`${apiBase}/api/v1/chat/share/${token}`);
-    if (!res.ok) {
-      return { props: { token, error: `分享链接无效或已过期 (${res.status})` } };
-    }
-    const json = await res.json();
-    const messages = json?.data?.messages ?? null;
-    if (!Array.isArray(messages)) {
-      return { props: { token, error: '数据格式错误' } };
-    }
-    const firstQuestion: string = messages.find((m: any) => m.role === 'human')?.context ?? '';
-    return { props: { token, messages, firstQuestion } };
-  } catch (e: any) {
-    return { props: { token, error: e?.message || '加载失败' } };
-  }
 };
 
 export default SharePage;

@@ -6,15 +6,17 @@ import UserBar from '@/new-components/layout/UserBar';
 import type { IChatDialogueSchema } from '@/types/chat';
 import { STORAGE_LANG_KEY, STORAGE_THEME_KEY } from '@/utils/constants/index';
 import Icon, {
-    ApartmentOutlined, AppstoreOutlined,
-    DeleteOutlined,
-    EditOutlined,
-    GlobalOutlined,
-    LineChartOutlined,
-    MenuFoldOutlined,
-    MenuUnfoldOutlined,
-    MessageOutlined, PlusOutlined,
-    RightOutlined,
+  ApartmentOutlined,
+  AppstoreOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  GlobalOutlined,
+  LineChartOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+  MessageOutlined,
+  PlusOutlined,
+  RightOutlined,
 } from '@ant-design/icons';
 import { Popover, Skeleton, Tooltip, message } from 'antd';
 import cls from 'classnames';
@@ -61,7 +63,6 @@ function SideBar() {
   const { isMenuExpand, setIsMenuExpand, mode, setMode } = useContext(ChatContext);
   const router = useRouter();
   const { pathname } = router;
-  const isNewTaskActive = pathname === '/';
   const isSettingsActive =
     pathname.startsWith('/construct/app') ||
     pathname.startsWith('/construct/flow') ||
@@ -175,9 +176,7 @@ function SideBar() {
 
   const settingsContent = (
     <div className='w-56 py-1'>
-      <div className='px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider'>
-        {t('management')}
-      </div>
+      <div className='px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider'>{t('management')}</div>
       <div
         onClick={() => {
           router.push('/construct/app');
