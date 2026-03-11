@@ -4,12 +4,14 @@ import logging
 import os
 import re
 import shutil
+import tempfile
 import uuid
 import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, AsyncGenerator, Dict, List, Optional
+from urllib.parse import urlparse
 
-from fastapi import APIRouter, Body, Depends, File, Query, UploadFile
+from fastapi import APIRouter, Body, Depends, File, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 
 from dbgpt._private.config import Config
@@ -24,9 +26,8 @@ from dbgpt_app.openapi.api_view_model import (
     ConversationVo,
     Result,
 )
-from dbgpt_serve.utils.auth import UserRequest, get_user_from_headers
-
 from dbgpt_serve.datasource.manages import ConnectorManager
+from dbgpt_serve.utils.auth import UserRequest, get_user_from_headers
 
 router = APIRouter()
 CFG = Config()
@@ -356,6 +357,26 @@ async def skill_detail(
     )
 
 
+def _install_skill_from_dir(src_dir: Path, skill_name: str, user_dir: Path) -> str:
+    """Copy an extracted skill directory into the user skills directory.
+
+    Args:
+        src_dir (Path): Directory containing the skill's files (already extracted).
+        skill_name (str): Name to use for the skill directory under ``user_dir``.
+        user_dir (Path): The ``skills/user/`` directory.
+
+    Returns:
+        str: Path of the installed skill directory relative to the skills root
+             (i.e. ``user/<skill_name>``).
+    """
+    dest = user_dir / skill_name
+    if dest.exists():
+        shutil.rmtree(dest)
+    shutil.copytree(src_dir, dest)
+    # Return path relative to skills_dir (parent of user_dir)
+    return str(dest.relative_to(user_dir.parent))
+
+
 @router.post("/v1/skills/upload", response_model=Result)
 async def skill_upload(
     file: UploadFile = File(...),
@@ -405,21 +426,22 @@ async def skill_upload(
                 else:
                     dest_name = stem
 
-                dest = user_dir / dest_name
-                if dest.exists():
-                    shutil.rmtree(dest)
+                with tempfile.TemporaryDirectory(dir=upload_dir) as tmp_extract:
+                    tmp_extract_path = Path(tmp_extract)
+                    if len(top_dirs) <= 1 and all(
+                        n.startswith(dest_name + "/") or n == dest_name
+                        for n in zf.namelist()
+                        if n
+                    ):
+                        zf.extractall(tmp_extract_path)
+                        src_dir = tmp_extract_path / dest_name
+                    else:
+                        skill_tmp = tmp_extract_path / dest_name
+                        skill_tmp.mkdir(parents=True, exist_ok=True)
+                        zf.extractall(skill_tmp)
+                        src_dir = skill_tmp
 
-                if len(top_dirs) <= 1 and all(
-                    n.startswith(dest_name + "/") or n == dest_name
-                    for n in zf.namelist()
-                    if n
-                ):
-                    zf.extractall(user_dir)
-                else:
-                    dest.mkdir(parents=True, exist_ok=True)
-                    zf.extractall(dest)
-
-            rel_path = str(dest.relative_to(skills_dir))
+                    rel_path = _install_skill_from_dir(src_dir, dest_name, user_dir)
 
         else:
             dest = user_dir / stem
@@ -447,6 +469,518 @@ async def skill_upload(
         return Result.failed(code="E5002", msg=f"Upload failed: {str(e)}")
 
 
+class _GitHubImportRequest(_BaseModel):
+    """Request body for importing a skill from a GitHub repository."""
+
+    github_url: str
+    branch: str = "main"
+
+
+def _parse_github_url(
+    github_url: str,
+) -> "tuple[str, str, str, Optional[str]]":
+    """Parse a GitHub or skills.sh URL into (owner, repo, branch, subdir).
+
+    Supported formats:
+      - https://github.com/owner/repo
+      - https://github.com/owner/repo/tree/<branch>[/optional/sub/dir]
+      - https://github.com/owner/repo/blob/<branch>/path/to/FILE.md
+      - https://skills.sh/owner/repo
+      - https://skills.sh/owner/repo[/skill-name]
+
+    Returns:
+        tuple[str, str, str, Optional[str]]
+          (owner, repo, branch, subdir) — branch is always a str (defaults to "main")
+
+    Raises:
+        ValueError: if the URL is not a recognisable GitHub/skills.sh repo URL.
+    """
+    parsed = urlparse(github_url)
+    is_skills_sh = parsed.netloc in ("skills.sh", "www.skills.sh")
+    is_github = parsed.netloc in ("github.com", "www.github.com")
+
+    if not is_github and not is_skills_sh:
+        raise ValueError(f"Not a GitHub URL: {github_url!r}")
+
+    parts = [p for p in parsed.path.strip("/").split("/") if p]
+    if len(parts) < 2:
+        raise ValueError(f"Cannot extract owner/repo from URL: {github_url!r}")
+
+    owner, repo = parts[0], parts[1]
+    # Strip '.git' suffix if present
+    if repo.endswith(".git"):
+        repo = repo[:-4]
+
+    branch: str = "main"
+    subdir: Optional[str] = None
+
+    if is_skills_sh:
+        # skills.sh: /owner/repo[/skill-name[/more]]
+        # Everything after owner/repo is treated as subpath
+        if len(parts) >= 3:
+            subdir = "/".join(parts[2:])
+    else:
+        # GitHub
+        if len(parts) >= 4 and parts[2] == "tree":
+            # /owner/repo/tree/<branch>[/path/to/subdir]
+            branch = parts[3]
+            if len(parts) >= 5:
+                subdir = "/".join(parts[4:])
+        elif len(parts) >= 4 and parts[2] == "blob":
+            # /owner/repo/blob/<branch>/path/to/FILE.md — strip filename
+            branch = parts[3]
+            if len(parts) >= 6:
+                # Keep everything except the last component (the filename)
+                subdir = "/".join(parts[4:-1])
+            # If exactly 5 parts: blob/<branch>/filename — no subdir
+
+    return owner, repo, branch, subdir
+
+
+def _construct_download_url(owner: str, repo: str, branch: str) -> str:
+    """Return the GitHub archive ZIP download URL for the given branch.
+
+    Args:
+        owner (str): Repository owner/organisation.
+        repo (str): Repository name.
+        branch (str): Branch name.
+
+    Returns:
+        str: URL pointing to the ZIP archive for the branch.
+    """
+    return f"https://github.com/{owner}/{repo}/archive/refs/heads/{branch}.zip"
+
+
+def _extract_skill_from_zip(
+    zip_path: "Path", subpath: "Optional[str]", dest_dir: "Path"
+) -> str:
+    """Extract a skill from a GitHub-style ZIP archive into ``dest_dir``.
+
+    The ZIP is expected to have a single top-level directory (e.g.
+    ``repo-main/``).  That top-level directory is stripped when extracting so
+    that the files inside it land directly in ``dest_dir``.
+
+    When ``subpath`` is given, only the files under
+    ``{top_dir}/{subpath}/`` are extracted (again, stripped to ``dest_dir``).
+
+    Args:
+        zip_path (Path): Path to the ZIP file on disk.
+        subpath (Optional[str]): Relative sub-directory inside the archive
+            (after stripping the top-level dir) that contains the skill.
+            Pass ``None`` to use the root of the archive.
+        dest_dir (Path): Directory into which the skill files are extracted.
+            It is created if it does not exist; if it already exists its
+            contents are removed before extraction.
+
+    Returns:
+        str: The skill name derived from ``subpath`` (last component) or from
+        the top-level archive directory name.
+
+    Raises:
+        ValueError: If the archive contains path-traversal sequences.
+        ValueError: If no ``SKILL.md`` is found after extraction.
+        ValueError: If the archive root contains multiple sub-directories with
+            ``SKILL.md`` files and no ``subpath`` was specified (the error
+            message lists the available sub-directory names).
+    """
+    with zipfile.ZipFile(zip_path, "r") as zf:
+        all_names = zf.namelist()
+
+        # Security: reject any path-traversal entries
+        for name in all_names:
+            normalized = os.path.normpath(name)
+            if normalized.startswith("..") or ".." in normalized.split(os.sep):
+                raise ValueError(f"Unsafe path in archive: {name!r}")
+
+        # Detect the single top-level directory (GitHub archives always have one)
+        top_dirs = {n.split("/")[0] for n in all_names if "/" in n}
+        archive_root: Optional[str] = top_dirs.pop() if len(top_dirs) == 1 else None
+
+        # Build the prefix inside the archive that maps to dest_dir
+        if subpath:
+            skill_prefix = (
+                f"{archive_root}/{subpath}/" if archive_root else f"{subpath}/"
+            )
+            skill_name = subpath.split("/")[-1]
+        else:
+            skill_prefix = f"{archive_root}/" if archive_root else ""
+            skill_name = archive_root or dest_dir.name
+
+        # Check whether SKILL.md exists under the chosen prefix
+        skill_md_entry = next(
+            (n for n in all_names if n == skill_prefix + "SKILL.md"),
+            None,
+        )
+
+        if skill_md_entry is None and not subpath:
+            # No SKILL.md at root — scan one level of subdirectories
+            subdirs_with_skill = []
+            for name in all_names:
+                if not name.startswith(skill_prefix):
+                    continue
+                rel = name[len(skill_prefix) :]
+                parts = rel.split("/")
+                if len(parts) == 2 and parts[1] == "SKILL.md":
+                    subdirs_with_skill.append(parts[0])
+
+            if subdirs_with_skill:
+                raise ValueError(
+                    "Multiple skills found. Specify a subpath. "
+                    "Available: " + ", ".join(sorted(subdirs_with_skill))
+                )
+
+        if skill_md_entry is None:
+            raise ValueError(
+                "No SKILL.md found in the archive"
+                + (f" under '{subpath}'" if subpath else "")
+                + ". Make sure the skill directory contains a SKILL.md file."
+            )
+
+        # Prepare dest_dir: remove existing content then (re-)create
+        if dest_dir.exists():
+            shutil.rmtree(dest_dir)
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
+        # Extract members individually (no extractall) for security
+        for member in all_names:
+            if not member.startswith(skill_prefix) or member == skill_prefix:
+                continue
+            rel = member[len(skill_prefix) :]
+            if not rel:
+                continue
+            target = dest_dir / rel
+            if member.endswith("/"):
+                target.mkdir(parents=True, exist_ok=True)
+            else:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(zf.read(member))
+
+    return skill_name
+
+
+@router.post("/v1/skills/import_from_github", response_model=Result)
+async def skill_import_from_github(
+    body: _GitHubImportRequest,
+    user_token: UserRequest = Depends(get_user_from_headers),
+):
+    """Import a skill directly from a public GitHub repository.
+
+    The endpoint downloads the repository as a ZIP archive using the GitHub
+    archive API, extracts it, optionally navigates to a sub-directory,
+    validates the presence of a ``SKILL.md`` file, and installs the skill
+    into ``skills/user/<skill-name>/``.
+
+    Args:
+        body (_GitHubImportRequest): ``github_url`` (required) and optional
+            ``branch`` (default ``"main"``).
+
+    Returns:
+        Result: ``{"file_path": "<relative-path>", "message": "..."}`` on
+        success, or a ``Result.failed`` with an appropriate error code.
+
+    Error codes:
+        - ``E4003``: Malformed or non-GitHub URL.
+        - ``E4004``: ``SKILL.md`` not found in the downloaded content.
+        - ``E5003``: Network / download failure.
+        - ``E5002``: Unexpected server-side error.
+    """
+    import httpx
+
+    # --- parse URL ----------------------------------------------------------
+    try:
+        owner, repo, branch_override, subdir = _parse_github_url(body.github_url)
+    except ValueError as exc:
+        return Result.failed(code="E4003", msg=str(exc))
+
+    branch = branch_override or body.branch
+
+    # --- build download URL -------------------------------------------------
+    zip_url = f"https://github.com/{owner}/{repo}/archive/refs/heads/{branch}.zip"
+
+    # --- download -----------------------------------------------------------
+    skills_dir = Path(DEFAULT_SKILLS_DIR).expanduser().resolve()
+    user_dir = skills_dir / "user"
+    user_dir.mkdir(parents=True, exist_ok=True)
+
+    upload_dir = Path(resolve_root_path("pilot/tmp") or "pilot/tmp").resolve()
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        async with httpx.AsyncClient(
+            follow_redirects=True,
+            timeout=httpx.Timeout(120.0),
+        ) as client:
+            response = await client.get(zip_url)
+            if response.status_code != 200:
+                return Result.failed(
+                    code="E5003",
+                    msg=(
+                        f"Failed to download {zip_url!r}: HTTP {response.status_code}"
+                    ),
+                )
+            content_bytes = response.content
+    except httpx.RequestError as exc:
+        logger.exception("Network error while downloading skill from GitHub")
+        return Result.failed(
+            code="E5003", msg=f"Network error downloading skill: {str(exc)}"
+        )
+
+    # --- save raw zip to tmp ------------------------------------------------
+    zip_filename = f"{repo}-{branch}.zip"
+    tmp_file = upload_dir / zip_filename
+    tmp_file.write_bytes(content_bytes)
+
+    # --- extract & validate -------------------------------------------------
+    try:
+        buf = io.BytesIO(content_bytes)
+        with zipfile.ZipFile(buf, "r") as zf:
+            # Security: reject path-traversal entries
+            for name in zf.namelist():
+                if ".." in name or name.startswith("/"):
+                    return Result.failed(
+                        code="E4002",
+                        msg=f"Unsafe path in archive: {name}",
+                    )
+
+            all_names = zf.namelist()
+
+            # GitHub archives always have a single top-level dir:
+            # "<repo>-<branch>/"
+            top_dirs = {n.split("/")[0] for n in all_names if "/" in n}
+            archive_root = top_dirs.pop() if len(top_dirs) == 1 else None
+
+            # Determine the directory inside the archive that holds SKILL.md
+            if subdir:
+                # User pointed at a sub-directory; look for SKILL.md there.
+                if archive_root:
+                    skill_prefix = f"{archive_root}/{subdir}/"
+                else:
+                    skill_prefix = f"{subdir}/"
+            else:
+                skill_prefix = f"{archive_root}/" if archive_root else ""
+
+            # Find the SKILL.md entry
+            skill_md_entry = next(
+                (
+                    n
+                    for n in all_names
+                    if n == skill_prefix + "SKILL.md"
+                    or (not skill_prefix and n.endswith("/SKILL.md"))
+                ),
+                None,
+            )
+
+            if skill_md_entry is None:
+                return Result.failed(
+                    code="E4004",
+                    msg=(
+                        "No SKILL.md found in the repository"
+                        + (f" under '{subdir}'" if subdir else "")
+                        + ". Make sure the skill directory contains a SKILL.md file."
+                    ),
+                )
+
+            # Determine skill name from SKILL.md frontmatter (best-effort)
+            try:
+                skill_md_bytes = zf.read(skill_md_entry)
+                skill_md_text = skill_md_bytes.decode("utf-8", errors="replace")
+
+                from dbgpt.agent.claude_skill import FileBasedSkill
+
+                # Write to a tmp location so FileBasedSkill can parse it
+                tmp_skill_dir = upload_dir / f"_gh_parse_{uuid.uuid4().hex}"
+                tmp_skill_dir.mkdir(parents=True, exist_ok=True)
+                tmp_skill_md = tmp_skill_dir / "SKILL.md"
+                tmp_skill_md.write_text(skill_md_text, encoding="utf-8")
+                fskill = FileBasedSkill(str(tmp_skill_md))
+                skill_name = fskill.metadata.name
+                shutil.rmtree(tmp_skill_dir, ignore_errors=True)
+            except Exception:
+                # Fall back to repo name or subdir name
+                skill_name = subdir.split("/")[-1] if subdir else repo
+
+            # Sanitise skill name to a safe directory name
+            safe_name = re.sub(r"[^A-Za-z0-9_\-]", "_", skill_name)
+
+            dest = user_dir / safe_name
+            if dest.exists():
+                shutil.rmtree(dest)
+            dest.mkdir(parents=True, exist_ok=True)
+
+            # Extract only the files that live under skill_prefix
+            for member in all_names:
+                if not member.startswith(skill_prefix) or member == skill_prefix:
+                    continue
+                # Relative path inside the skill directory
+                rel = member[len(skill_prefix) :]
+                if not rel:
+                    continue
+                target = dest / rel
+                if member.endswith("/"):
+                    target.mkdir(parents=True, exist_ok=True)
+                else:
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes(zf.read(member))
+
+        rel_path = str(dest.relative_to(skills_dir))
+        return Result.succ(
+            {
+                "file_path": rel_path,
+                "message": f"Skill imported successfully from GitHub: {rel_path}",
+            }
+        )
+
+    except zipfile.BadZipFile as exc:
+        logger.exception("Bad ZIP received from GitHub")
+        return Result.failed(
+            code="E5003", msg=f"Downloaded archive is not a valid ZIP: {str(exc)}"
+        )
+    except Exception as exc:
+        logger.exception("Failed to import skill from GitHub")
+        return Result.failed(code="E5002", msg=f"Import failed: {str(exc)}")
+
+
+@router.post("/v1/skills/import_github", response_model=Result)
+async def skill_import_from_github_v2(
+    request: Request,
+    user_token: UserRequest = Depends(get_user_from_headers),
+):
+    """Import a skill from a GitHub or skills.sh URL (v2 — raw JSON body).
+
+    Accepts ``{ "url": "..." }`` from the frontend, downloads the repository
+    ZIP, extracts the skill, installs it to ``skills/user/<name>/``, and
+    returns a success response.
+
+    Compared to the v1 endpoint (``/v1/skills/import_from_github``), this
+    endpoint:
+
+    - Accepts a raw JSON body ``{ "url": "..." }`` (no Pydantic model).
+    - Supports branch fallback: tries ``main`` first, then ``master`` if 404.
+    - Enforces a 50 MB download size limit.
+    - Delegates extraction/installation to the modular helpers
+      ``_extract_skill_from_zip`` and ``_install_skill_from_dir``.
+
+    Error codes:
+        - ``E4001``: Empty URL.
+        - ``E4003``: Malformed or non-GitHub/skills.sh URL.
+        - ``E4004``: ``SKILL.md`` not found in the downloaded content.
+        - ``E4005``: Download failed or size limit exceeded.
+        - ``E5002``: Unexpected server-side error.
+    """
+    import httpx
+
+    # --- parse JSON body --------------------------------------------------------
+    body = await request.json()
+    url = body.get("url", "").strip()
+    if not url:
+        return Result.failed(code="E4001", msg="URL must not be empty")
+
+    # --- parse URL --------------------------------------------------------------
+    try:
+        owner, repo, branch, subpath = _parse_github_url(url)
+    except ValueError as exc:
+        return Result.failed(code="E4003", msg=str(exc))
+
+    # --- resolve dirs -----------------------------------------------------------
+    skills_dir = Path(DEFAULT_SKILLS_DIR).expanduser().resolve()
+    user_dir = skills_dir / "user"
+    user_dir.mkdir(parents=True, exist_ok=True)
+
+    upload_dir = Path(resolve_root_path("pilot/tmp") or "pilot/tmp").resolve()
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    # --- download with branch fallback (main → master) --------------------------
+    zip_path: Optional[Path] = None
+    tmp_dir_obj = None  # tempfile.TemporaryDirectory kept alive until finally
+
+    try:
+        zip_url = _construct_download_url(owner, repo, branch)
+
+        async with httpx.AsyncClient(
+            follow_redirects=True,
+            timeout=httpx.Timeout(120.0),
+        ) as client:
+            response = await client.get(zip_url)
+
+            # Branch fallback: if the resolved branch gives 404, try "master"
+            if response.status_code == 404 and branch == "main":
+                fallback_branch = "master"
+                fallback_url = _construct_download_url(owner, repo, fallback_branch)
+                response = await client.get(fallback_url)
+                if response.status_code == 200:
+                    branch = fallback_branch
+                    zip_url = fallback_url
+
+            if response.status_code != 200:
+                return Result.failed(
+                    code="E4005",
+                    msg=(
+                        f"Failed to download {zip_url!r}: HTTP {response.status_code}"
+                    ),
+                )
+
+            content_bytes = response.content
+
+        # --- size limit check ---------------------------------------------------
+        if len(content_bytes) > 50 * 1024 * 1024:
+            return Result.failed(
+                code="E4005",
+                msg=(
+                    f"Download size {len(content_bytes) // (1024 * 1024)} MB "
+                    "exceeds the 50 MB limit"
+                ),
+            )
+
+        # --- save raw zip to tmp ------------------------------------------------
+        zip_filename = f"{repo}-{branch}.zip"
+        zip_path = upload_dir / zip_filename
+        zip_path.write_bytes(content_bytes)
+
+        # --- extract into a temp directory, then install ------------------------
+        tmp_dir_obj = tempfile.TemporaryDirectory(dir=upload_dir)
+        dest_dir_in_temp = Path(tmp_dir_obj.name) / "skill"
+        dest_dir_in_temp.mkdir(parents=True, exist_ok=True)
+
+        try:
+            skill_name = _extract_skill_from_zip(zip_path, subpath, dest_dir_in_temp)
+        except ValueError as exc:
+            err_msg = str(exc)
+            if "SKILL.md" in err_msg:
+                return Result.failed(code="E4004", msg=err_msg)
+            return Result.failed(code="E4003", msg=err_msg)
+
+        rel_path = _install_skill_from_dir(dest_dir_in_temp, skill_name, user_dir)
+
+        return Result.succ(
+            {
+                "file_path": rel_path,
+                "message": f"Skill imported successfully from GitHub: {rel_path}",
+            }
+        )
+
+    except httpx.RequestError as exc:
+        logger.exception("Network error while downloading skill from GitHub")
+        return Result.failed(
+            code="E4005", msg=f"Network error downloading skill: {str(exc)}"
+        )
+    except Exception as exc:
+        logger.exception("Failed to import skill from GitHub (v2)")
+        return Result.failed(code="E5002", msg=f"Import failed: {str(exc)}")
+    finally:
+        # Clean up temp zip file
+        if zip_path is not None:
+            try:
+                zip_path.unlink(missing_ok=True)
+            except Exception:
+                pass
+        # Clean up temp extraction directory
+        if tmp_dir_obj is not None:
+            try:
+                tmp_dir_obj.cleanup()
+            except Exception:
+                pass
+
+
 def _sse_event(payload: Dict[str, Any]) -> str:
     return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
@@ -464,7 +998,7 @@ async def _react_agent_stream(
     )
     from dbgpt.agent.expand.actions.react_action import Terminate
     from dbgpt.agent.expand.react_agent import ReActAgent
-    from dbgpt.agent.resource import ResourcePack, ToolPack, tool
+    from dbgpt.agent.resource import ToolPack, tool
     from dbgpt.agent.resource.base import AgentResource, ResourceType
     from dbgpt.agent.resource.manage import get_resource_manager
     from dbgpt.agent.util.llm.llm import LLMConfig, LLMStrategyType
@@ -2847,8 +3381,8 @@ def _get_share_dao():
 
 def _get_conversation_service():
     """Return the ConversationServe Service component."""
-    from dbgpt_serve.conversation.service.service import Service
     from dbgpt_serve.conversation.config import SERVE_SERVICE_COMPONENT_NAME
+    from dbgpt_serve.conversation.service.service import Service
 
     return CFG.SYSTEM_APP.get_component(SERVE_SERVICE_COMPONENT_NAME, Service)
 

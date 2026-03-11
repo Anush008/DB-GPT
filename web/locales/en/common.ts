@@ -477,4 +477,12 @@ export const CommonEn = {
   skills_upload_success: 'Successfully uploaded {{count}} skill(s)',
   skills_file_invalid: 'Invalid file',
   skills_upload_failed: 'Upload failed',
+  skills_import_github: 'Import from GitHub',
+  skills_import_github_desc: 'Import a skill from a public GitHub repository or skills.sh',
+  skills_import_modal_title: 'Import Skill from GitHub',
+  skills_github_url_label: 'GitHub URL',
+  skills_github_url_placeholder: 'https://github.com/owner/repo or https://skills.sh/owner/repo/skill',
+  skills_github_importing: 'Importing skill...',
+  skills_github_import_success: 'Skill imported successfully',
+  skills_github_import_failed: 'Failed to import skill',
 } as const;

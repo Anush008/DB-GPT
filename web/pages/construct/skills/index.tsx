@@ -6,6 +6,7 @@ import {
   CloudUploadOutlined,
   DownOutlined,
   EllipsisOutlined,
+  GithubOutlined,
   InboxOutlined,
   PlusOutlined,
   SearchOutlined,
@@ -14,6 +15,7 @@ import { useRequest } from 'ahooks';
 import {
   Button,
   Dropdown,
+  Form,
   Input,
   MenuProps,
   Modal,
@@ -99,6 +101,9 @@ function Skills() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadFileList, setUploadFileList] = useState<UploadFile[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [importModalVisible, setImportModalVisible] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importForm] = Form.useForm();
 
   const {
     data: skillsList = [],
@@ -260,6 +265,27 @@ function Skills() {
     },
   };
 
+  const handleGithubImport = async () => {
+    try {
+      const values = await importForm.validateFields();
+      setImportLoading(true);
+      const res = await axios.post('/api/v1/skills/import_github', { url: values.github_url }, { timeout: 60000 }) as any;
+      if (res?.success) {
+        message.success(t('skills_github_import_success'));
+        setImportModalVisible(false);
+        importForm.resetFields();
+        refreshList();
+      } else {
+        message.error(res?.err_msg || t('skills_github_import_failed'));
+      }
+    } catch (e: any) {
+      if (e?.errorFields) return; // form validation error, not API error
+      message.error(t('skills_github_import_failed'));
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
   const addMenuItems: MenuProps['items'] = [
     {
       key: 'upload',
@@ -271,6 +297,17 @@ function Skills() {
         </div>
       ),
       onClick: () => setUploadOpen(true),
+    },
+    {
+      key: 'import_github',
+      icon: <GithubOutlined />,
+      label: (
+        <div>
+          <div className='font-medium'>{t('skills_import_github')}</div>
+          <div className='text-xs text-gray-400'>{t('skills_import_github_desc')}</div>
+        </div>
+      ),
+      onClick: () => setImportModalVisible(true),
     },
   ];
 
@@ -489,6 +526,29 @@ function Skills() {
             <p className='text-base font-medium'>{t('skills_upload_dragger_text')}</p>
             <p className='text-sm text-gray-400 mt-1'>{t('skills_upload_format_tip')}</p>
           </Upload.Dragger>
+        </div>
+      </Modal>
+      <Modal
+        title={t('skills_import_modal_title')}
+        open={importModalVisible}
+        onOk={handleGithubImport}
+        onCancel={() => {
+          setImportModalVisible(false);
+          importForm.resetFields();
+        }}
+        confirmLoading={importLoading}
+        destroyOnClose
+      >
+        <div className='py-4'>
+          <Form form={importForm} layout='vertical'>
+            <Form.Item
+              name='github_url'
+              label={t('skills_github_url_label')}
+              rules={[{ required: true, message: t('skills_github_url_placeholder') }]}
+            >
+              <Input placeholder={t('skills_github_url_placeholder')} />
+            </Form.Item>
+          </Form>
         </div>
       </Modal>
     </ConstructLayout>

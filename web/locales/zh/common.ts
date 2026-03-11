@@ -480,4 +480,12 @@ export const CommonZh: Resources['translation'] = {
   skills_upload_success: '成功上传 {{count}} 个技能',
   skills_file_invalid: '文件无效',
   skills_upload_failed: '上传失败',
+  skills_import_github: '从 GitHub 导入',
+  skills_import_github_desc: '从公开的 GitHub 仓库或 skills.sh 导入技能',
+  skills_import_modal_title: '从 GitHub 导入技能',
+  skills_github_url_label: 'GitHub URL',
+  skills_github_url_placeholder: 'https://github.com/owner/repo 或 https://skills.sh/owner/repo/skill',
+  skills_github_importing: '正在导入技能...',
+  skills_github_import_success: '技能导入成功',
+  skills_github_import_failed: '技能导入失败',
 } as const;
