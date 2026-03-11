@@ -27,7 +27,7 @@ import { Button, Tooltip, message } from 'antd';
 import { NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 // ---------------------------------------------------------------------------
 // Types mirroring index.tsx
@@ -336,6 +336,8 @@ function useReplayEngine(rounds: ReplayRound[], speed: number, autoPlay = false)
   playingRef.current = playing;
   const speedRef = useRef(speed);
   speedRef.current = speed;
+  const roundsRef = useRef(rounds);
+  roundsRef.current = rounds;
 
   const delay = useCallback((ms: number) => {
     return new Promise<void>(resolve => {
@@ -343,22 +345,22 @@ function useReplayEngine(rounds: ReplayRound[], speed: number, autoPlay = false)
     });
   }, []);
 
-  /** Core replay loop — runs as an async generator stepping through all events */
   const runLoop = useCallback(async () => {
-    for (let ri = stateRef.current.roundIndex; ri < rounds.length; ri++) {
-      const round = rounds[ri];
+    const currentRounds = roundsRef.current;
+    const startRound = stateRef.current.roundIndex;
+    const startStep = stateRef.current.visibleStepCount;
 
-      // Restore already-finished rounds instantly
-      if (ri < stateRef.current.roundIndex) continue;
+    for (let ri = startRound; ri < currentRounds.length; ri++) {
+      const round = currentRounds[ri];
+      const siStart = ri === startRound ? startStep : 0;
 
-      for (let si = stateRef.current.visibleStepCount; si < round.steps.length; si++) {
-        if (!playingRef.current) return; // paused
+      for (let si = siStart; si < round.steps.length; si++) {
+        if (!playingRef.current) return;
 
         const step = round.steps[si];
         await delay(BASE_DELAYS.beforeStep);
         if (!playingRef.current) return;
 
-        // Reveal the step
         setState(prev => ({
           ...prev,
           roundIndex: ri,
@@ -371,7 +373,6 @@ function useReplayEngine(rounds: ReplayRound[], speed: number, autoPlay = false)
         if (!playingRef.current) return;
       }
 
-      // Show final summary
       await delay(BASE_DELAYS.beforeFinal);
       if (!playingRef.current) return;
 
@@ -384,10 +385,9 @@ function useReplayEngine(rounds: ReplayRound[], speed: number, autoPlay = false)
         completedRoundIndex: ri,
       }));
 
-      if (ri < rounds.length - 1) {
+      if (ri < currentRounds.length - 1) {
         await delay(BASE_DELAYS.betweenRounds);
         if (!playingRef.current) return;
-        // Move to next round
         setState(prev => ({
           ...prev,
           roundIndex: ri + 1,
@@ -398,10 +398,9 @@ function useReplayEngine(rounds: ReplayRound[], speed: number, autoPlay = false)
       }
     }
 
-    // Replay complete
     setState(prev => ({ ...prev, done: true }));
     setPlaying(false);
-  }, [rounds, delay]);
+  }, [delay]);
 
   const play = useCallback(() => {
     if (stateRef.current.done) return;
@@ -423,13 +422,12 @@ function useReplayEngine(rounds: ReplayRound[], speed: number, autoPlay = false)
     };
   }, [playing, runLoop]);
 
-  // Auto-play on mount when rounds are ready
+  // Auto-play when rounds become available
   useEffect(() => {
-    if (autoPlay && rounds.length > 0) {
+    if (autoPlay && rounds.length > 0 && !playingRef.current && !stateRef.current.done) {
       setPlaying(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [autoPlay, rounds.length]);
 
   /** Jump to a specific round (skips to its end instantly) */
   const jumpToRound = useCallback(
@@ -511,7 +509,7 @@ const SharePage: NextPage = () => {
       });
   }, [token]);
 
-  const rounds = messages ? buildReplayRounds(messages) : [];
+  const rounds = useMemo(() => (messages ? buildReplayRounds(messages) : []), [messages]);
   const { state, playing, play, pause, jumpToRound, restart } = useReplayEngine(
     rounds,
     speed,
