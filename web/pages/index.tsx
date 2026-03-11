@@ -2256,7 +2256,7 @@ const Playground: NextPage = () => {
 
           {/* Chat Messages or Hero Section */}
           {messages.length > 0 ? (
-            <div className='flex-1 flex overflow-hidden'>
+            <div className={`flex-1 flex overflow-hidden ${rightPanelCollapsed ? 'justify-center' : ''}`}>
               <div
                 className={`${rightPanelCollapsed ? 'flex-1 max-w-[800px] border-r-0' : 'flex-[2] min-w-0 border-r border-gray-200/80 dark:border-gray-800'} flex flex-col overflow-hidden bg-white dark:bg-[#111217] transition-all duration-300 relative`}
               >
@@ -2291,6 +2291,7 @@ const Playground: NextPage = () => {
                           if (round.viewMsg?.id) {
                             setActiveViewMsgId(round.viewMsg.id);
                             setSelectedStepId(stepId);
+                            setRightPanelCollapsed(false);
                             setExecutionMap(prev => ({
                               ...prev,
                               [round.viewMsg!.id!]: {
@@ -2927,7 +2928,7 @@ const Playground: NextPage = () => {
                               <div className='w-[320px] bg-white dark:bg-[#2c2d31] rounded-xl shadow-xl overflow-hidden'>
                                 <div className='p-3 border-b border-gray-100 dark:border-gray-700'>
                                   <Input
-                                    placeholder={t('search_skill') || '搜索技能'}
+                                    placeholder={t('search_skill')}
                                     prefix={<SearchOutlined className='text-gray-400' />}
                                     value={skillSearchQuery}
                                     onChange={e => setSkillSearchQuery(e.target.value)}
@@ -3332,13 +3333,13 @@ const Playground: NextPage = () => {
 
                         <div className='flex items-center gap-3'>
                           {/* Voice Button */}
-                          <Tooltip title='语音输入'>
+                          <Tooltip title={t('voice_input')}>
                             <Button
                               type='text'
                               shape='circle'
                               size='large'
                               icon={<AudioOutlined className='text-gray-500 text-xl' />}
-                              onClick={() => message.info('语音输入即将上线')}
+                              onClick={() => message.info(t('voice_input_coming_soon'))}
                               className='flex-shrink-0 transition-all duration-200 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800'
                             />
                           </Tooltip>
