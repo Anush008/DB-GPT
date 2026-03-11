@@ -31,6 +31,7 @@ import {
   FileOutlined,
   FilePptOutlined,
   FileTextOutlined,
+  LeftOutlined,
   PaperClipOutlined,
   PieChartOutlined,
   PlusOutlined,
@@ -2718,20 +2719,17 @@ const Playground: NextPage = () => {
                   </div>
                 </div>
 
-                {rightPanelCollapsed && (
-                  <div className='absolute right-0 top-1/2 -translate-y-1/2 z-10'>
-                    <Tooltip title={t('expand_panel')}>
-                      <Button
-                        type='text'
-                        shape='circle'
-                        size='small'
-                        icon={<RightOutlined />}
-                        onClick={() => setRightPanelCollapsed(false)}
-                        className='text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1a1b1e]'
-                      />
-                    </Tooltip>
-                  </div>
-                )}
+              </div>
+              {/* Panel toggle handle — placed between panels to avoid overflow clipping */}
+              <div className='relative z-20 flex-shrink-0'>
+                <Tooltip title={rightPanelCollapsed ? t('expand_panel') : t('collapse_panel')} placement='left'>
+                  <button
+                    onClick={() => setRightPanelCollapsed(prev => !prev)}
+                    className='absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-8 flex items-center justify-center bg-white dark:bg-[#1a1b1e] border border-gray-200 dark:border-gray-700 rounded-full shadow-sm hover:bg-gray-100 dark:hover:bg-gray-800 hover:w-5 hover:shadow-md transition-all duration-200 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                  >
+                    {rightPanelCollapsed ? <LeftOutlined style={{ fontSize: 10 }} /> : <RightOutlined style={{ fontSize: 10 }} />}
+                  </button>
+                </Tooltip>
               </div>
               <div
                 className={`${rightPanelCollapsed ? 'w-0 min-w-0 overflow-hidden opacity-0' : 'flex-[3] min-w-0 overflow-hidden'} bg-[#f8f8fb] dark:bg-[#0f1114] flex flex-col transition-all duration-300`}

@@ -1598,16 +1598,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
 
   return (
     <div className='relative flex flex-col h-full bg-[#f8f9fc] dark:bg-[#0d0e11]'>
-      {onCollapse && (
-        <Tooltip title={t('collapse_panel')} placement='left'>
-          <button
-            onClick={() => onCollapse()}
-            className='absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 w-6 h-12 flex items-center justify-center bg-white dark:bg-[#1a1b1e] border border-gray-200 dark:border-gray-700 rounded-full shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-md transition-all text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
-          >
-            <LeftOutlined style={{ fontSize: 10 }} />
-          </button>
-        </Tooltip>
-      )}
+      {/* Collapse button is rendered by the parent layout to avoid overflow clipping */}
 
       {/* Terminal Header */}
       <div className='flex items-center justify-between px-5 py-3 bg-white dark:bg-[#111217] border-b border-gray-200 dark:border-gray-800'>
