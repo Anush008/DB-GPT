@@ -2392,7 +2392,16 @@ print(json.dumps(summary, ensure_ascii=False))
                         "chunks": [
                             {
                                 "output_type": "text",
-                                "content": f"Template not found: {tp}",
+                                "content": (
+                                    f"Template not found: {tp}. "
+                                    "This skill does not have HTML templates. "
+                                    "Please retry by calling html_interpreter "
+                                    "with the `html` parameter instead — "
+                                    "generate the complete HTML report code "
+                                    "yourself and pass it directly via "
+                                    '{"html": "<html>...</html>", '
+                                    '"title": "report title"}.'
+                                ),
                             }
                         ]
                     },
@@ -2778,7 +2787,7 @@ Please always response in the same language as the user's input language.
 1. Strictly follow the instructions of the loaded skill.
 2. For each step, output Thought -> Phase -> Action -> Action Input.
 3. Wait for the system to return Observation before deciding on the next step.
-4. **[Mandatory Rule] If the task requires generating an analysis report, you MUST call `html_interpreter` for HTML rendering.** Follow the workflow defined in the loaded skill's documentation. When rendering the report using `html_interpreter`, you MUST provide ALL required placeholders (e.g., titles, headers, analysis text, language flags) in the `data` dictionary, except for those the backend automatically handles (like images or specific data if stated in the skill).
+4. **[Mandatory Rule] If the task requires generating an analysis report, you MUST call `html_interpreter` for HTML rendering.** By default, generate complete HTML code yourself and pass it via the `html` parameter (include DOCTYPE, html, head, body, styles, and all content). Only use `template_path` mode if the skill explicitly provides HTML templates in its `templates/` directory and its documentation references them. When using template mode, provide ALL required placeholders in the `data` dictionary.
 5. If the task does not require generating a report, directly call terminate to return the final result. The Action Input format must be {{"result": "final answer"}}.
 
 {skill_prompt_context}
@@ -2789,7 +2798,7 @@ Please always response in the same language as the user's input language.
 - **Need to execute skill script** -> Use `execute_skill_script_file` with parameters {{"skill_name": "skill name", "script_file_name": "script file name", "args": {{parameters}}}}. This tool will automatically handle image copying and data recording.
 - **Need to understand indicator definitions/analysis framework** -> Use `get_skill_resource` and specify the `references/xxx.md` path to read the reference document.
 - **Encounter image file** -> If the model does not support image input, it will return an error prompt.
-- **Need to generate report** -> Call `html_interpreter`, passing `template_path` (relative path of the template) and `data` (a dictionary containing ALL text variables like titles and analysis contents required by the template). **Do not use `code_interpreter` to generate the report, and there is no need to use `get_skill_resource` to read the template first**.
+- **Need to generate report** -> Call `html_interpreter`. **Default: directly pass complete HTML via the `html` parameter** — you generate the full HTML code yourself (including `<!DOCTYPE html>`, `<html>`, `<head>`, `<body>`, styles, content). The HTML can be as long as needed. **Only use `template_path` if the skill explicitly provides HTML templates in its `templates/` directory and its documentation tells you to use them.** Do not use `code_interpreter` to generate the report.
 
 ## Available Tools Description
 1. **execute_skill_script_file** (recommended for executing skill scripts): Execute script files in the skills scripts directory, automatically handling post-processing such as copying images to the static directory and recording calculation results.
@@ -2799,16 +2808,18 @@ Please always response in the same language as the user's input language.
 2. **get_skill_resource**: Read reference documents, configurations, templates, and other non-script resource files in the skill.
    Parameters: {{"skill_name": "skill name", "resource_path": "resource path"}}
    - Read reference document: {{"skill_name": "{pre_matched_skill.metadata.name if pre_matched_skill else "skill"}", "resource_path": "references/analysis_framework.md"}}
-   - Note: The report template does not need to be read using this tool; directly use the template_path parameter of html_interpreter.
+   - Note: For generating reports, prefer using html_interpreter directly with the `html` parameter. Only use template_path if the skill explicitly provides templates.
 3. **execute_skill_script**: Execute the inline script defined in the skill (backup). Parameters: {{"skill_name": "skill name", "script_name": "script name", "args": {{"parameter name": "parameter value"}}}}
 4. **shell_interpreter**: Execute shell/bash commands (only for non-skill script system commands, such as ls, cat, etc.).
    Parameters: {{"code": "shell command"}}
    - Each call is independent and does not retain state. If multi-step operations are needed, use `&&` or `;` to connect commands.
    - **Note: Do not use this tool to execute skill scripts**, as it will not automatically handle images and data recording.
-5. **html_interpreter**: Render HTML templates into web reports.
-   Recommended usage: {{"template_path": "skill name/templates/template file.html", "data": {{"PLACEHOLDER_KEY": "value", ...}}, "title": "report title"}}
-   - You MUST provide ALL text placeholders defined in the skill's template (like titles, summaries, language variables, and analysis paragraphs) in the `data` dictionary. Only exclude variables that the backend explicitly auto-merges (like charts).
-   - Example: {{"template_path": "my-skill/templates/report_template.html", "data": {{"REPORT_TITLE": "Sales Analysis", "SECTION_1_TITLE": "Revenue", "SECTION_1_ANALYSIS": "Revenue grew by 20%..."}}, "title": "Sales Report"}}
+5. **html_interpreter**: Render HTML as an interactive web report. This is the ONLY way to display reports on the right panel.
+   **Default usage (recommended)**: {{"html": "<html>your complete HTML code</html>", "title": "report title"}}
+   - Generate complete HTML yourself (DOCTYPE, html, head, body, CSS styles, content). No length limit.
+   - **Do not** use code_interpreter to write HTML. Directly pass the HTML string to this tool.
+   **Template mode (only when skill has templates/)**: {{"template_path": "skill-name/templates/template.html", "data": {{"KEY": "value"}}, "title": "title"}}
+   - Only use this if the skill's documentation explicitly provides template paths. If template_path returns "Template not found", immediately switch to the default `html` parameter usage.
    {available_images_hint}
 6. **terminate**: Return the final answer when the task is completed. Action Input must be {{"result": "your final answer content"}}.
 
@@ -2884,7 +2895,7 @@ Complete each workflow step before moving to the next. Do not mix multiple tool 
 10. **sql_query**: Execute a read-only SQL query against the selected database. Parameters: {{"sql": "SELECT statement"}}
 11. **load_tools**: Resolve required tools for the selected skill. Parameters: none.
 12. **execute_tool**: Execute a tool by name with JSON args. Parameters: {{"tool_name": "tool name", "args": {{parameters}}}}
-13. **html_interpreter**: Render an HTML template or file. Parameters: {{"template_path": "template file path", "file_path": "absolute path to html file", "data": {{parameters}}}}
+13. **html_interpreter**: Render HTML as an interactive web report (the ONLY way to display reports on the right panel). Default usage: {{"html": "<html>complete HTML code</html>", "title": "title"}}. Template mode: {{"template_path": "skill/templates/xxx.html", "data": {{...}}, "title": "title"}}. File mode: {{"file_path": "/path/to/report.html"}}
 14. **terminate**: Finish the task. Parameters: {{"result": "final answer"}}
 
 {file_context}

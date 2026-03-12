@@ -2757,7 +2757,7 @@ const Playground: NextPage = () => {
                       onCollapse={() => setRightPanelCollapsed(true)}
                       onRerun={() => {}}
                       onShare={!loading && !!conversationId ? handleShare : undefined}
-                      terminalTitle="DB-GPT's Computer"
+                      terminalTitle={t('db_gpt_computer')}
                       artifacts={artifacts.filter(a => a.messageId === activeViewMsg?.id)}
                       onArtifactClick={artifact => {
                         if (artifact.type === 'html') {
