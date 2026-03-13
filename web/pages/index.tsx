@@ -1315,7 +1315,7 @@ const Playground: NextPage = () => {
                   if (!seenFilePaths.has(fileName.toLowerCase())) {
                     seenFilePaths.add(fileName.toLowerCase());
                     const alreadyHasFile = finalArtifacts.some(
-                      a => a.type === 'file' && a.name.toLowerCase() === fileName.toLowerCase(),
+                      a => (a.type === 'file' || a.type === 'image') && a.name.toLowerCase() === fileName.toLowerCase(),
                     );
                     if (!alreadyHasFile) {
                       // Use the path as-is; backend resolves relative paths against pilot/tmp
@@ -1818,12 +1818,19 @@ const Playground: NextPage = () => {
                       const filtered = prevArtifacts.filter(a => a.messageId !== responseId);
                       const newArtifacts = [...filtered, ...deduped];
 
-                      // Auto-select the first HTML artifact for preview
+                      // Auto-select the first HTML artifact for preview, or image if no HTML
                       const htmlArtifact = deduped.find(a => a.type === 'html');
                       if (htmlArtifact) {
                         setPreviewArtifact(htmlArtifact as Artifact);
                         setRightPanelView('html-preview');
                         setRightPanelCollapsed(false);
+                      } else {
+                        const imgArtifact = deduped.find(a => a.type === 'image');
+                        if (imgArtifact) {
+                          setPreviewArtifact(imgArtifact as Artifact);
+                          setRightPanelView('image-preview');
+                          setRightPanelCollapsed(false);
+                        }
                       }
 
                       return newArtifacts;
@@ -2332,8 +2339,16 @@ const Playground: NextPage = () => {
                               }));
                             }
                           } else if (artifact.type === 'file') {
-                            // File artifacts: trigger download on click
-                            downloadArtifact(artifact as Artifact);
+                            // Image file artifacts: preview instead of download
+                            if (/\.(png|jpg|jpeg|gif|webp|svg|bmp)$/i.test(artifact.name)) {
+                              setPreviewArtifact(artifact as Artifact);
+                              setRightPanelView('image-preview');
+                            } else {
+                              downloadArtifact(artifact as Artifact);
+                            }
+                          } else if (artifact.type === 'image') {
+                            setPreviewArtifact(artifact as Artifact);
+                            setRightPanelView('image-preview');
                           }
                         }}
                         onArtifactDownload={artifact => downloadArtifact(artifact as Artifact)}
@@ -2779,6 +2794,16 @@ const Playground: NextPage = () => {
                               },
                             }));
                           }
+                        } else if (artifact.type === 'file') {
+                          if (/\.(png|jpg|jpeg|gif|webp|svg|bmp)$/i.test(artifact.name)) {
+                            setPreviewArtifact(artifact as Artifact);
+                            setRightPanelView('image-preview');
+                            setRightPanelCollapsed(false);
+                          }
+                        } else if (artifact.type === 'image') {
+                          setPreviewArtifact(artifact as Artifact);
+                          setRightPanelView('image-preview');
+                          setRightPanelCollapsed(false);
                         }
                       }}
                       panelView={rightPanelView}

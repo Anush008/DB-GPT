@@ -107,7 +107,7 @@ export interface ManusRightPanelProps {
   isSummaryStreaming?: boolean;
 }
 
-export type PanelView = 'execution' | 'files' | 'html-preview' | 'skill-preview' | 'summary';
+export type PanelView = 'execution' | 'files' | 'html-preview' | 'image-preview' | 'skill-preview' | 'summary';
 
 // Get icon for step type
 const getStepTypeIcon = (type: StepType) => {
@@ -1740,17 +1740,17 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
           )}
           {previewArtifact && (
             <button
-              onClick={() => setPanelView('html-preview')}
+              onClick={() => setPanelView(previewArtifact.type === 'image' ? 'image-preview' : 'html-preview')}
               className={classNames(
                 'px-4 py-2.5 text-xs font-medium transition-colors relative',
-                panelView === 'html-preview'
+                panelView === 'html-preview' || panelView === 'image-preview'
                   ? 'text-gray-900 dark:text-gray-100'
                   : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300',
               )}
             >
               <EyeOutlined className='mr-1.5' />
               {previewArtifact.name || t('web_preview')}
-              {panelView === 'html-preview' && (
+              {(panelView === 'html-preview' || panelView === 'image-preview') && (
                 <div className='absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900 dark:bg-gray-100 rounded-full' />
               )}
             </button>
@@ -1762,7 +1762,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
       <div
         className={classNames(
           'flex-1 overflow-y-auto flex flex-col min-h-0',
-          panelView === 'html-preview' || panelView === 'skill-preview' ? 'p-0' : 'p-5 space-y-4',
+          panelView === 'html-preview' || panelView === 'image-preview' || panelView === 'skill-preview' ? 'p-0' : 'p-5 space-y-4',
         )}
       >
         {panelView === 'skill-preview' && skillName ? (
@@ -1798,6 +1798,26 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
                 />
               );
             })()}
+          </div>
+        ) : panelView === 'image-preview' && previewArtifact ? (
+          <div className='w-full h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-6'>
+            <img
+              src={(() => {
+                const content = previewArtifact.content;
+                if (typeof content === 'string') {
+                  return resolveImageUrl(content);
+                }
+                const obj = content as Record<string, any>;
+                if (obj?.file_path) {
+                  const base = process.env.API_BASE_URL || '';
+                  return `${base}/api/v1/agent/files/download?file_path=${encodeURIComponent(obj.file_path)}`;
+                }
+                return resolveImageUrl(obj?.url || obj?.src || String(content));
+              })()}
+              alt={previewArtifact.name || 'Image preview'}
+              className='max-w-full max-h-full object-contain rounded-lg shadow-md'
+              style={{ maxHeight: 'calc(100vh - 200px)' }}
+            />
           </div>
         ) : panelView === 'summary' && summaryContent ? (
           <div className='prose prose-sm dark:prose-invert max-w-none text-gray-800 dark:text-gray-200 leading-relaxed'>
