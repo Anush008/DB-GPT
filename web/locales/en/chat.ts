@@ -131,4 +131,8 @@ export const ChatEn = {
   voice_input_coming_soon: 'Voice input coming soon',
   expand_panel: 'Expand Panel',
   search_skill: 'Search skills',
+  step_type_skill: 'Load Skill',
+  running: 'Running...',
+  files_count: '{{count}} files',
+  click_to_execute: 'Click to execute',
 };
