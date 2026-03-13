@@ -140,6 +140,41 @@
 
 ## 安装
 
+你可以通过一键安装脚本在几分钟内启动 DB-GPT（macOS / Linux）：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/eosphoros-ai/DB-GPT/main/scripts/install/install.sh | bash
+```
+
+也可以直接指定 profile 和 API Key：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/eosphoros-ai/DB-GPT/main/scripts/install/install.sh \
+  | OPENAI_API_KEY=sk-xxx bash -s -- --profile openai
+```
+
+如果你已经有本地 DB-GPT 仓库，也可以直接复用当前仓库，跳过 `~/.dbgpt/DB-GPT` 的重复 clone：
+
+```bash
+OPENAI_API_KEY=sk-xxx \
+  bash scripts/install/install.sh --profile openai --repo-dir "$(pwd)" --yes
+```
+
+安装完成后，启动服务：
+
+```bash
+cd ~/.dbgpt/DB-GPT && uv run dbgpt start webserver --config ~/.dbgpt/configs/openai.toml
+```
+
+然后打开 [http://localhost:5670](http://localhost:5670)。
+
+> **想先审阅安装脚本再执行？**
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/eosphoros-ai/DB-GPT/main/scripts/install/install.sh -o install.sh
+> less install.sh
+> bash install.sh --profile openai
+> ```
+
 ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 ![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)
 ![macOS](https://img.shields.io/badge/mac%20os-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0)

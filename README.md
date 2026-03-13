@@ -136,19 +136,58 @@ The core capabilities include the following parts:
 ![agent_prompt_awel_v0 6](https://github.com/user-attachments/assets/40761507-a1e1-49d4-b49a-3dd9a5ea41cc)
 
 
-## Installation / Quick Start 
+## Quick Start
+
+Get DB-GPT running in minutes with the one-line installer (macOS & Linux):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/eosphoros-ai/DB-GPT/main/scripts/install/install.sh | bash
+```
+
+Or specify a profile and API key directly:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/eosphoros-ai/DB-GPT/main/scripts/install/install.sh \
+  | OPENAI_API_KEY=sk-xxx bash -s -- --profile openai
+```
+
+Already have a local DB-GPT checkout? Reuse it instead of cloning `~/.dbgpt/DB-GPT`:
+
+```bash
+OPENAI_API_KEY=sk-xxx \
+  bash scripts/install/install.sh --profile openai --repo-dir "$(pwd)" --yes
+```
+
+After installation, start the server:
+
+```bash
+cd ~/.dbgpt/DB-GPT && uv run dbgpt start webserver --config ~/.dbgpt/configs/openai.toml
+```
+
+Then open [http://localhost:5670](http://localhost:5670).
+
+> **Prefer to review the script first?**
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/eosphoros-ai/DB-GPT/main/scripts/install/install.sh -o install.sh
+> less install.sh
+> bash install.sh --profile openai
+> ```
+
+### Advanced Installation
+
 ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 ![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)
 ![macOS](https://img.shields.io/badge/mac%20os-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0)
 ![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
 
-[**Usage Tutorial**](http://docs.dbgpt.cn/docs/overview)
+For Docker, local GPU models (vLLM, llama.cpp), or manual source-code setup, see the full docs:
+
 - [**Install**](http://docs.dbgpt.cn/docs/installation)
   - [Docker](http://docs.dbgpt.cn/docs/installation/docker)
   - [Source Code](http://docs.dbgpt.cn/docs/installation/sourcecode)
 - [**Quickstart**](http://docs.dbgpt.cn/docs/quickstart)
 - [**Application**](http://docs.dbgpt.cn/docs/operation_manual)
-  - [Development Guide](http://docs.dbgpt.cn/docs/cookbook/app/data_analysis_app_develop) 
+  - [Development Guide](http://docs.dbgpt.cn/docs/cookbook/app/data_analysis_app_develop)
   - [App Usage](http://docs.dbgpt.cn/docs/application/app_usage)
   - [AWEL Flow Usage](http://docs.dbgpt.cn/docs/application/awel_flow_usage)
 - [**Debugging**](http://docs.dbgpt.cn/docs/operation_manual/advanced_tutorial/debugging)
