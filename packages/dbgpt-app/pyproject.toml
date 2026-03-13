@@ -15,6 +15,7 @@ dependencies = [
     "dbgpt-ext",
     "dbgpt-serve",
     "dbgpt-client",
+    "dbgpt-sandbox",
     "aiofiles",
     "httpx>=0.24.0",
     "pyparsing",
