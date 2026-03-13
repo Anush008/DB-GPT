@@ -65,6 +65,7 @@ export const ChatEn = {
   export_pdf: 'Export PDF',
   task_files: 'Task Files',
   web_preview: 'Web Preview',
+  content_summary: 'Summary',
   skill_label: 'Skill',
   database_label: 'Database',
   waiting_to_start: 'Waiting to start...',

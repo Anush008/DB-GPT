@@ -1792,10 +1792,11 @@ const Playground: NextPage = () => {
           );
           setActiveMessageId(responseId);
 
-          if (payload.content) {
+          if (payload.content && payload.content.trim()) {
             setStreamingSummary('');
             setSummaryComplete(false);
             setRightPanelTab('summary');
+            setRightPanelView('summary');
 
             const summaryText = cleanFinalContent(payload.content);
             const streamInterval = setInterval(() => {
@@ -2718,7 +2719,6 @@ const Playground: NextPage = () => {
                     </div>
                   </div>
                 </div>
-
               </div>
               {/* Panel toggle handle — placed between panels to avoid overflow clipping */}
               <div className='relative z-20 flex-shrink-0'>
@@ -2727,7 +2727,11 @@ const Playground: NextPage = () => {
                     onClick={() => setRightPanelCollapsed(prev => !prev)}
                     className='absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-8 flex items-center justify-center bg-white dark:bg-[#1a1b1e] border border-gray-200 dark:border-gray-700 rounded-full shadow-sm hover:bg-gray-100 dark:hover:bg-gray-800 hover:w-5 hover:shadow-md transition-all duration-200 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
                   >
-                    {rightPanelCollapsed ? <LeftOutlined style={{ fontSize: 10 }} /> : <RightOutlined style={{ fontSize: 10 }} />}
+                    {rightPanelCollapsed ? (
+                      <LeftOutlined style={{ fontSize: 10 }} />
+                    ) : (
+                      <RightOutlined style={{ fontSize: 10 }} />
+                    )}
                   </button>
                 </Tooltip>
               </div>
@@ -2781,6 +2785,8 @@ const Playground: NextPage = () => {
                       onPanelViewChange={setRightPanelView}
                       previewArtifact={previewArtifact}
                       skillName={createdSkillNames[activeViewMsg?.id || ''] || null}
+                      summaryContent={streamingSummary || activeViewMsg?.context || ''}
+                      isSummaryStreaming={!_summaryComplete && !!streamingSummary}
                     />
                   );
                 })()}

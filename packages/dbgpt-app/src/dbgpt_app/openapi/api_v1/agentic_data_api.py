@@ -469,13 +469,6 @@ async def skill_upload(
         return Result.failed(code="E5002", msg=f"Upload failed: {str(e)}")
 
 
-class _GitHubImportRequest(_BaseModel):
-    """Request body for importing a skill from a GitHub repository."""
-
-    github_url: str
-    branch: str = "main"
-
-
 def _parse_github_url(
     github_url: str,
 ) -> "tuple[str, str, str, Optional[str]]":
@@ -658,201 +651,18 @@ def _extract_skill_from_zip(
     return skill_name
 
 
-@router.post("/v1/skills/import_from_github", response_model=Result)
-async def skill_import_from_github(
-    body: _GitHubImportRequest,
-    user_token: UserRequest = Depends(get_user_from_headers),
-):
-    """Import a skill directly from a public GitHub repository.
-
-    The endpoint downloads the repository as a ZIP archive using the GitHub
-    archive API, extracts it, optionally navigates to a sub-directory,
-    validates the presence of a ``SKILL.md`` file, and installs the skill
-    into ``skills/user/<skill-name>/``.
-
-    Args:
-        body (_GitHubImportRequest): ``github_url`` (required) and optional
-            ``branch`` (default ``"main"``).
-
-    Returns:
-        Result: ``{"file_path": "<relative-path>", "message": "..."}`` on
-        success, or a ``Result.failed`` with an appropriate error code.
-
-    Error codes:
-        - ``E4003``: Malformed or non-GitHub URL.
-        - ``E4004``: ``SKILL.md`` not found in the downloaded content.
-        - ``E5003``: Network / download failure.
-        - ``E5002``: Unexpected server-side error.
-    """
-    import httpx
-
-    # --- parse URL ----------------------------------------------------------
-    try:
-        owner, repo, branch_override, subdir = _parse_github_url(body.github_url)
-    except ValueError as exc:
-        return Result.failed(code="E4003", msg=str(exc))
-
-    branch = branch_override or body.branch
-
-    # --- build download URL -------------------------------------------------
-    zip_url = f"https://github.com/{owner}/{repo}/archive/refs/heads/{branch}.zip"
-
-    # --- download -----------------------------------------------------------
-    skills_dir = Path(DEFAULT_SKILLS_DIR).expanduser().resolve()
-    user_dir = skills_dir / "user"
-    user_dir.mkdir(parents=True, exist_ok=True)
-
-    upload_dir = Path(resolve_root_path("pilot/tmp") or "pilot/tmp").resolve()
-    upload_dir.mkdir(parents=True, exist_ok=True)
-
-    try:
-        async with httpx.AsyncClient(
-            follow_redirects=True,
-            timeout=httpx.Timeout(120.0),
-        ) as client:
-            response = await client.get(zip_url)
-            if response.status_code != 200:
-                return Result.failed(
-                    code="E5003",
-                    msg=(
-                        f"Failed to download {zip_url!r}: HTTP {response.status_code}"
-                    ),
-                )
-            content_bytes = response.content
-    except httpx.RequestError as exc:
-        logger.exception("Network error while downloading skill from GitHub")
-        return Result.failed(
-            code="E5003", msg=f"Network error downloading skill: {str(exc)}"
-        )
-
-    # --- save raw zip to tmp ------------------------------------------------
-    zip_filename = f"{repo}-{branch}.zip"
-    tmp_file = upload_dir / zip_filename
-    tmp_file.write_bytes(content_bytes)
-
-    # --- extract & validate -------------------------------------------------
-    try:
-        buf = io.BytesIO(content_bytes)
-        with zipfile.ZipFile(buf, "r") as zf:
-            # Security: reject path-traversal entries
-            for name in zf.namelist():
-                if ".." in name or name.startswith("/"):
-                    return Result.failed(
-                        code="E4002",
-                        msg=f"Unsafe path in archive: {name}",
-                    )
-
-            all_names = zf.namelist()
-
-            # GitHub archives always have a single top-level dir:
-            # "<repo>-<branch>/"
-            top_dirs = {n.split("/")[0] for n in all_names if "/" in n}
-            archive_root = top_dirs.pop() if len(top_dirs) == 1 else None
-
-            # Determine the directory inside the archive that holds SKILL.md
-            if subdir:
-                # User pointed at a sub-directory; look for SKILL.md there.
-                if archive_root:
-                    skill_prefix = f"{archive_root}/{subdir}/"
-                else:
-                    skill_prefix = f"{subdir}/"
-            else:
-                skill_prefix = f"{archive_root}/" if archive_root else ""
-
-            # Find the SKILL.md entry
-            skill_md_entry = next(
-                (
-                    n
-                    for n in all_names
-                    if n == skill_prefix + "SKILL.md"
-                    or (not skill_prefix and n.endswith("/SKILL.md"))
-                ),
-                None,
-            )
-
-            if skill_md_entry is None:
-                return Result.failed(
-                    code="E4004",
-                    msg=(
-                        "No SKILL.md found in the repository"
-                        + (f" under '{subdir}'" if subdir else "")
-                        + ". Make sure the skill directory contains a SKILL.md file."
-                    ),
-                )
-
-            # Determine skill name from SKILL.md frontmatter (best-effort)
-            try:
-                skill_md_bytes = zf.read(skill_md_entry)
-                skill_md_text = skill_md_bytes.decode("utf-8", errors="replace")
-
-                from dbgpt.agent.claude_skill import FileBasedSkill
-
-                # Write to a tmp location so FileBasedSkill can parse it
-                tmp_skill_dir = upload_dir / f"_gh_parse_{uuid.uuid4().hex}"
-                tmp_skill_dir.mkdir(parents=True, exist_ok=True)
-                tmp_skill_md = tmp_skill_dir / "SKILL.md"
-                tmp_skill_md.write_text(skill_md_text, encoding="utf-8")
-                fskill = FileBasedSkill(str(tmp_skill_md))
-                skill_name = fskill.metadata.name
-                shutil.rmtree(tmp_skill_dir, ignore_errors=True)
-            except Exception:
-                # Fall back to repo name or subdir name
-                skill_name = subdir.split("/")[-1] if subdir else repo
-
-            # Sanitise skill name to a safe directory name
-            safe_name = re.sub(r"[^A-Za-z0-9_\-]", "_", skill_name)
-
-            dest = user_dir / safe_name
-            if dest.exists():
-                shutil.rmtree(dest)
-            dest.mkdir(parents=True, exist_ok=True)
-
-            # Extract only the files that live under skill_prefix
-            for member in all_names:
-                if not member.startswith(skill_prefix) or member == skill_prefix:
-                    continue
-                # Relative path inside the skill directory
-                rel = member[len(skill_prefix) :]
-                if not rel:
-                    continue
-                target = dest / rel
-                if member.endswith("/"):
-                    target.mkdir(parents=True, exist_ok=True)
-                else:
-                    target.parent.mkdir(parents=True, exist_ok=True)
-                    target.write_bytes(zf.read(member))
-
-        rel_path = str(dest.relative_to(skills_dir))
-        return Result.succ(
-            {
-                "file_path": rel_path,
-                "message": f"Skill imported successfully from GitHub: {rel_path}",
-            }
-        )
-
-    except zipfile.BadZipFile as exc:
-        logger.exception("Bad ZIP received from GitHub")
-        return Result.failed(
-            code="E5003", msg=f"Downloaded archive is not a valid ZIP: {str(exc)}"
-        )
-    except Exception as exc:
-        logger.exception("Failed to import skill from GitHub")
-        return Result.failed(code="E5002", msg=f"Import failed: {str(exc)}")
-
-
 @router.post("/v1/skills/import_github", response_model=Result)
 async def skill_import_from_github_v2(
     request: Request,
     user_token: UserRequest = Depends(get_user_from_headers),
 ):
-    """Import a skill from a GitHub or skills.sh URL (v2 — raw JSON body).
+    """Import a skill from a GitHub or skills.sh URL.
 
     Accepts ``{ "url": "..." }`` from the frontend, downloads the repository
     ZIP, extracts the skill, installs it to ``skills/user/<name>/``, and
     returns a success response.
 
-    Compared to the v1 endpoint (``/v1/skills/import_from_github``), this
-    endpoint:
+    This endpoint:
 
     - Accepts a raw JSON body ``{ "url": "..." }`` (no Pydantic model).
     - Supports branch fallback: tries ``main`` first, then ``master`` if 404.

@@ -205,7 +205,8 @@ const getFileTypeLabel = (fileName: string, t: any, mimeType?: string): string =
     return t('file_type_spreadsheet');
   if (ext === 'csv' || mimeType?.includes('csv')) return t('file_type_spreadsheet');
   if (ext === 'pdf' || mimeType?.includes('pdf')) return t('file_type_pdf');
-  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext) || mimeType?.includes('image')) return t('file_type_image');
+  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext) || mimeType?.includes('image'))
+    return t('file_type_image');
   if (['doc', 'docx'].includes(ext) || mimeType?.includes('word')) return t('file_type_word');
   if (['txt', 'md'].includes(ext) || mimeType?.includes('text')) return t('file_type_text');
   return t('file_type_generic');
@@ -473,7 +474,10 @@ const StepCard: React.FC<{
   }, []);
   const isThinkingStep =
     step.status === 'running' &&
-    (step.title === t('thinking') || step.title === '思考中' || step.title === '正在思考中' || step.title?.toLowerCase() === 'thinking');
+    (step.title === t('thinking') ||
+      step.title === '思考中' ||
+      step.title === '正在思考中' ||
+      step.title?.toLowerCase() === 'thinking');
   if (isThinkingStep) {
     return (
       <div
@@ -898,7 +902,7 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
                     <div className='text-sm font-medium text-gray-800 dark:text-gray-200 truncate'>
                       {attachedSkill.name}
                     </div>
-                      <div className='text-[11px] text-gray-400 dark:text-gray-500'>{t('skill_label')}</div>
+                    <div className='text-[11px] text-gray-400 dark:text-gray-500'>{t('skill_label')}</div>
                   </div>
                 </div>
               )}
@@ -911,9 +915,9 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
                     <div className='text-sm font-medium text-gray-800 dark:text-gray-200 truncate'>
                       {attachedDb.db_name}
                     </div>
-                      <div className='text-[11px] text-gray-400 dark:text-gray-500'>
-                        {attachedDb.db_type || t('database_label')}
-                      </div>
+                    <div className='text-[11px] text-gray-400 dark:text-gray-500'>
+                      {attachedDb.db_type || t('database_label')}
+                    </div>
                   </div>
                 </div>
               )}
@@ -945,7 +949,7 @@ const ManusLeftPanel: React.FC<ManusLeftPanelProps> = ({
                 <span className='text-sm text-blue-600 dark:text-blue-400'>{t('db_gpt_thinking')}</span>
               </div>
             ) : (
-                <span className='text-sm'>{t('waiting_to_start')}</span>
+              <span className='text-sm'>{t('waiting_to_start')}</span>
             )}
             {isWorking && stepThoughts?.[activeStepId || 'initial'] && (
               <ThoughtBubble text={stepThoughts[activeStepId || 'initial']} />

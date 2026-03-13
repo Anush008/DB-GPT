@@ -11,7 +11,6 @@ import {
   PlusOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
-import { useRequest } from 'ahooks';
 import {
   Button,
   Dropdown,
@@ -30,7 +29,7 @@ import {
   message,
 } from 'antd';
 import type { DataNode } from 'antd/es/tree';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 interface SkillItem {
@@ -105,45 +104,56 @@ function Skills() {
   const [importLoading, setImportLoading] = useState(false);
   const [importForm] = Form.useForm();
 
-  const {
-    data: skillsList = [],
-    loading: listLoading,
-    refresh: refreshList,
-  } = useRequest<SkillItem[], []>(async () => {
-    try {
-      const response = await axios.get(`${process.env.API_BASE_URL ?? ''}/api/v1/skills/list`);
-      if (response?.success && Array.isArray(response.data)) {
-        return response.data as SkillItem[];
-      }
-      return [];
-    } catch (err) {
-      console.error('[Skills] Failed to fetch list:', err);
-      return [];
-    }
-  });
+  const [skillsList, setSkillsList] = useState<SkillItem[]>([]);
+  const [listLoading, setListLoading] = useState(false);
+  const [skillDetail, setSkillDetail] = useState<SkillDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const listFetchCountRef = useRef(0);
 
-  const {
-    data: skillDetail,
-    loading: detailLoading,
-    run: fetchDetail,
-    mutate: setSkillDetail,
-  } = useRequest<SkillDetail | null, [string, string]>(
-    async (skillName: string, filePath: string) => {
-      try {
-        const response = await axios.get(`${process.env.API_BASE_URL ?? ''}/api/v1/skills/detail`, {
-          params: { skill_name: skillName, file_path: filePath },
-        });
-        if (response?.success && response.data) {
-          return response.data as SkillDetail;
-        }
-        return null;
-      } catch (err) {
-        console.error('[Skills] Failed to fetch detail:', err);
-        return null;
+  const fetchSkillsList = useCallback(async () => {
+    setListLoading(true);
+    const currentFetch = ++listFetchCountRef.current;
+    try {
+      const response = (await axios.get(`${process.env.API_BASE_URL ?? ''}/api/v1/skills/list`)) as any;
+      if (currentFetch !== listFetchCountRef.current) return;
+      if (response?.success && Array.isArray(response.data)) {
+        setSkillsList(response.data as SkillItem[]);
+      } else {
+        setSkillsList([]);
       }
-    },
-    { manual: true },
-  );
+    } catch (err) {
+      if (currentFetch !== listFetchCountRef.current) return;
+      console.error('[Skills] Failed to fetch list:', err);
+      setSkillsList([]);
+    } finally {
+      if (currentFetch === listFetchCountRef.current) {
+        setListLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSkillsList();
+  }, [fetchSkillsList]);
+
+  const fetchDetail = useCallback(async (skillName: string, filePath: string) => {
+    setDetailLoading(true);
+    try {
+      const response = await (axios.get(`${process.env.API_BASE_URL ?? ''}/api/v1/skills/detail`, {
+        params: { skill_name: skillName, file_path: filePath },
+      }) as Promise<any>);
+      if (response?.success && response.data) {
+        setSkillDetail(response.data as SkillDetail);
+      } else {
+        setSkillDetail(null);
+      }
+    } catch (err) {
+      console.error('[Skills] Failed to fetch detail:', err);
+      setSkillDetail(null);
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
 
   const filteredSkills = useMemo(() => {
     let list = skillsList;
@@ -170,7 +180,7 @@ function Skills() {
     setDetailOpen(false);
     setSelectedSkill(null);
     setSkillDetail(null);
-  }, [setSkillDetail]);
+  }, []);
 
   const handleToggle = useCallback((skillId: string, checked: boolean) => {
     setEnabledMap(prev => ({ ...prev, [skillId]: checked }));
@@ -241,9 +251,9 @@ function Skills() {
       message.success(t('skills_upload_success', { count: successCount }));
       setUploadOpen(false);
       setUploadFileList([]);
-      refreshList();
+      fetchSkillsList();
     }
-  }, [uploadFileList, refreshList, t]);
+  }, [uploadFileList, fetchSkillsList, t]);
 
   const uploadProps: UploadProps = {
     multiple: true,
@@ -269,12 +279,16 @@ function Skills() {
     try {
       const values = await importForm.validateFields();
       setImportLoading(true);
-      const res = await axios.post('/api/v1/skills/import_github', { url: values.github_url }, { timeout: 60000 }) as any;
+      const res = (await axios.post(
+        '/api/v1/skills/import_github',
+        { url: values.github_url },
+        { timeout: 60000 },
+      )) as any;
       if (res?.success) {
         message.success(t('skills_github_import_success'));
         setImportModalVisible(false);
         importForm.resetFields();
-        refreshList();
+        fetchSkillsList();
       } else {
         message.error(res?.err_msg || t('skills_github_import_failed'));
       }

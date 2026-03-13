@@ -101,9 +101,13 @@ export interface ManusRightPanelProps {
   databaseName?: string;
   /** Skill name for the skill-preview tab (set when a skill is created/packaged) */
   skillName?: string | null;
+  /** Summary content to display in the summary tab */
+  summaryContent?: string;
+  /** Whether the summary is currently streaming */
+  isSummaryStreaming?: boolean;
 }
 
-export type PanelView = 'execution' | 'files' | 'html-preview' | 'skill-preview';
+export type PanelView = 'execution' | 'files' | 'html-preview' | 'skill-preview' | 'summary';
 
 // Get icon for step type
 const getStepTypeIcon = (type: StepType) => {
@@ -1456,6 +1460,8 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
   databaseType,
   databaseName,
   skillName,
+  summaryContent,
+  isSummaryStreaming,
 }) => {
   const { t } = useTranslation();
   const [inputCollapsed, setInputCollapsed] = useState(false);
@@ -1661,7 +1667,7 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
       </div>
 
       {/* View Toggle Tabs */}
-      {((artifacts && artifacts.length > 0) || previewArtifact || skillName) && (
+      {((artifacts && artifacts.length > 0) || previewArtifact || skillName || !!summaryContent) && (
         <div className='flex items-center gap-0 px-5 bg-white dark:bg-[#111217] border-b border-gray-200 dark:border-gray-800'>
           <button
             onClick={() => setPanelView('execution')}
@@ -1711,6 +1717,23 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
               <AppstoreOutlined className='mr-1.5' />
               {skillName}
               {panelView === 'skill-preview' && (
+                <div className='absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900 dark:bg-gray-100 rounded-full' />
+              )}
+            </button>
+          )}
+          {!!summaryContent && (
+            <button
+              onClick={() => setPanelView('summary')}
+              className={classNames(
+                'px-4 py-2.5 text-xs font-medium transition-colors relative',
+                panelView === 'summary'
+                  ? 'text-gray-900 dark:text-gray-100'
+                  : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300',
+              )}
+            >
+              <FileTextOutlined className='mr-1.5' />
+              {t('content_summary')}
+              {panelView === 'summary' && (
                 <div className='absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900 dark:bg-gray-100 rounded-full' />
               )}
             </button>
@@ -1775,6 +1798,13 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
                 />
               );
             })()}
+          </div>
+        ) : panelView === 'summary' && summaryContent ? (
+          <div className='prose prose-sm dark:prose-invert max-w-none text-gray-800 dark:text-gray-200 leading-relaxed'>
+            <MarkDownContext>{summaryContent}</MarkDownContext>
+            {isSummaryStreaming && (
+              <span className='inline-block w-1.5 h-4 bg-blue-500 animate-pulse ml-0.5 align-text-bottom' />
+            )}
           </div>
         ) : panelView === 'files' ? (
           <div className='space-y-0'>
@@ -1932,7 +1962,9 @@ const ManusRightPanel: React.FC<ManusRightPanelProps> = ({
                                       <div className='text-sm font-semibold text-gray-800 dark:text-gray-200 truncate'>
                                         {skillDisplayName}
                                       </div>
-                <div className='text-[11px] text-gray-400 dark:text-gray-500'>{t('skill_label')}</div>
+                                      <div className='text-[11px] text-gray-400 dark:text-gray-500'>
+                                        {t('skill_label')}
+                                      </div>
                                     </div>
                                   </div>
                                   {skillDescription && (
