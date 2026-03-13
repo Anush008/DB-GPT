@@ -138,4 +138,8 @@ export const ChatZh: Resources['translation'] = {
    voice_input_coming_soon: '语音输入即将上线',
    expand_panel: '展开面板',
    search_skill: '搜索技能',
+   step_type_skill: '加载技能',
+   running: '运行中...',
+   files_count: '{{count}} 个文件',
+   click_to_execute: '点击执行',
 } as const;

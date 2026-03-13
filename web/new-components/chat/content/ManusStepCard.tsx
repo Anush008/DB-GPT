@@ -14,6 +14,7 @@ import {
 import { Spin, Tooltip } from 'antd';
 import classNames from 'classnames';
 import React, { memo, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export type StepStatus = 'pending' | 'running' | 'completed' | 'error';
 
@@ -92,21 +93,21 @@ const getStatusIndicator = (status: StepStatus) => {
   }
 };
 
-const getTypeLabel = (type: StepCardProps['type']): string => {
+const getTypeLabel = (type: StepCardProps['type'], t: (key: string) => string): string => {
   const labels: Record<StepCardProps['type'], string> = {
-    read: '读取文件',
-    edit: '编辑文件',
-    write: '写入文件',
-    bash: '执行命令',
-    grep: '搜索内容',
-    glob: '查找文件',
-    task: '执行任务',
-    skill: t('chat:load_skill') || '加载技能',
-    python: 'Python 脚本',
-    html: 'HTML',
-    other: '其他操作',
+    read: t('step_type_read'),
+    edit: t('step_type_edit'),
+    write: t('step_type_write'),
+    bash: t('step_type_bash'),
+    grep: t('step_type_grep'),
+    glob: t('step_type_glob'),
+    task: t('step_type_task'),
+    skill: t('step_type_skill'),
+    python: t('step_type_python'),
+    html: t('step_type_html'),
+    other: t('step_type_other'),
   };
-  return labels[type] || '操作';
+  return labels[type] || t('step_type_other');
 };
 
 const ManusStepCard: React.FC<StepCardProps> = ({
@@ -174,7 +175,7 @@ const ManusStepCard: React.FC<StepCardProps> = ({
           >
             {typeLabel}
           </span>
-          {status === 'running' && <span className='text-[10px] text-blue-500 animate-pulse'>运行中...</span>}
+          {status === 'running' && <span className='text-[10px] text-blue-500 animate-pulse'>{t('running')}</span>}
         </div>
 
         <div className='text-sm font-medium text-gray-800 dark:text-gray-200 truncate'>{title}</div>
@@ -194,7 +195,7 @@ const ManusStepCard: React.FC<StepCardProps> = ({
             {stats.deletions !== undefined && stats.deletions > 0 && (
               <span className='text-red-500 dark:text-red-400'>-{stats.deletions}</span>
             )}
-            {stats.files !== undefined && <span className='text-gray-400'>{stats.files} 文件</span>}
+            {stats.files !== undefined && <span className='text-gray-400'>{t('files_count', { count: stats.files })}</span>}
           </div>
         )}
       </div>
@@ -204,7 +205,7 @@ const ManusStepCard: React.FC<StepCardProps> = ({
 
       {/* Hover Play Button */}
       {status === 'pending' && (
-        <Tooltip title='点击执行'>
+        <Tooltip title={t('click_to_execute')}>
           <div className='absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity'>
             <PlayCircleOutlined className='text-lg text-blue-500 hover:text-blue-600' />
           </div>
