@@ -1,28 +1,28 @@
 ---
 name: csv-data-analysis
-description: This skill should be used when users need to analyze CSV files, understand data patterns, generate statistical summaries, or create data visualizations. Trigger keywords include "分析CSV", "数据分析", "CSV分析", "数据统计", "生成图表", "数据可视化".
+description: This skill should be used when users need to analyze CSV or Excel files, understand data patterns, generate statistical summaries, or create data visualizations. Trigger keywords include "分析CSV", "分析Excel", "数据分析", "CSV分析", "Excel分析", "数据统计", "生成图表", "数据可视化".
 ---
 
-# 智能 CSV 数据深度分析工具
+# 智能数据深度分析工具
 
-CSV数据分析工具是一个基于 AI 与前端可视化技术（ECharts + Tailwind CSS）的深度自动化数据探索工具。它能够快速提取统计特征、数据质量、数值分布、异常值检测、分类信息、相关性、排名以及时序趋势，并在后半段补充异动概述、归因线索和总结建议，生成高度美观和可交互的网页分析报告。
+数据分析工具是一个基于 AI 与前端可视化技术（ECharts + Tailwind CSS）的深度自动化数据探索工具。它能够快速提取统计特征、数据质量、数值分布、异常值检测、分类信息、相关性、排名以及时序趋势，并在后半段补充异动概述、归因线索和总结建议，生成高度美观和可交互的网页分析报告。支持 CSV、Excel（.xlsx/.xls）和 TSV 格式。
 
 报告整体遵循“前半段基础数据分析、后半段异动与归因增强”的结构，核心章节包括：报告摘要、数据概览与质量检查、数值指标分布特征、特征分析与结构分析、关系分析与异常识别、数据异动概述、归因分析模块、分析结果与统计明细、原因推测/总结/建议。
 
 ## 核心工作流（LLM 必读）
 
-作为 AI 助手，在用户上传 CSV 并要求分析时，你需要严格按照以下两步执行：
+作为 AI 助手，在用户上传 CSV 或 Excel 文件并要求分析时，你需要严格按照以下两步执行：
 
 ### 第一步：提取数据特征 (执行脚本)
 
-使用 `execute_skill_script_file` 工具运行 `csv_analyzer.py`，将 CSV 文件路径传入。
+使用 `execute_skill_script_file` 工具运行 `csv_analyzer.py`，将数据文件路径传入（支持 .csv、.xlsx、.xls、.tsv 格式）。
 
 **工具调用参数示例：**
 ```json
 {
   "skill_name": "csv-data-analysis",
   "script_file_name": "csv_analyzer.py",
-  "args": {"input_file": "/path/to/data.csv"}
+  "args": {"input_file": "/path/to/data.csv or /path/to/data.xlsx"}
 }
 ```
 
@@ -104,7 +104,7 @@ CSV数据分析工具是一个基于 AI 与前端可视化技术（ECharts + Tai
 csv-data-analysis/
 ├── SKILL.md                        # 你当前正在阅读的技能指南
 ├── scripts/
-│   └── csv_analyzer.py             # Python 分析引擎（轻量级、无图形依赖）
+│   └── csv_analyzer.py             # Python 分析引擎（支持 CSV/Excel/TSV，轻量级、无图形依赖）
 └── templates/
     └── report_template.html        # 响应式 ECharts 报表模板（内含完整渲染逻辑与硬编码标题）
 ```
