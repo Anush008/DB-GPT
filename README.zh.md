@@ -153,6 +153,13 @@ curl -fsSL https://raw.githubusercontent.com/eosphoros-ai/DB-GPT/main/scripts/in
   | OPENAI_API_KEY=sk-xxx bash -s -- --profile openai
 ```
 
+如果你想使用 Kimi 2.5（Moonshot API）：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/eosphoros-ai/DB-GPT/main/scripts/install/install.sh \
+  | MOONSHOT_API_KEY=sk-xxx bash -s -- --profile kimi
+```
+
 如果你已经有本地 DB-GPT 仓库，也可以直接复用当前仓库，跳过 `~/.dbgpt/DB-GPT` 的重复 clone：
 
 ```bash
@@ -160,10 +167,17 @@ OPENAI_API_KEY=sk-xxx \
   bash scripts/install/install.sh --profile openai --repo-dir "$(pwd)" --yes
 ```
 
-安装完成后，启动服务：
+如果你想在当前仓库里直接测试 Kimi 2.5：
 
 ```bash
-cd ~/.dbgpt/DB-GPT && uv run dbgpt start webserver --config ~/.dbgpt/configs/openai.toml
+MOONSHOT_API_KEY=sk-xxx \
+  bash scripts/install/install.sh --profile kimi --repo-dir "$(pwd)" --yes
+```
+
+安装完成后，使用生成的 profile 配置启动服务：
+
+```bash
+cd ~/.dbgpt/DB-GPT && uv run dbgpt start webserver --config ~/.dbgpt/configs/<profile>.toml
 ```
 
 然后打开 [http://localhost:5670](http://localhost:5670)。

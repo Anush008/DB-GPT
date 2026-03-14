@@ -151,6 +151,13 @@ curl -fsSL https://raw.githubusercontent.com/eosphoros-ai/DB-GPT/main/scripts/in
   | OPENAI_API_KEY=sk-xxx bash -s -- --profile openai
 ```
 
+For Kimi 2.5 via Moonshot API:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/eosphoros-ai/DB-GPT/main/scripts/install/install.sh \
+  | MOONSHOT_API_KEY=sk-xxx bash -s -- --profile kimi
+```
+
 Already have a local DB-GPT checkout? Reuse it instead of cloning `~/.dbgpt/DB-GPT`:
 
 ```bash
@@ -158,10 +165,17 @@ OPENAI_API_KEY=sk-xxx \
   bash scripts/install/install.sh --profile openai --repo-dir "$(pwd)" --yes
 ```
 
-After installation, start the server:
+Or reuse your local repo with Kimi 2.5:
 
 ```bash
-cd ~/.dbgpt/DB-GPT && uv run dbgpt start webserver --config ~/.dbgpt/configs/openai.toml
+MOONSHOT_API_KEY=sk-xxx \
+  bash scripts/install/install.sh --profile kimi --repo-dir "$(pwd)" --yes
+```
+
+After installation, start the server with the generated profile config:
+
+```bash
+cd ~/.dbgpt/DB-GPT && uv run dbgpt start webserver --config ~/.dbgpt/configs/<profile>.toml
 ```
 
 Then open [http://localhost:5670](http://localhost:5670).

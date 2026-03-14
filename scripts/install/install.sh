@@ -89,7 +89,7 @@ Usage:
   install.sh [options]
 
 Options:
-  --profile <name>       Deployment profile (currently: openai)
+  --profile <name>       Deployment profile (currently: openai, kimi)
   --install-dir <path>   Where to install (default: ~/.dbgpt)
   --version <git-ref>    Git tag or branch to check out (default: main)
   --repo-dir <path>      Use an existing local DB-GPT checkout
@@ -111,8 +111,11 @@ Examples:
   # Fully non-interactive
   bash install.sh --profile openai --yes
 
-  # With API key
+  # With OpenAI API key
   OPENAI_API_KEY=sk-xxx bash install.sh --profile openai --yes
+
+  # With Kimi / Moonshot API key
+  MOONSHOT_API_KEY=sk-xxx bash install.sh --profile kimi --yes
 
   # Reuse your current local repo (skip clone/update)
   OPENAI_API_KEY=sk-xxx bash install.sh --profile openai --repo-dir . --yes
@@ -206,6 +209,7 @@ step_choose_profile() {
   printf '\n'
   printf '%b' "${COLOR_CYAN}Select a deployment profile:${COLOR_RESET}\n"
   printf '  1) openai     — OpenAI API proxy (recommended)\n'
+  printf '  2) kimi       — Kimi 2.5 via Moonshot API\n'
   printf '  q) quit\n'
   printf '\n'
 
@@ -215,6 +219,7 @@ step_choose_profile() {
 
   case "${choice}" in
     1|openai) PROFILE="openai" ;;
+    2|kimi)   PROFILE="kimi" ;;
     q|Q)      info "Installation cancelled."; exit 0 ;;
     *)        die "Invalid choice: ${choice}" ;;
   esac

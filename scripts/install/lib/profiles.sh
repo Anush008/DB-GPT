@@ -9,12 +9,12 @@
 # ── Validation ────────────────────────────────────────────────────────────────
 
 # Currently supported profiles.  Extend this list when adding new profiles.
-readonly SUPPORTED_PROFILES="openai"
+readonly SUPPORTED_PROFILES="openai kimi"
 
 validate_profile() {
   local profile="$1"
   case "${profile}" in
-    openai) ;;
+    openai|kimi) ;;
     *)
       die "Unsupported profile: ${profile}. Supported profiles: ${SUPPORTED_PROFILES}"
       ;;
@@ -37,6 +37,15 @@ storage_chromadb
 dbgpts
 EOF
       ;;
+    kimi)
+      cat <<'EOF'
+base
+proxy_openai
+rag
+storage_chromadb
+dbgpts
+EOF
+      ;;
     *)
       die "No extras defined for profile: ${profile}"
       ;;
@@ -50,6 +59,7 @@ profile_template() {
   local profile="$1"
   case "${profile}" in
     openai)  echo "openai.toml" ;;
+    kimi)    echo "kimi.toml" ;;
     *)       die "No template defined for profile: ${profile}" ;;
   esac
 }
@@ -60,6 +70,7 @@ profile_repo_config() {
   local profile="$1"
   case "${profile}" in
     openai)  echo "configs/dbgpt-proxy-openai.toml" ;;
+    kimi)    echo "configs/dbgpt-proxy-moonshot.toml" ;;
     *)       die "No repo config path defined for profile: ${profile}" ;;
   esac
 }
@@ -70,6 +81,7 @@ profile_api_key_env() {
   local profile="$1"
   case "${profile}" in
     openai)   echo "OPENAI_API_KEY" ;;
+    kimi)     echo "MOONSHOT_API_KEY" ;;
     *)        echo "" ;;
   esac
 }
@@ -80,6 +92,7 @@ profile_api_key_token() {
   local profile="$1"
   case "${profile}" in
     openai)   echo "__OPENAI_API_KEY__" ;;
+    kimi)     echo "__MOONSHOT_API_KEY__" ;;
     *)        echo "" ;;
   esac
 }
