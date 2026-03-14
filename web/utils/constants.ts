@@ -35,6 +35,11 @@ export const MODEL_ICON_INFO: Record<string, ModelIconInfo> = {
     icon: '/models/moonshot.png',
     patterns: ['moonshot', 'kimi'],
   },
+  minimax: {
+    label: 'MiniMax',
+    icon: '/models/minimax.png',
+    patterns: ['minimax', 'm2.5', 'm2.1', 'm2'],
+  },
   doubao: {
     label: 'Doubao',
     icon: '/models/doubao.png',

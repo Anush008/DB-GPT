@@ -158,6 +158,13 @@ curl -fsSL https://raw.githubusercontent.com/eosphoros-ai/DB-GPT/main/scripts/in
   | MOONSHOT_API_KEY=sk-xxx bash -s -- --profile kimi
 ```
 
+For MiniMax via the OpenAI-compatible API:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/eosphoros-ai/DB-GPT/main/scripts/install/install.sh \
+  | MINIMAX_API_KEY=sk-xxx bash -s -- --profile minimax
+```
+
 Already have a local DB-GPT checkout? Reuse it instead of cloning `~/.dbgpt/DB-GPT`:
 
 ```bash
@@ -170,6 +177,13 @@ Or reuse your local repo with Kimi 2.5:
 ```bash
 MOONSHOT_API_KEY=sk-xxx \
   bash scripts/install/install.sh --profile kimi --repo-dir "$(pwd)" --yes
+```
+
+Or reuse your local repo with MiniMax:
+
+```bash
+MINIMAX_API_KEY=sk-xxx \
+  bash scripts/install/install.sh --profile minimax --repo-dir "$(pwd)" --yes
 ```
 
 After installation, start the server with the generated profile config:

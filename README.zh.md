@@ -160,6 +160,13 @@ curl -fsSL https://raw.githubusercontent.com/eosphoros-ai/DB-GPT/main/scripts/in
   | MOONSHOT_API_KEY=sk-xxx bash -s -- --profile kimi
 ```
 
+如果你想使用 MiniMax（OpenAI 兼容接口）：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/eosphoros-ai/DB-GPT/main/scripts/install/install.sh \
+  | MINIMAX_API_KEY=sk-xxx bash -s -- --profile minimax
+```
+
 如果你已经有本地 DB-GPT 仓库，也可以直接复用当前仓库，跳过 `~/.dbgpt/DB-GPT` 的重复 clone：
 
 ```bash
@@ -172,6 +179,13 @@ OPENAI_API_KEY=sk-xxx \
 ```bash
 MOONSHOT_API_KEY=sk-xxx \
   bash scripts/install/install.sh --profile kimi --repo-dir "$(pwd)" --yes
+```
+
+如果你想在当前仓库里直接测试 MiniMax：
+
+```bash
+MINIMAX_API_KEY=sk-xxx \
+  bash scripts/install/install.sh --profile minimax --repo-dir "$(pwd)" --yes
 ```
 
 安装完成后，使用生成的 profile 配置启动服务：
