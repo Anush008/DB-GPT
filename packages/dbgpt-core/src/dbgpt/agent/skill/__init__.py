@@ -6,6 +6,8 @@ agent skills that include prompts, tools, knowledge, and actions.
 
 from .agent import SkillsAgent, SkillsAgentConfig, create_skills_agent
 from .base import Skill, SkillBase, SkillMetadata, SkillType
+from .loader import SkillBuilder, SkillLoader
+from .manage import SkillManager, get_skill_manager, initialize_skill
 from .middleware import (
     LoadedSkill,
     SkillsMiddleware,
@@ -14,9 +16,7 @@ from .middleware import (
     _validate_skill_name,
 )
 from .middleware_v2 import SkillsMiddlewareV2
-from .manage import SkillManager, get_skill_manager, initialize_skill
 from .parameters import SkillParameters
-from .loader import SkillLoader, SkillBuilder
 
 __all__ = [
     "Skill",

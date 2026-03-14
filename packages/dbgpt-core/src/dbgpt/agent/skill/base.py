@@ -3,10 +3,9 @@
 import dataclasses
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any, Dict, List, Optional
 
 from dbgpt.core import PromptTemplate
-from dbgpt._private.pydantic import BaseModel, Field
 
 
 class SkillType(str, Enum):

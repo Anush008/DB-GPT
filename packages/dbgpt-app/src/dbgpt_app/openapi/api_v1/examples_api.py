@@ -23,8 +23,13 @@ EXAMPLE_FILES = {
         "name": "Walmart_Sales.csv",
     },
     "fin_report": {
-        "path": "docker/examples/fin_report/pdf/2020-01-23__浙江海翔药业股份有限公司__002099__海翔药业__2019年__年度报告.pdf",
-        "name": "2020-01-23__浙江海翔药业股份有限公司__002099__海翔药业__2019年__年度报告.pdf",
+        "path": (
+            "docker/examples/fin_report/pdf/"
+            "2020-01-23__浙江海翔药业股份有限公司__002099__海翔药业__2019年__年度报告.pdf"
+        ),
+        "name": (
+            "2020-01-23__浙江海翔药业股份有限公司__002099__海翔药业__2019年__年度报告.pdf"
+        ),
     },
     "create_sql_skill": {
         "path": "docker/examples/txt/sql_skill.txt",

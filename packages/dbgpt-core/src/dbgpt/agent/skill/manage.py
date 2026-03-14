@@ -5,9 +5,8 @@ import logging
 from typing import Any, Dict, List, Optional, Type, Union, cast
 
 from dbgpt.component import BaseComponent, ComponentType, SystemApp
-from dbgpt.util.parameter_utils import ParameterDescription
 
-from .base import Skill, SkillBase, SkillMetadata, SkillType
+from .base import SkillBase, SkillMetadata, SkillType
 from .parameters import SkillParameters
 
 logger = logging.getLogger(__name__)
@@ -61,7 +60,8 @@ class SkillManager(BaseComponent):
     To manage the skills.
     """
 
-    # Use a distinct component name so SkillManager does not collide with ResourceManager
+    # Use a distinct component name so SkillManager does not collide
+    # with ResourceManager
     name = ComponentType.SKILL_MANAGER
 
     def __init__(self, system_app: SystemApp):
@@ -231,11 +231,12 @@ class SkillManager(BaseComponent):
         """Retrieve all skills metadata.
 
         Returns:
-            List[Dict[str, Any]]: List of skill metadata including name, description and path.
+            List[Dict[str, Any]]: List of skill metadata including name,
+            description and path.
         """
-        # This is a basic implementation. In a real scenario, this might search directories
-        # or a database. Since we currently register skills manually or via config,
-        # we iterate over registered skills.
+        # This is a basic implementation. In a real scenario, this might
+        # search directories or a database. Since we currently register skills
+        # manually or via config, we iterate over registered skills.
         # To support directory scanning as requested, we would need to implement
         # a scanner here or in SkillLoader.
         # For now, let's assume skills are registered.
@@ -258,9 +259,9 @@ class SkillManager(BaseComponent):
         # If the skill was loaded from a file, we might have the path stored somewhere.
         # SkillMetadata doesn't strictly enforce a 'path' attribute, but let's check.
         # Or we can try to find it via the loader mechanism if we had the path.
-        # For the sake of the example and current codebase state, let's look at metadata.
-        # If we can't find the file content easily from the object, we might need to rely
-        # on how it was loaded.
+        # For the sake of the example and current codebase state, let's look at
+        # metadata. If we can't find the file content easily from the object,
+        # we might need to rely on how it was loaded.
 
         # A workaround for the example: The Skill object usually has prompt_template.
         # If it's a file-based skill, the prompt_template IS the content.
@@ -356,7 +357,10 @@ class SkillManager(BaseComponent):
                         "chunks": [
                             {
                                 "output_type": "text",
-                                "content": f"Script '{script_name}' not found in skill '{skill_name}'",
+                                "content": (
+                                    f"Script '{script_name}' not found"
+                                    f" in skill '{skill_name}'"
+                                ),
                             }
                         ]
                     },
@@ -512,7 +516,6 @@ class SkillManager(BaseComponent):
 
     def _get_skill_path(self, skill_name: str) -> Optional[str]:
         import os
-        from pathlib import Path
 
         skill = self.get_skill(name=skill_name)
         if skill and hasattr(skill, "metadata") and skill.metadata:
@@ -558,8 +561,9 @@ class SkillManager(BaseComponent):
 
         Args:
             skill_name: The name of the skill.
-            resource_path: The relative path to the resource (e.g., "references/analysis.md",
-                          "scripts/calculate.py", "data/config.json").
+            resource_path: The relative path to the resource
+                (e.g., "references/analysis.md",
+                "scripts/calculate.py", "data/config.json").
             args: Optional arguments for script execution (only used for scripts).
 
         Returns:
@@ -591,7 +595,11 @@ class SkillManager(BaseComponent):
             return json.dumps(
                 {
                     "error": True,
-                    "message": f'Cannot read "{os.path.basename(resource_path)}" (this model does not support image input). Inform the user.',
+                    "message": (
+                        f'Cannot read "{os.path.basename(resource_path)}"'
+                        " (this model does not support image input)."
+                        " Inform the user."
+                    ),
                 },
                 ensure_ascii=False,
             )
@@ -633,7 +641,9 @@ class SkillManager(BaseComponent):
             return json.dumps(
                 {
                     "error": True,
-                    "message": f"Resource '{resource_path}' not found in skill '{skill_name}'",
+                    "message": (
+                        f"Resource '{resource_path}' not found in skill '{skill_name}'"
+                    ),
                 },
                 ensure_ascii=False,
             )
@@ -662,7 +672,9 @@ class SkillManager(BaseComponent):
             return json.dumps(
                 {
                     "error": True,
-                    "message": f"Cannot read '{resource_path}': binary file not supported",
+                    "message": (
+                        f"Cannot read '{resource_path}': binary file not supported"
+                    ),
                 },
                 ensure_ascii=False,
             )

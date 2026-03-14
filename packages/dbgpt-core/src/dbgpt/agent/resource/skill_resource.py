@@ -6,12 +6,10 @@ skill instances from parameters and exposes prompt/get_prompt to integrate
 with existing resource plumbing.
 """
 
-from typing import Optional, Tuple, Dict, Any
+from typing import Any, Dict, Optional, Tuple
 
-from dbgpt.agent.resource.base import Resource, ResourceParameters, ResourceType
-from dbgpt.agent.skill.manage import get_skill_manager
+from dbgpt.agent.resource.base import Resource, ResourceType
 from dbgpt.agent.skill.parameters import SkillParameters
-from dbgpt.core import Chunk
 
 
 class SkillResource(Resource[SkillParameters]):

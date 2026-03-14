@@ -132,7 +132,6 @@ class ReActOutputParser:
         if thought_match:
             thought = thought_match.group(1).strip()
 
-
         # Extract phase (optional, between thought and action)
         phase = None
         phase_match = re.search(

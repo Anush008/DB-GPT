@@ -4,12 +4,11 @@ This module implements a simple SKILL system similar to Claude's SKILL mechanism
 where skills are defined in Markdown files with metadata and instructions.
 """
 
-import os
-import re
 import dataclasses
+import re
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
-from abc import ABC, abstractmethod
 
 from dbgpt.core import PromptTemplate
 
@@ -127,7 +126,8 @@ class FileBasedSkill:
 
         if len(parts) < 3:
             raise ValueError(
-                f"Invalid SKILL file format. Expected '---metadata---instructions': {file_path}"
+                "Invalid SKILL file format. "
+                f"Expected '---metadata---instructions': {file_path}"
             )
 
         metadata_text = parts[1].strip()
@@ -312,7 +312,11 @@ class FileBasedSkill:
         """
         keywords = []
 
-        pattern = r"(?:when|use|for|to)\s+(?:the\s+)?(?:user\s+)?(?:asks|requests|wants|needs)?\s*(?:to\s+)?([a-z\s]+?)(?:\s*(?:\.|,|;|or|\(|\)|use when|$))"
+        pattern = (
+            r"(?:when|use|for|to)\s+(?:the\s+)?(?:user\s+)?"
+            r"(?:asks|requests|wants|needs)?\s*(?:to\s+)?([a-z\s]+?)"
+            r"(?:\s*(?:\.|,|;|or|\(|\)|use when|$))"
+        )
         matches = re.findall(pattern, description, re.IGNORECASE)
 
         for match in matches:

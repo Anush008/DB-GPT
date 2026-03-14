@@ -42,7 +42,8 @@ For each task input, your response should contain:
 1. One analysis of the task and the current environment, reasoning to determine the \
 next action (prefix "Thought: ").
 2. A short phrase describing the intent or stage of this step (prefix "Phase: "). \
-For example: "Phase: 分析任务需求", "Phase: 加载数据分析技能", "Phase: 执行数据清洗", "Phase: 生成可视化报告".
+For example: "Phase: 分析任务需求", "Phase: 加载数据分析技能", \
+"Phase: 执行数据清洗", "Phase: 生成可视化报告".
 3. One action string in the ACTION SPACE (prefix "Action: "), should be one of \
 [{{ action_space_names }}].
 4. One action input (prefix "Action Input: "), empty if no input is required.

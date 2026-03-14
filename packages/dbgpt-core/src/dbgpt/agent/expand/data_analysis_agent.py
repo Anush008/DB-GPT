@@ -1,8 +1,6 @@
-import json
 import logging
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any, Dict, Optional, Type
 
-from dbgpt._private.pydantic import Field
 from dbgpt.agent import (
     ActionOutput,
     Agent,
@@ -13,12 +11,14 @@ from dbgpt.agent import (
     StructuredAgentMemoryFragment,
 )
 from dbgpt.agent.core.role import AgentRunMode
-from dbgpt.agent.resource import BaseTool
 from dbgpt.util.configure import DynConfig
 
 logger = logging.getLogger(__name__)
 
-_DATA_ANALYSIS_DEFAULT_GOAL = """Perform data analysis tasks efficiently by selecting actions intelligently from the ACTION SPACE."""
+_DATA_ANALYSIS_DEFAULT_GOAL = (
+    """Perform data analysis tasks efficiently by selecting actions """
+    """intelligently from the ACTION SPACE."""
+)
 
 _DATA_ANALYSIS_SYSTEM_TEMPLATE = """
 You are a {{ role }}, {% if name %}named {{ name }}. {% endif %}{{ goal }}
@@ -31,13 +31,18 @@ You can only use actions in the ACTION SPACE. Your response must include:
 {{ action_space }}
 """
 
+
 class DataAnalysisAgent(ConversableAgent):
     max_retry_count: int = 10
     run_mode: AgentRunMode = AgentRunMode.LOOP
 
     profile: ProfileConfig = ProfileConfig(
-        name=DynConfig("DataAnalysisAgent", category="agent", key="data_analysis_agent_name"),
-        role=DynConfig("DataAnalyzer", category="agent", key="data_analysis_agent_role"),
+        name=DynConfig(
+            "DataAnalysisAgent", category="agent", key="data_analysis_agent_name"
+        ),
+        role=DynConfig(
+            "DataAnalyzer", category="agent", key="data_analysis_agent_role"
+        ),
         goal=DynConfig(
             _DATA_ANALYSIS_DEFAULT_GOAL,
             category="agent",
@@ -62,13 +67,19 @@ class DataAnalysisAgent(ConversableAgent):
         try:
             steps = self.parser.parse(message_content)
             if not steps or len(steps) != 1:
-                return ActionOutput(is_exe_success=False, content="Invalid response format.")
+                return ActionOutput(
+                    is_exe_success=False, content="Invalid response format."
+                )
         except Exception as e:
             logger.warning(f"Parsing error: {e}")
             return ActionOutput(is_exe_success=False, content=str(e))
 
         action_output = await super().act(
-            message=message, sender=sender, reviewer=reviewer, is_retry_chat=is_retry_chat, **kwargs
+            message=message,
+            sender=sender,
+            reviewer=reviewer,
+            is_retry_chat=is_retry_chat,
+            **kwargs,
         )
         return action_output
 

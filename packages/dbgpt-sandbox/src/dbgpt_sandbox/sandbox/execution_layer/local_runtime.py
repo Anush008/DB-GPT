@@ -39,11 +39,7 @@ class LocalSandboxSession(SandboxSession):
             # Use config.working_dir if it's an explicit real directory
             # (not the default '/workspace'). Otherwise create a temp dir.
             custom_dir = self.config.working_dir
-            if (
-                custom_dir
-                and custom_dir != "/workspace"
-                and os.path.isabs(custom_dir)
-            ):
+            if custom_dir and custom_dir != "/workspace" and os.path.isabs(custom_dir):
                 os.makedirs(custom_dir, exist_ok=True)
                 self.work_dir = custom_dir
                 self._is_custom_work_dir = True

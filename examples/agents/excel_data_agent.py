@@ -19,31 +19,31 @@ from dbgpt.agent import (
     AgentContext,
     AgentMemory,
     LLMConfig,
-    UserProxyAgent,
     ProfileConfig,
+    UserProxyAgent,
 )
-from dbgpt.agent.expand.react_agent import ReActAgent
-from dbgpt.agent.skill import (
-    SkillLoader,
-    initialize_skill,
-)
-from dbgpt.agent.resource import ToolPack, tool
 from dbgpt.agent.expand.actions.react_action import Terminate
-from dbgpt.model import AutoLLMClient
+from dbgpt.agent.expand.react_agent import ReActAgent
+from dbgpt.agent.resource import ToolPack, tool
 from dbgpt.agent.resource.manage import (
     get_resource_manager,
     initialize_resource,
 )
 from dbgpt.agent.resource.skill_resource import SkillResource
+from dbgpt.agent.skill import (
+    SkillLoader,
+    initialize_skill,
+)
+from dbgpt.model import AutoLLMClient
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # --- Global Execution Context ---
-import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
 GLOBAL_EXECUTION_CONTEXT = {"pd": pd, "np": np, "plt": plt, "print": print}
 
@@ -98,9 +98,9 @@ def code_interpreter(code: str) -> str:
         The standard output and any error messages from the execution.
     """
     try:
+        import ast
         import io
         import sys
-        import ast
 
         # AST transformation: wrap last expression in print() if needed
         try:

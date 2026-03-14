@@ -165,9 +165,7 @@ class ReActAction(ToolAction):
             if isinstance(step.action_input, str):
                 act_out.action_input = step.action_input
             else:
-                act_out.action_input = json.dumps(
-                    step.action_input, ensure_ascii=False
-                )
+                act_out.action_input = json.dumps(step.action_input, ensure_ascii=False)
         return act_out
 
     @staticmethod
@@ -243,38 +241,46 @@ class ReActAction(ToolAction):
                 next_pname = key_positions[idx + 1][0]
                 next_start = key_positions[idx + 1][1]
                 # Walk backwards from next key to find the boundary:
-                pat_next = re.compile(r'\s*,\s*["\']?' + re.escape(next_pname) + r'["\']?\s*:')
+                pat_next = re.compile(
+                    r'\s*,\s*["\']?' + re.escape(next_pname) + r'["\']?\s*:'
+                )
                 m_next = pat_next.search(raw_str, val_start)
                 if m_next and m_next.start() < next_start:
-                    segment = raw_str[val_start:m_next.start()]
+                    segment = raw_str[val_start : m_next.start()]
                 else:
                     segment = raw_str[val_start:next_start]
                     # Find last `",` or `" ,` pattern as value end
-                    boundary = segment.rfind(',')
+                    boundary = segment.rfind(",")
                     if boundary >= 0:
                         segment = segment[:boundary]
-                        
+
                 # Strip trailing quotes
                 segment = segment.rstrip()
                 if segment.endswith('"') or segment.endswith("'"):
                     segment = segment[:-1]
-                
+
                 result[pname] = _unescape(segment)
             else:
                 # Last param: take everything up to the last `"` before `}`
                 remaining = raw_str[val_start:]
                 # Strip trailing `"}` or `" }` etc.
                 remaining = remaining.rstrip()
-                while remaining.endswith('}') or remaining.endswith('"') or remaining.endswith("'"):
+                while (
+                    remaining.endswith("}")
+                    or remaining.endswith('"')
+                    or remaining.endswith("'")
+                ):
                     remaining = remaining[:-1]
                     remaining = remaining.rstrip()
-                
+
                 result[pname] = _unescape(remaining)
-                
+
             # Try to parse the value as JSON if it looks like an object or array
             if isinstance(result[pname], str):
                 s_val = result[pname].strip()
-                if (s_val.startswith("{") and s_val.endswith("}")) or (s_val.startswith("[") and s_val.endswith("]")):
+                if (s_val.startswith("{") and s_val.endswith("}")) or (
+                    s_val.startswith("[") and s_val.endswith("]")
+                ):
                     try:
                         result[pname] = json.loads(s_val)
                     except Exception:
@@ -320,7 +326,7 @@ class ReActAction(ToolAction):
                 # Strip trailing "} patterns
                 html_content = raw[html_start:]
                 html_content = html_content.rstrip()
-                while html_content and html_content[-1] in '"}\' ':
+                while html_content and html_content[-1] in "\"}' ":
                     html_content = html_content[:-1]
                     html_content = html_content.rstrip()
                 if html_content:
@@ -335,7 +341,7 @@ class ReActAction(ToolAction):
         title_content = raw[title_val_start:]
         title_content = title_content.rstrip()
         # Strip trailing }"' characters
-        while title_content and title_content[-1] in '"}\' ':
+        while title_content and title_content[-1] in "\"}' ":
             title_content = title_content[:-1]
             title_content = title_content.rstrip()
         title_value = title_content.strip() or "Report"
@@ -357,18 +363,18 @@ class ReActAction(ToolAction):
         # Strip trailing separator: comma, whitespace, quotes
         html_content = raw[html_start:html_end]
         html_content = html_content.rstrip()
-        if html_content.endswith(','):
+        if html_content.endswith(","):
             html_content = html_content[:-1].rstrip()
         # Strip trailing quote if present
-        if html_content and html_content[-1] in '"\'':
+        if html_content and html_content[-1] in "\"'":
             html_content = html_content[:-1]
 
         # Unescape common JSON escape sequences
         html_content = (
-            html_content.replace('\\n', '\n')
-            .replace('\\t', '\t')
+            html_content.replace("\\n", "\n")
+            .replace("\\t", "\t")
             .replace('\\"', '"')
-            .replace('\\\\', '\\')
+            .replace("\\\\", "\\")
         )
 
         if html_content:
@@ -387,12 +393,9 @@ class ReActAction(ToolAction):
         action_input = parsed_step.action_input
         action_input_str = action_input
 
-
         # Diagnostic logging for html_interpreter calls
         if name == "html_interpreter":
-            input_preview = (
-                str(action_input)[:200] if action_input else "<empty>"
-            )
+            input_preview = str(action_input)[:200] if action_input else "<empty>"
             logger.info(
                 "html_interpreter called: action_input type=%s, len=%d, preview=%s",
                 type(action_input).__name__,
@@ -438,18 +441,21 @@ class ReActAction(ToolAction):
                 # JSON parsing failed — try to infer args from the tool definition.
                 # If the tool has exactly one required parameter, treat the raw
                 # action_input as that parameter's value.
-                tool_args = self._fallback_parse_args(
-                    name, action_input, self.resource
-                )
+                tool_args = self._fallback_parse_args(name, action_input, self.resource)
             if not tool_args:
                 logger.warning(f"Failed to parse the args: {action_input}")
         # Log resolved args for html_interpreter before execution
         if name == "html_interpreter":
-            html_len = len(tool_args.get("html", "")) if isinstance(tool_args, dict) else 0
+            html_len = (
+                len(tool_args.get("html", "")) if isinstance(tool_args, dict) else 0
+            )
             fp = tool_args.get("file_path", "") if isinstance(tool_args, dict) else ""
             logger.info(
-                "html_interpreter resolved: tool_args keys=%s, html_len=%d, file_path=%s",
-                list(tool_args.keys()) if isinstance(tool_args, dict) else type(tool_args).__name__,
+                "html_interpreter resolved: tool_args keys=%s, "
+                "html_len=%d, file_path=%s",
+                list(tool_args.keys())
+                if isinstance(tool_args, dict)
+                else type(tool_args).__name__,
                 html_len,
                 fp or "<none>",
             )

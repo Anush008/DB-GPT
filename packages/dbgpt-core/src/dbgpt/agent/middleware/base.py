@@ -7,11 +7,10 @@ allowing plugins to hook into agent lifecycle events.
 from __future__ import annotations
 
 import logging
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Any, Dict, List, Optional
 
-from dbgpt.agent.core.agent import AgentContext, AgentGenerateContext, AgentMessage
-from dbgpt.core import PromptTemplate
+from dbgpt.agent.core.agent import AgentGenerateContext, AgentMessage
 
 logger = logging.getLogger(__name__)
 

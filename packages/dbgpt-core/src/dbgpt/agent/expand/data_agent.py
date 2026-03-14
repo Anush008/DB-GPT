@@ -24,8 +24,10 @@ from .actions.react_action import ReActAction, Terminate
 
 logger = logging.getLogger(__name__)
 
-_DATA_AGENT_DEFAULT_GOAL = """You are an intelligent data analysis agent that can autonomously plan and execute data analysis tasks. 
-Your goal is to understand data analysis requirements, create analysis plans, and execute them systematically.
+_DATA_AGENT_DEFAULT_GOAL = """You are an intelligent data analysis agent that can
+autonomously plan and execute data analysis tasks.
+Your goal is to understand data analysis requirements, create analysis plans,
+and execute them systematically.
 
 # Planning Process #
 1. Understand the analysis objective and requirements
@@ -72,19 +74,24 @@ of steps you can take is {{ max_steps }}.
 
 # RESPONSE FORMAT # 
 For each task input, your response should contain:
-1. Thought: Your analysis of the task, planning considerations, and reasoning for the next action
-2. Phase: A short phrase describing the intent or stage of this step (e.g. "探索数据源结构", "加载数据并初步分析", "执行数据清洗脚本", "生成分析报告")
+1. Thought: Your analysis of the task, planning considerations, and reasoning for
+the next action
+2. Phase: A short phrase describing the intent or stage of this step
+(e.g. "探索数据源结构", "加载数据并初步分析", "执行数据清洗脚本", "生成分析报告")
 3. Action: The selected action from the ACTION SPACE
 4. Action Input: Parameters required for the action (can be empty if no input needed)
 
 # PLANNING EXAMPLE #
-Thought: I need to analyze sales data to identify trends and provide insights. First, I should examine the available data sources to understand the data structure and then create a comprehensive analysis plan.
+Thought: I need to analyze sales data to identify trends and provide insights.
+First, I should examine the available data sources to understand the data structure
+and then create a comprehensive analysis plan.
 Phase: 分析销售数据结构与来源
 Action: examine_data_sources
 Action Input: {}
 
 # EXECUTION EXAMPLE #
-Thought: Now that I understand the data structure, I'll load the sales data and perform initial exploratory analysis to identify patterns and trends.
+Thought: Now that I understand the data structure, I'll load the sales data and
+perform initial exploratory analysis to identify patterns and trends.
 Phase: 加载数据并初步分析
 Action: load_data
 Action Input: {"source": "sales_data", "analysis_type": "exploratory"}
@@ -111,10 +118,10 @@ _DATA_AGENT_WRITE_MEMORY_TEMPLATE = """\
 
 class DataAnalysisPlanningAgent(ConversableAgent):
     """Data Analysis Agent with autonomous planning capabilities."""
-    
+
     max_retry_count: int = 20
     run_mode: AgentRunMode = AgentRunMode.LOOP
-    
+
     # Planning state
     analysis_plan: Optional[List[Dict[str, Any]]] = Field(default=None)
     current_step: int = Field(default=0)
@@ -165,20 +172,20 @@ class DataAnalysisPlanningAgent(ConversableAgent):
         action_space = []
         action_space_names = []
         action_space_simple_desc = []
-        
+
         # Add data analysis specific actions
         data_analysis_actions = [
             "create_analysis_plan: Create a systematic plan for data analysis",
-            "examine_data_sources: Explore available data sources and their structure", 
+            "examine_data_sources: Explore available data sources and their structure",
             "load_data: Load data from specified sources for analysis",
             "clean_data: Perform data cleaning and preprocessing",
             "explore_data: Conduct exploratory data analysis",
             "statistical_analysis: Perform statistical tests and analysis",
             "create_visualization: Generate charts and visualizations",
             "generate_insights: Extract and present key insights",
-            "validate_results: Validate analysis results and methodology"
+            "validate_results: Validate analysis results and methodology",
         ]
-        
+
         if tool_packs:
             tool_pack = tool_packs[0]
             for tool in tool_pack.sub_resources:
@@ -197,7 +204,7 @@ class DataAnalysisPlanningAgent(ConversableAgent):
                 action_space_names.append(action_name)
                 action_space.append(action_desc)
                 action_space_simple_desc.append(action_desc)
-                
+
             for action in self.actions:
                 action_space_names.append(action.name)
                 action_space.append(action.get_action_description())
@@ -281,7 +288,7 @@ class DataAnalysisPlanningAgent(ConversableAgent):
         message_content = message.content
         if not message_content:
             raise ValueError("The response is empty.")
-            
+
         try:
             steps = self.parser.parse(message_content)
             err_msg = None
@@ -305,21 +312,25 @@ class DataAnalysisPlanningAgent(ConversableAgent):
             last_speaker_name=last_speaker_name,
             **kwargs,
         )
-        
+
         # Update planning state based on action results
         if action_output.is_exe_success:
             await self._update_planning_state(action_output)
-            
+
         return action_output
 
     async def _update_planning_state(self, action_output: ActionOutput):
         """Update planning state based on action output."""
         # This can be extended to track planning progress
-        if hasattr(action_output, 'action') and action_output.action:
+        if hasattr(action_output, "action") and action_output.action:
             if action_output.action == "create_analysis_plan":
                 self.planning_complete = True
                 # Could parse and store the plan here
-            elif action_output.action in ["load_data", "explore_data", "statistical_analysis"]:
+            elif action_output.action in [
+                "load_data",
+                "explore_data",
+                "statistical_analysis",
+            ]:
                 self.current_step += 1
 
     @property
@@ -335,7 +346,7 @@ class DataAnalysisPlanningAgent(ConversableAgent):
         not_json_memories = []
         messages = []
         structured_memories = []
-        
+
         for m in memories:
             if m.raw_observation:
                 try:
@@ -356,7 +367,7 @@ class DataAnalysisPlanningAgent(ConversableAgent):
             action_input = mem_dict.get("action_input")
             observation = mem_dict.get("observation")
             plan = mem_dict.get("plan")
-            
+
             if question:
                 messages.append(
                     AgentMessage(
@@ -364,7 +375,7 @@ class DataAnalysisPlanningAgent(ConversableAgent):
                         role=ModelMessageRoleType.HUMAN,
                     )
                 )
-                
+
             ai_content = []
             if thought:
                 ai_content.append(f"Thought: {thought}")
@@ -374,7 +385,7 @@ class DataAnalysisPlanningAgent(ConversableAgent):
                 ai_content.append(f"Action: {action}")
             if action_input:
                 ai_content.append(f"Action Input: {action_input}")
-                
+
             messages.append(
                 AgentMessage(
                     content="\n".join(ai_content),

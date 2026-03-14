@@ -1,9 +1,10 @@
 """Skill parameters classes."""
 
 import dataclasses
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from dbgpt.agent.resource.base import ResourceParameters
+
 from .base import SkillType
 
 
