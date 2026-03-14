@@ -27,6 +27,7 @@ import {
   UploadFile,
   UploadProps,
   message,
+  theme,
 } from 'antd';
 import type { DataNode } from 'antd/es/tree';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -103,6 +104,8 @@ function Skills() {
   const [importModalVisible, setImportModalVisible] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
   const [importForm] = Form.useForm();
+  const [githubUrlValue, setGithubUrlValue] = useState('');
+  const { token } = theme.useToken();
 
   const [skillsList, setSkillsList] = useState<SkillItem[]>([]);
   const [listLoading, setListLoading] = useState(false);
@@ -275,6 +278,16 @@ function Skills() {
     },
   };
 
+  const isValidGithubUrl = (url: string): boolean => {
+    if (!url.trim()) return false;
+    try {
+      const parsed = new URL(url.trim());
+      return ['github.com', 'skills.sh'].some(host => parsed.hostname === host || parsed.hostname.endsWith(`.${host}`));
+    } catch {
+      return false;
+    }
+  };
+
   const handleGithubImport = async () => {
     try {
       const values = await importForm.validateFields();
@@ -433,7 +446,7 @@ function Skills() {
         width='80vw'
         style={{ maxWidth: 1000, top: 40 }}
         closable={false}
-        bodyStyle={{ padding: 0 }}
+        styles={{ body: { padding: 0 } }}
         destroyOnClose
       >
         {/* Modal Header */}
@@ -543,27 +556,128 @@ function Skills() {
         </div>
       </Modal>
       <Modal
-        title={t('skills_import_modal_title')}
+        title={null}
         open={importModalVisible}
         onOk={handleGithubImport}
         onCancel={() => {
           setImportModalVisible(false);
           importForm.resetFields();
+          setGithubUrlValue('');
         }}
         confirmLoading={importLoading}
+        okText={importLoading ? t('skills_github_importing') : t('skills_import_github')}
+        cancelText={t('cancel')}
+        width={560}
         destroyOnClose
       >
-        <div className='py-4'>
-          <Form form={importForm} layout='vertical'>
-            <Form.Item
-              name='github_url'
-              label={t('skills_github_url_label')}
-              rules={[{ required: true, message: t('skills_github_url_placeholder') }]}
-            >
-              <Input placeholder={t('skills_github_url_placeholder')} />
-            </Form.Item>
-          </Form>
+        <div className='flex items-center gap-3 pt-5 pb-4 border-b border-gray-100 dark:border-gray-700 mb-4'>
+          <div
+            className='flex items-center justify-center w-10 h-10 rounded-xl'
+            style={{ background: token.colorPrimaryBg }}
+          >
+            <GithubOutlined style={{ fontSize: 20, color: token.colorPrimary }} />
+          </div>
+          <div>
+            <h3 className='text-base font-semibold text-gray-900 dark:text-white m-0 leading-tight'>
+              {t('skills_import_modal_title')}
+            </h3>
+            <p className='text-xs text-gray-400 dark:text-gray-500 m-0 mt-0.5'>{t('skills_import_github_desc')}</p>
+          </div>
         </div>
+
+        <div
+          className='rounded-lg px-3 py-2.5 mb-4'
+          style={{
+            background: token.colorInfoBg,
+            borderLeft: `3px solid ${token.colorInfo}`,
+          }}
+        >
+          <span className='text-xs leading-relaxed' style={{ color: token.colorInfoText }}>
+            导入地址为包含{' '}
+            <code
+              className='px-1 py-0.5 rounded text-[11px]'
+              style={{
+                background: token.colorInfoBgHover,
+                color: token.colorInfoActive,
+                fontFamily: 'ui-monospace, SFMono-Regular, monospace',
+              }}
+            >
+              SKILL.md
+            </code>{' '}
+            的文件夹目录地址。系统会自动拉取该目录下的所有文件并打包。
+          </span>
+        </div>
+
+        <Form form={importForm} layout='vertical'>
+          <Form.Item
+            name='github_url'
+            label={
+              <span className='font-medium text-sm text-gray-700 dark:text-gray-300'>
+                Skill 文件夹地址
+                <span className='font-normal text-gray-400 dark:text-gray-500 ml-1'>
+                  — 若 SKILL.md 在子目录中，需填写完整路径
+                </span>
+              </span>
+            }
+            rules={[{ required: true, message: '请输入 GitHub 仓库地址' }]}
+            className='mb-2'
+            extra={
+              <div className='mt-2 flex flex-col gap-1'>
+                <span className='text-xs text-gray-400 dark:text-gray-500'>例如:</span>
+                <code
+                  className='text-xs px-2 py-1 rounded block w-fit'
+                  style={{
+                    background: token.colorFillQuaternary,
+                    color: token.colorTextSecondary,
+                    fontFamily: 'ui-monospace, SFMono-Regular, monospace',
+                  }}
+                >
+                  https://github.com/owner/repo/tree/main
+                </code>
+                <code
+                  className='text-xs px-2 py-1 rounded block w-fit'
+                  style={{
+                    background: token.colorFillQuaternary,
+                    color: token.colorTextSecondary,
+                    fontFamily: 'ui-monospace, SFMono-Regular, monospace',
+                  }}
+                >
+                  https://github.com/owner/repo/tree/main/skills/my-skill
+                </code>
+              </div>
+            }
+          >
+            <Input
+              prefix={<GithubOutlined className='text-gray-400' />}
+              placeholder='https://github.com/owner/repo/tree/main'
+              size='large'
+              value={githubUrlValue}
+              onChange={e => setGithubUrlValue(e.target.value)}
+              allowClear
+              className='rounded-lg'
+            />
+          </Form.Item>
+
+          {githubUrlValue.trim().length > 0 && (
+            <div className='flex items-center gap-1.5 mt-1'>
+              {isValidGithubUrl(githubUrlValue) ? (
+                <>
+                  <span className='inline-block w-1.5 h-1.5 rounded-full' style={{ background: token.colorSuccess }} />
+                  <span className='text-xs' style={{ color: token.colorSuccess }}>
+                    链接格式正确，点击「导入」开始拉取
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className='inline-block w-1.5 h-1.5 rounded-full' style={{ background: token.colorWarning }} />
+                  <span className='text-xs' style={{ color: token.colorWarning }}>
+                    请输入有效的 GitHub 地址
+                  </span>
+                </>
+              )}
+            </div>
+          )}
+        </Form>
       </Modal>
     </ConstructLayout>
   );
