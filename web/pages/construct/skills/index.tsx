@@ -422,7 +422,7 @@ function Skills() {
                         <span>@{skill.author || 'unknown'}</span>
                       )}
                       <span>·</span>
-                      <span>{'更新于 2026年2月6日'}</span>
+                      <span>{t('skills_updated_at', { date: '2026-02-06' })}</span>
                     </div>
                     <div
                       className='opacity-0 group-hover:opacity-100 transition-opacity'
@@ -593,7 +593,7 @@ function Skills() {
           }}
         >
           <span className='text-xs leading-relaxed' style={{ color: token.colorInfoText }}>
-            导入地址为包含{' '}
+            {t('skills_import_hint')}{' '}
             <code
               className='px-1 py-0.5 rounded text-[11px]'
               style={{
@@ -604,7 +604,7 @@ function Skills() {
             >
               SKILL.md
             </code>{' '}
-            的文件夹目录地址。系统会自动拉取该目录下的所有文件并打包。
+            {t('skills_import_hint_suffix')}
           </span>
         </div>
 
@@ -613,17 +613,17 @@ function Skills() {
             name='github_url'
             label={
               <span className='font-medium text-sm text-gray-700 dark:text-gray-300'>
-                Skill 文件夹地址
+                {t('skills_import_folder_label')}
                 <span className='font-normal text-gray-400 dark:text-gray-500 ml-1'>
-                  — 若 SKILL.md 在子目录中，需填写完整路径
+                  {t('skills_import_folder_hint')}
                 </span>
               </span>
             }
-            rules={[{ required: true, message: '请输入 GitHub 仓库地址' }]}
+            rules={[{ required: true, message: t('skills_import_url_required') }]}
             className='mb-2'
             extra={
               <div className='mt-2 flex flex-col gap-1'>
-                <span className='text-xs text-gray-400 dark:text-gray-500'>例如:</span>
+                <span className='text-xs text-gray-400 dark:text-gray-500'>{t('skills_import_example_label')}</span>
                 <code
                   className='text-xs px-2 py-1 rounded block w-fit'
                   style={{
@@ -664,14 +664,14 @@ function Skills() {
                 <>
                   <span className='inline-block w-1.5 h-1.5 rounded-full' style={{ background: token.colorSuccess }} />
                   <span className='text-xs' style={{ color: token.colorSuccess }}>
-                    链接格式正确，点击「导入」开始拉取
+                    {t('skills_import_url_valid')}
                   </span>
                 </>
               ) : (
                 <>
                   <span className='inline-block w-1.5 h-1.5 rounded-full' style={{ background: token.colorWarning }} />
                   <span className='text-xs' style={{ color: token.colorWarning }}>
-                    请输入有效的 GitHub 地址
+                    {t('skills_import_url_invalid')}
                   </span>
                 </>
               )}
