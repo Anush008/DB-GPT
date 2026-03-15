@@ -1,4 +1,4 @@
-# <img src="./assets/LOGO_SMALL.png" alt="Logo" style="vertical-align: middle; height: 24px;" /> DB-GPT: AI Native Data App Development framework with AWEL and Agents
+# <img src="./assets/LOGO_SMALL.png" alt="Logo" style="vertical-align: middle; height: 24px;" /> DB-GPT: Open-Source Agentic AI Data Assistant
 
 <p align="left">
   <img src="./assets/Twitter_LOGO.png" width="100%" />
@@ -50,82 +50,62 @@
 
 </div>
 
+> **Connect to databases, files, and knowledge bases. Let AI autonomously write SQL and code, use skills, run in sandboxed environments, and generate charts, reports, and decisions.**
+
 ## What is DB-GPT?
 
-🤖 **DB-GPT is an open source AI native data app development framework with AWEL(Agentic Workflow Expression Language) and agents**. 
+DB-GPT is an open-source **agentic AI data assistant** built for the next generation of **AI + Data** products.
 
-The purpose is to build infrastructure in the field of large models, through the development of multiple technical capabilities such as multi-model management (SMMF), Text2SQL effect optimization, RAG framework and optimization, Multi-Agents framework collaboration, AWEL (agent workflow orchestration), etc. Which makes large model applications with data simpler and more convenient.
+It helps users and teams:
+- connect to **multiple data sources** such as databases, CSV / Excel files, warehouses, and knowledge bases
+- ask questions in natural language and let AI **autonomously write SQL**
+- run **Python and code-based analysis** workflows
+- load and execute reusable **skills** for domain-specific tasks
+- generate **charts, dashboards, HTML reports, and analysis summaries**
+- safely execute tasks in **sandboxed environments**
 
-🚀 **In the Data 3.0 era, based on models and databases, enterprises and developers can build their own bespoke applications with less code.**
+DB-GPT is also a platform for building **AI-native data agents, workflows, and applications** with agents, AWEL, RAG, and multi-model support.
 
-### Introduction 
-The architecture of DB-GPT is shown in the following figure:
+## Why DB-GPT?
 
-<p align="center">
-  <img src="./assets/dbgpt.png" width="800" />
-</p>
+### 1. Agentic data analysis
+DB-GPT can plan tasks, break work into steps, call tools, and iteratively complete analysis workflows.
 
-The core capabilities include the following parts:
+### 2. Autonomous SQL + code execution
+DB-GPT can automatically write SQL and code to query data, clean datasets, compute metrics, and generate outputs.
 
-- **RAG (Retrieval Augmented Generation)**: RAG is currently the most practically implemented and urgently needed domain. DB-GPT has already implemented a framework based on RAG, allowing users to build knowledge-based applications using the RAG capabilities of DB-GPT.
+### 3. Multi-source data access
+DB-GPT works across structured and unstructured sources, including databases, spreadsheets, documents, and knowledge bases.
 
-- **GBI (Generative Business Intelligence)**: Generative BI is one of the core capabilities of the DB-GPT project, providing the foundational data intelligence technology to build enterprise report analysis and business insights.
+### 4. Skills-driven extensibility
+DB-GPT supports reusable skills that encapsulate domain knowledge, analysis methods, and execution workflows.
 
-- **Fine-tuning Framework**: Model fine-tuning is an indispensable capability for any enterprise to implement in vertical and niche domains. DB-GPT provides a complete fine-tuning framework that integrates seamlessly with the DB-GPT project. In recent fine-tuning efforts, an accuracy rate based on the Spider dataset has been achieved at 82.5%.
+### 5. Sandboxed execution
+DB-GPT can safely run code and tools in isolated environments for more reliable and controllable analysis.
 
-- **Data-Driven Multi-Agents Framework**: DB-GPT offers a data-driven self-evolving multi-agents framework, aiming to continuously make decisions and execute based on data.
+## What you can do with DB-GPT
 
-- **Data Factory**: The Data Factory is mainly about cleaning and processing trustworthy knowledge and data in the era of large models.
+- **Analyze CSV / Excel files** and generate visual reports
+- **Connect to databases** and produce profiling reports
+- Ask business questions in natural language and let AI **write SQL automatically**
+- Perform **financial report analysis** with code, charts, and narrative summaries
+- Create and reuse **SQL analysis skills** and domain workflows
+- Combine **code, SQL, retrieval, and tools** in one agentic workflow
+- Build next-generation **AI + Data assistants** for your team or product
 
-- **Data Sources**: Integrating various data sources to seamlessly connect production business data to the core capabilities of DB-GPT.
+## Product Workflow
 
-#### SubModule
-- [DB-GPT-Hub](https://github.com/eosphoros-ai/DB-GPT-Hub) Text-to-SQL workflow with high performance by applying Supervised Fine-Tuning (SFT) on Large Language Models (LLMs).
+### Explore data
+Connect files, databases, and knowledge bases in one workspace.
 
-- [dbgpts](https://github.com/eosphoros-ai/dbgpts)  dbgpts is the official repository which contains some data apps、AWEL operators、AWEL workflow templates and agents which build upon DB-GPT.
+### Plan and execute
+Let AI reason through the task, write SQL and code, and execute step by step.
 
-#### DeepWiki
-- [DB-GPT](https://deepwiki.com/eosphoros-ai/DB-GPT)
-- [DB-GPT-HUB](https://deepwiki.com/eosphoros-ai/DB-GPT-Hub)
-- [dbgpts](https://deepwiki.com/eosphoros-ai/dbgpts)
+### Use skills
+Load reusable skills for repeatable business analysis workflows.
 
-
-#### Text2SQL Finetune
-
-  |     LLM     |  Supported  | 
-  |:-----------:|:-----------:|
-  |    LLaMA    |      ✅     |
-  |   LLaMA-2   |      ✅     | 
-  |    BLOOM    |      ✅     | 
-  |   BLOOMZ    |      ✅     | 
-  |   Falcon    |      ✅     | 
-  |  Baichuan   |      ✅     | 
-  |  Baichuan2  |      ✅     | 
-  |  InternLM   |      ✅     |
-  |    Qwen     |      ✅     | 
-  |   XVERSE    |      ✅     | 
-  |  ChatGLM2   |      ✅     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
-
-
-[More Information about Text2SQL finetune](https://github.com/eosphoros-ai/DB-GPT-Hub)
-
-- [DB-GPT-Plugins](https://github.com/eosphoros-ai/DB-GPT-Plugins) DB-GPT Plugins that can run Auto-GPT plugin directly
-- [GPT-Vis](https://github.com/eosphoros-ai/GPT-Vis) Visualization protocol
-
-### AI-Native Data App 
----
-- 🔥🔥🔥 [Released V0.7.0 | A set of significant upgrades](http://docs.dbgpt.cn/blog/db-gpt-v070-release)
-  - [Support MCP Protocol](https://github.com/eosphoros-ai/DB-GPT/pull/2497)
-  - [Support DeepSeek R1](https://github.com/deepseek-ai/DeepSeek-R1)
-  - [Support QwQ-32B](https://huggingface.co/Qwen/QwQ-32B)
-  - [Refactor the basic modules]()
-    - [dbgpt-app](./packages/dbgpt-app)
-    - [dbgpt-core](./packages/dbgpt-core)
-    - [dbgpt-serve](./packages/dbgpt-serve)
-    - [dbgpt-client](./packages/dbgpt-client)
-    - [dbgpt-accelerator](./packages/dbgpt-accelerator)
-    - [dbgpt-ext](./packages/dbgpt-ext)
----
+### Generate reports
+Produce charts, dashboards, HTML reports, and decision-ready outputs.
 
 ![app_chat_v0 6](https://github.com/user-attachments/assets/a2f0a875-df8c-4f0d-89a3-eed321c02113)
 
@@ -225,30 +205,81 @@ For Docker, local GPU models (vLLM, llama.cpp), or manual source-code setup, see
   - [AWEL](http://docs.dbgpt.cn/docs/awel/tutorial)
 
 
-## Features
+## Core Capabilities
 
-At present, we have introduced several key features to showcase our current capabilities:
-- **Private Domain Q&A & Data Processing**
+### Agentic Analysis
+- task planning
+- step-by-step execution
+- tool use
+- iterative reasoning
 
-  The DB-GPT project offers a range of functionalities designed to improve knowledge base construction and enable efficient storage and retrieval of both structured and unstructured data. These functionalities include built-in support for uploading multiple file formats, the ability to integrate custom data extraction plug-ins, and unified vector storage and retrieval capabilities for effectively managing large volumes of information.
+### SQL + Code Execution
+- natural language to SQL
+- Python-based analysis and transformation
+- metric calculation
+- chart generation
 
-- **Multi-Data Source & GBI(Generative Business intelligence)**
+### Multi-Source Data Access
+- relational databases
+- CSV / Excel
+- documents
+- knowledge bases
+- mixed-source workflows
 
-  The DB-GPT project facilitates seamless natural language interaction with diverse data sources, including Excel, databases, and data warehouses. It simplifies the process of querying and retrieving information from these sources, empowering users to engage in intuitive conversations and gain insights. Moreover, DB-GPT supports the generation of analytical reports, providing users with valuable data summaries and interpretations.
+### Skills and Agents
+- reusable skills
+- domain workflows
+- agent orchestration
+- customizable execution flows
 
-- **Multi-Agents&Plugins**
+### Reporting and Decision Support
+- database profiling reports
+- financial analysis reports
+- visual reports and dashboards
+- summaries and business insights
 
-  It offers support for custom plug-ins to perform various tasks and natively integrates the Auto-GPT plug-in model. The Agents protocol adheres to the Agent Protocol standard.
+### Safe Execution
+- sandboxed code execution
+- controlled tool use
+- reproducible outputs and artifacts
 
-- **Automated Fine-tuning text2SQL**
+## Platform & Ecosystem
 
-  We've also developed an automated fine-tuning lightweight framework centred on large language models (LLMs), Text2SQL datasets, LoRA/QLoRA/Pturning, and other fine-tuning methods. This framework simplifies Text-to-SQL fine-tuning, making it as straightforward as an assembly line process. [DB-GPT-Hub](https://github.com/eosphoros-ai/DB-GPT-Hub)
+DB-GPT is also a platform for building AI-native data systems.
 
-  - **SMMF(Service-oriented Multi-model Management Framework)**
+- **AWEL** for agentic workflow orchestration
+- **Agents** for autonomous task execution
+- **RAG** for knowledge-enhanced reasoning
+- **SMMF** for multi-model management
+- **DB-GPT-Hub** for Text2SQL and finetuning workflows
+- **dbgpts** for apps, workflows, operators, and templates
+- [DB-GPT-Plugins](https://github.com/eosphoros-ai/DB-GPT-Plugins) for plugin-based extension
+- [GPT-Vis](https://github.com/eosphoros-ai/GPT-Vis) for visualization protocols
 
-    We offer extensive model support, including dozens of large language models (LLMs) from both open-source and API agents, such as LLaMA/LLaMA2, Baichuan, ChatGLM, Wenxin, Tongyi, Zhipu, and many more. 
+#### DeepWiki
+- [DB-GPT](https://deepwiki.com/eosphoros-ai/DB-GPT)
+- [DB-GPT-HUB](https://deepwiki.com/eosphoros-ai/DB-GPT-Hub)
+- [dbgpts](https://deepwiki.com/eosphoros-ai/dbgpts)
 
-  - News
+#### Text2SQL Finetune
+
+  |     LLM     |  Supported  | 
+  |:-----------:|:-----------:|
+  |    LLaMA    |      ✅     |
+  |   LLaMA-2   |      ✅     | 
+  |    BLOOM    |      ✅     | 
+  |   BLOOMZ    |      ✅     | 
+  |   Falcon    |      ✅     | 
+  |  Baichuan   |      ✅     | 
+  |  Baichuan2  |      ✅     | 
+  |  InternLM   |      ✅     |
+  |    Qwen     |      ✅     | 
+  |   XVERSE    |      ✅     | 
+  |  ChatGLM2   |      ✅     |
+
+[More Information about Text2SQL finetune](https://github.com/eosphoros-ai/DB-GPT-Hub)
+
+### Supported Models
     <table>
       <thead>
         <tr>
@@ -358,12 +389,26 @@ At present, we have introduced several key features to showcase our current capa
 
   - [More Supported LLMs](http://docs.dbgpt.site/docs/modules/smmf)
 
-- **Privacy and Security**
-  
-  We ensure the privacy and security of data through the implementation of various technologies, including privatized large models and proxy desensitization.
+### Privacy and Security
 
-- Support Datasources
-  - [Datasources](http://docs.dbgpt.cn/docs/modules/connections)
+We protect data privacy and execution safety through private model deployment, proxy desensitization, and sandboxed execution mechanisms.
+
+### Data Sources
+- [Datasources](http://docs.dbgpt.cn/docs/modules/connections)
+
+## Vision
+
+We believe the future of data products is not dashboards alone.
+
+The next generation of **AI + Data** products will be:
+- **agentic**
+- **multi-source**
+- **skill-driven**
+- **sandboxed**
+- capable of writing **SQL and code**
+- able to turn analysis into **reports, decisions, and action**
+
+DB-GPT aims to help developers and enterprises build that future.
 
 ## Image
 🌐 [AutoDL Image](https://www.codewithgpu.com/i/eosphoros-ai/DB-GPT/dbgpt)
