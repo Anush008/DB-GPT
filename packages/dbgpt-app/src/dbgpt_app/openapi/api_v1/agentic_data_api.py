@@ -411,37 +411,26 @@ async def skill_upload(
             is_archive = zipfile.is_zipfile(buf)
 
         if is_archive:
-            buf = io.BytesIO(content_bytes)
-            with zipfile.ZipFile(buf, "r") as zf:
-                for name in zf.namelist():
-                    if ".." in name or name.startswith("/"):
-                        return Result.failed(
-                            code="E4002",
-                            msg=f"Unsafe path in archive: {name}",
-                        )
-
-                top_dirs = {n.split("/")[0] for n in zf.namelist() if "/" in n}
-                if len(top_dirs) == 1:
-                    dest_name = top_dirs.pop()
-                else:
-                    dest_name = stem
-
+            # Reuse the robust _extract_skill_from_zip helper (same one used
+            # by the GitHub import endpoint) to avoid the nested-directory bug
+            # that the old inline extractall logic suffered from.
+            #
+            # strict=False: uploaded packages may not contain a SKILL.md yet.
+            tmp_zip = upload_dir / f"{uuid.uuid4().hex}.zip"
+            tmp_zip.write_bytes(content_bytes)
+            try:
                 with tempfile.TemporaryDirectory(dir=upload_dir) as tmp_extract:
-                    tmp_extract_path = Path(tmp_extract)
-                    if len(top_dirs) <= 1 and all(
-                        n.startswith(dest_name + "/") or n == dest_name
-                        for n in zf.namelist()
-                        if n
-                    ):
-                        zf.extractall(tmp_extract_path)
-                        src_dir = tmp_extract_path / dest_name
-                    else:
-                        skill_tmp = tmp_extract_path / dest_name
-                        skill_tmp.mkdir(parents=True, exist_ok=True)
-                        zf.extractall(skill_tmp)
-                        src_dir = skill_tmp
+                    dest_in_tmp = Path(tmp_extract) / "skill"
+                    try:
+                        dest_name = _extract_skill_from_zip(
+                            tmp_zip, subpath=None, dest_dir=dest_in_tmp, strict=False
+                        )
+                    except ValueError as exc:
+                        return Result.failed(code="E4002", msg=str(exc))
 
-                    rel_path = _install_skill_from_dir(src_dir, dest_name, user_dir)
+                    rel_path = _install_skill_from_dir(dest_in_tmp, dest_name, user_dir)
+            finally:
+                tmp_zip.unlink(missing_ok=True)
 
         else:
             dest = user_dir / stem
@@ -544,10 +533,19 @@ def _construct_download_url(owner: str, repo: str, branch: str) -> str:
     return f"https://github.com/{owner}/{repo}/archive/refs/heads/{branch}.zip"
 
 
+def _is_macos_junk(name: str) -> bool:
+    """Return True if the archive entry is a macOS metadata artifact."""
+    parts = name.split("/")
+    return any(p == "__MACOSX" or p.startswith("._") for p in parts)
+
+
 def _extract_skill_from_zip(
-    zip_path: "Path", subpath: "Optional[str]", dest_dir: "Path"
+    zip_path: "Path",
+    subpath: "Optional[str]",
+    dest_dir: "Path",
+    strict: bool = True,
 ) -> str:
-    """Extract a skill from a GitHub-style ZIP archive into ``dest_dir``.
+    """Extract a skill from a ZIP archive into ``dest_dir``.
 
     The ZIP is expected to have a single top-level directory (e.g.
     ``repo-main/``).  That top-level directory is stripped when extracting so
@@ -555,6 +553,10 @@ def _extract_skill_from_zip(
 
     When ``subpath`` is given, only the files under
     ``{top_dir}/{subpath}/`` are extracted (again, stripped to ``dest_dir``).
+
+    macOS metadata entries (``__MACOSX/`` directories and ``._*`` files) are
+    automatically filtered out before any directory-structure analysis so they
+    do not cause spurious nested directories.
 
     Args:
         zip_path (Path): Path to the ZIP file on disk.
@@ -564,6 +566,10 @@ def _extract_skill_from_zip(
         dest_dir (Path): Directory into which the skill files are extracted.
             It is created if it does not exist; if it already exists its
             contents are removed before extraction.
+        strict (bool): When ``True`` (default), raise ``ValueError`` if no
+            ``SKILL.md`` is found in the archive.  When ``False``, skip the
+            ``SKILL.md`` validation — useful for uploading generic skill
+            packages that may not yet contain a ``SKILL.md``.
 
     Returns:
         str: The skill name derived from ``subpath`` (last component) or from
@@ -571,7 +577,8 @@ def _extract_skill_from_zip(
 
     Raises:
         ValueError: If the archive contains path-traversal sequences.
-        ValueError: If no ``SKILL.md`` is found after extraction.
+        ValueError: If no ``SKILL.md`` is found after extraction (only when
+            ``strict=True``).
         ValueError: If the archive root contains multiple sub-directories with
             ``SKILL.md`` files and no ``subpath`` was specified (the error
             message lists the available sub-directory names).
@@ -585,8 +592,11 @@ def _extract_skill_from_zip(
             if normalized.startswith("..") or ".." in normalized.split(os.sep):
                 raise ValueError(f"Unsafe path in archive: {name!r}")
 
+        # Filter out macOS metadata artifacts before analysing structure
+        valid_names = [n for n in all_names if not _is_macos_junk(n)]
+
         # Detect the single top-level directory (GitHub archives always have one)
-        top_dirs = {n.split("/")[0] for n in all_names if "/" in n}
+        top_dirs = {n.split("/")[0] for n in valid_names if "/" in n}
         archive_root: Optional[str] = top_dirs.pop() if len(top_dirs) == 1 else None
 
         # Build the prefix inside the archive that maps to dest_dir
@@ -601,14 +611,14 @@ def _extract_skill_from_zip(
 
         # Check whether SKILL.md exists under the chosen prefix
         skill_md_entry = next(
-            (n for n in all_names if n == skill_prefix + "SKILL.md"),
+            (n for n in valid_names if n == skill_prefix + "SKILL.md"),
             None,
         )
 
         if skill_md_entry is None and not subpath:
             # No SKILL.md at root — scan one level of subdirectories
             subdirs_with_skill = []
-            for name in all_names:
+            for name in valid_names:
                 if not name.startswith(skill_prefix):
                     continue
                 rel = name[len(skill_prefix) :]
@@ -616,13 +626,20 @@ def _extract_skill_from_zip(
                 if len(parts) == 2 and parts[1] == "SKILL.md":
                     subdirs_with_skill.append(parts[0])
 
-            if subdirs_with_skill:
+            if len(subdirs_with_skill) > 1:
                 raise ValueError(
                     "Multiple skills found. Specify a subpath. "
                     "Available: " + ", ".join(sorted(subdirs_with_skill))
                 )
 
-        if skill_md_entry is None:
+            # If exactly one sub-directory has SKILL.md, use it automatically
+            if len(subdirs_with_skill) == 1:
+                only_subdir = subdirs_with_skill[0]
+                skill_prefix = f"{skill_prefix}{only_subdir}/"
+                skill_name = only_subdir
+                skill_md_entry = skill_prefix + "SKILL.md"
+
+        if strict and skill_md_entry is None:
             raise ValueError(
                 "No SKILL.md found in the archive"
                 + (f" under '{subpath}'" if subpath else "")
@@ -634,8 +651,8 @@ def _extract_skill_from_zip(
             shutil.rmtree(dest_dir)
         dest_dir.mkdir(parents=True, exist_ok=True)
 
-        # Extract members individually (no extractall) for security
-        for member in all_names:
+        # Extract valid members individually (no extractall) for security
+        for member in valid_names:
             if not member.startswith(skill_prefix) or member == skill_prefix:
                 continue
             rel = member[len(skill_prefix) :]
