@@ -1,10 +1,11 @@
 import logging
 import os
 
-from fastapi import APIRouter, UploadFile, File, Depends
-from dbgpt_serve.utils.auth import UserRequest, get_user_from_headers
+from fastapi import APIRouter, Depends, File, UploadFile
+
 from dbgpt._private.config import Config
 from dbgpt_app.openapi.api_view_model import Result
+from dbgpt_serve.utils.auth import UserRequest, get_user_from_headers
 
 router = APIRouter()
 CFG = Config()

@@ -8,7 +8,7 @@ import logging
 import time
 from concurrent.futures import Executor, ThreadPoolExecutor
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, final, cast
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, cast, final
 
 from jinja2 import Template
 

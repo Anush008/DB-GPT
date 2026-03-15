@@ -8,7 +8,8 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from ..middleware.base import AgentMiddleware
-from .middleware import LoadedSkill, SkillsMiddleware as BaseSkillsMiddleware
+from .middleware import LoadedSkill
+from .middleware import SkillsMiddleware as BaseSkillsMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -154,7 +155,8 @@ class SkillsMiddlewareV2(AgentMiddleware):
             matched_skills = self.match_skills(user_input)
             if matched_skills:
                 logger.info(
-                    f"Matched {len(matched_skills)} skills for input: {user_input[:50]}..."
+                    f"Matched {len(matched_skills)} skills for input:"
+                    f" {user_input[:50]}..."
                 )
                 return {
                     "matched_skills": [s.metadata.name for s in matched_skills],

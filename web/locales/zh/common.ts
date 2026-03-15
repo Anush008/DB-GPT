@@ -488,4 +488,13 @@ export const CommonZh: Resources['translation'] = {
   skills_github_importing: '正在导入技能...',
   skills_github_import_success: '技能导入成功',
   skills_github_import_failed: '技能导入失败',
+  skills_import_hint: '导入地址为包含',
+  skills_import_hint_suffix: '的文件夹目录地址。系统会自动拉取该目录下的所有文件并打包。',
+  skills_import_folder_label: 'Skill 文件夹地址',
+  skills_import_folder_hint: '— 若 SKILL.md 在子目录中，需填写完整路径',
+  skills_import_url_required: '请输入 GitHub 仓库地址',
+  skills_import_example_label: '例如:',
+  skills_import_url_valid: '链接格式正确，点击「导入」开始拉取',
+  skills_import_url_invalid: '请输入有效的 GitHub 地址',
+  skills_updated_at: '更新于 {{date}}',
 } as const;

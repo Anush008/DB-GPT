@@ -3,12 +3,10 @@
 import importlib
 import json
 import logging
-import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 from .base import Skill, SkillBase, SkillMetadata, SkillType
-
 
 logger = logging.getLogger(__name__)
 
@@ -163,14 +161,12 @@ class SkillLoader:
             file_skill = FileBasedSkill(str(path))
             # Build core Skill from FileBasedSkill
             metadata = file_skill.metadata
-            from dbgpt.core import PromptTemplate
 
             prompt_template = file_skill.get_prompt()
-            from .base import Skill, SkillMetadata
-
-            # Map additional fields from Claude-style SkillMetadata into core SkillMetadata
+            # Map additional fields from Claude-style SkillMetadata
+            # into core SkillMetadata
             # Map Claude-style metadata into core Skill and SkillMetadata
-            from .base import SkillType
+            from .base import Skill, SkillMetadata, SkillType
 
             # try to coerce skill_type to known SkillType, fallback to Custom
             skill_type_val = SkillType.Custom
@@ -195,7 +191,10 @@ class SkillLoader:
                 prompt_template=prompt_template,
                 required_tools=getattr(metadata, "required_tools", []) or [],
                 required_knowledge=getattr(metadata, "required_knowledge", []) or [],
-                config={"file_path": str(path), **(getattr(metadata, "config", {}) or {})},
+                config={
+                    "file_path": str(path),
+                    **(getattr(metadata, "config", {}) or {}),
+                },
             )
 
             return skill

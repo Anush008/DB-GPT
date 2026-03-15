@@ -109,8 +109,8 @@ def _initialize_resource_manager(system_app: SystemApp):
     from dbgpt.agent.expand.resources.search_tool import baidu_search
     from dbgpt.agent.resource.base import ResourceType
     from dbgpt.agent.resource.manage import get_resource_manager, initialize_resource
-    from dbgpt.agent.skill.manage import initialize_skill
     from dbgpt.agent.resource.skill_resource import SkillResource
+    from dbgpt.agent.skill.manage import initialize_skill
     from dbgpt_serve.agent.resource.app import GptAppResource
     from dbgpt_serve.agent.resource.datasource import DatasourceResource
     from dbgpt_serve.agent.resource.knowledge import KnowledgeSpaceRetrieverResource

@@ -411,37 +411,26 @@ async def skill_upload(
             is_archive = zipfile.is_zipfile(buf)
 
         if is_archive:
-            buf = io.BytesIO(content_bytes)
-            with zipfile.ZipFile(buf, "r") as zf:
-                for name in zf.namelist():
-                    if ".." in name or name.startswith("/"):
-                        return Result.failed(
-                            code="E4002",
-                            msg=f"Unsafe path in archive: {name}",
-                        )
-
-                top_dirs = {n.split("/")[0] for n in zf.namelist() if "/" in n}
-                if len(top_dirs) == 1:
-                    dest_name = top_dirs.pop()
-                else:
-                    dest_name = stem
-
+            # Reuse the robust _extract_skill_from_zip helper (same one used
+            # by the GitHub import endpoint) to avoid the nested-directory bug
+            # that the old inline extractall logic suffered from.
+            #
+            # strict=False: uploaded packages may not contain a SKILL.md yet.
+            tmp_zip = upload_dir / f"{uuid.uuid4().hex}.zip"
+            tmp_zip.write_bytes(content_bytes)
+            try:
                 with tempfile.TemporaryDirectory(dir=upload_dir) as tmp_extract:
-                    tmp_extract_path = Path(tmp_extract)
-                    if len(top_dirs) <= 1 and all(
-                        n.startswith(dest_name + "/") or n == dest_name
-                        for n in zf.namelist()
-                        if n
-                    ):
-                        zf.extractall(tmp_extract_path)
-                        src_dir = tmp_extract_path / dest_name
-                    else:
-                        skill_tmp = tmp_extract_path / dest_name
-                        skill_tmp.mkdir(parents=True, exist_ok=True)
-                        zf.extractall(skill_tmp)
-                        src_dir = skill_tmp
+                    dest_in_tmp = Path(tmp_extract) / "skill"
+                    try:
+                        dest_name = _extract_skill_from_zip(
+                            tmp_zip, subpath=None, dest_dir=dest_in_tmp, strict=False
+                        )
+                    except ValueError as exc:
+                        return Result.failed(code="E4002", msg=str(exc))
 
-                    rel_path = _install_skill_from_dir(src_dir, dest_name, user_dir)
+                    rel_path = _install_skill_from_dir(dest_in_tmp, dest_name, user_dir)
+            finally:
+                tmp_zip.unlink(missing_ok=True)
 
         else:
             dest = user_dir / stem
@@ -544,10 +533,19 @@ def _construct_download_url(owner: str, repo: str, branch: str) -> str:
     return f"https://github.com/{owner}/{repo}/archive/refs/heads/{branch}.zip"
 
 
+def _is_macos_junk(name: str) -> bool:
+    """Return True if the archive entry is a macOS metadata artifact."""
+    parts = name.split("/")
+    return any(p == "__MACOSX" or p.startswith("._") for p in parts)
+
+
 def _extract_skill_from_zip(
-    zip_path: "Path", subpath: "Optional[str]", dest_dir: "Path"
+    zip_path: "Path",
+    subpath: "Optional[str]",
+    dest_dir: "Path",
+    strict: bool = True,
 ) -> str:
-    """Extract a skill from a GitHub-style ZIP archive into ``dest_dir``.
+    """Extract a skill from a ZIP archive into ``dest_dir``.
 
     The ZIP is expected to have a single top-level directory (e.g.
     ``repo-main/``).  That top-level directory is stripped when extracting so
@@ -555,6 +553,10 @@ def _extract_skill_from_zip(
 
     When ``subpath`` is given, only the files under
     ``{top_dir}/{subpath}/`` are extracted (again, stripped to ``dest_dir``).
+
+    macOS metadata entries (``__MACOSX/`` directories and ``._*`` files) are
+    automatically filtered out before any directory-structure analysis so they
+    do not cause spurious nested directories.
 
     Args:
         zip_path (Path): Path to the ZIP file on disk.
@@ -564,6 +566,10 @@ def _extract_skill_from_zip(
         dest_dir (Path): Directory into which the skill files are extracted.
             It is created if it does not exist; if it already exists its
             contents are removed before extraction.
+        strict (bool): When ``True`` (default), raise ``ValueError`` if no
+            ``SKILL.md`` is found in the archive.  When ``False``, skip the
+            ``SKILL.md`` validation — useful for uploading generic skill
+            packages that may not yet contain a ``SKILL.md``.
 
     Returns:
         str: The skill name derived from ``subpath`` (last component) or from
@@ -571,7 +577,8 @@ def _extract_skill_from_zip(
 
     Raises:
         ValueError: If the archive contains path-traversal sequences.
-        ValueError: If no ``SKILL.md`` is found after extraction.
+        ValueError: If no ``SKILL.md`` is found after extraction (only when
+            ``strict=True``).
         ValueError: If the archive root contains multiple sub-directories with
             ``SKILL.md`` files and no ``subpath`` was specified (the error
             message lists the available sub-directory names).
@@ -585,8 +592,11 @@ def _extract_skill_from_zip(
             if normalized.startswith("..") or ".." in normalized.split(os.sep):
                 raise ValueError(f"Unsafe path in archive: {name!r}")
 
+        # Filter out macOS metadata artifacts before analysing structure
+        valid_names = [n for n in all_names if not _is_macos_junk(n)]
+
         # Detect the single top-level directory (GitHub archives always have one)
-        top_dirs = {n.split("/")[0] for n in all_names if "/" in n}
+        top_dirs = {n.split("/")[0] for n in valid_names if "/" in n}
         archive_root: Optional[str] = top_dirs.pop() if len(top_dirs) == 1 else None
 
         # Build the prefix inside the archive that maps to dest_dir
@@ -601,14 +611,14 @@ def _extract_skill_from_zip(
 
         # Check whether SKILL.md exists under the chosen prefix
         skill_md_entry = next(
-            (n for n in all_names if n == skill_prefix + "SKILL.md"),
+            (n for n in valid_names if n == skill_prefix + "SKILL.md"),
             None,
         )
 
         if skill_md_entry is None and not subpath:
             # No SKILL.md at root — scan one level of subdirectories
             subdirs_with_skill = []
-            for name in all_names:
+            for name in valid_names:
                 if not name.startswith(skill_prefix):
                     continue
                 rel = name[len(skill_prefix) :]
@@ -616,13 +626,20 @@ def _extract_skill_from_zip(
                 if len(parts) == 2 and parts[1] == "SKILL.md":
                     subdirs_with_skill.append(parts[0])
 
-            if subdirs_with_skill:
+            if len(subdirs_with_skill) > 1:
                 raise ValueError(
                     "Multiple skills found. Specify a subpath. "
                     "Available: " + ", ".join(sorted(subdirs_with_skill))
                 )
 
-        if skill_md_entry is None:
+            # If exactly one sub-directory has SKILL.md, use it automatically
+            if len(subdirs_with_skill) == 1:
+                only_subdir = subdirs_with_skill[0]
+                skill_prefix = f"{skill_prefix}{only_subdir}/"
+                skill_name = only_subdir
+                skill_md_entry = skill_prefix + "SKILL.md"
+
+        if strict and skill_md_entry is None:
             raise ValueError(
                 "No SKILL.md found in the archive"
                 + (f" under '{subpath}'" if subpath else "")
@@ -634,8 +651,8 @@ def _extract_skill_from_zip(
             shutil.rmtree(dest_dir)
         dest_dir.mkdir(parents=True, exist_ok=True)
 
-        # Extract members individually (no extractall) for security
-        for member in all_names:
+        # Extract valid members individually (no extractall) for security
+        for member in valid_names:
             if not member.startswith(skill_prefix) or member == skill_prefix:
                 continue
             rel = member[len(skill_prefix) :]
@@ -1482,7 +1499,10 @@ print(json.dumps(summary, ensure_ascii=False))
                         "chunks": [
                             {
                                 "output_type": "text",
-                                "content": f"安全限制: 不允许执行 {kw} 语句，仅支持 SELECT 查询。",
+                                "content": (
+                                    f"安全限制: 不允许执行 {kw} 语句，"
+                                    f"仅支持 SELECT 查询。"
+                                ),
                             }
                         ]
                     },
@@ -1710,10 +1730,12 @@ print(json.dumps(summary, ensure_ascii=False))
             clean_output = output_text.strip()
             max_out_len = 2000
             if len(clean_output) > max_out_len:
-                clean_output = (
-                    clean_output[:max_out_len]
-                    + f"\n\n... [Output truncated, length: {len(clean_output)} chars. Only showing first {max_out_len} chars. If you generated HTML, the file is saved.]"
+                truncation_notice = (
+                    f"\n\n... [Output truncated, length: {len(clean_output)} chars."
+                    f" Only showing first {max_out_len} chars."
+                    f" If you generated HTML, the file is saved.]"
                 )
+                clean_output = clean_output[:max_out_len] + truncation_notice
             chunks.append({"output_type": "text", "content": clean_output})
         else:
             chunks.append(
@@ -2544,13 +2566,6 @@ print(json.dumps(summary, ensure_ascii=False))
 - Analyze this file if needed for the user's request.
 """
 
-    # Build business tools context
-    business_tools_context = (
-        "\n".join([f"- {t.name}: {t.description}" for t in business_tools])
-        if business_tools
-        else "No additional business tools available."
-    )
-
     # Build skill context for system prompt when skill is pre-selected
     skill_prompt_context = ""
     execution_instruction = ""
@@ -2585,6 +2600,7 @@ print(json.dumps(summary, ensure_ascii=False))
 
     # Check if skill is pre-selected to use simplified prompt
     is_skill_mode = pre_matched_skill is not None
+    _skill_name = pre_matched_skill.metadata.name if pre_matched_skill else "skill"
 
     if is_skill_mode:
         # Simplified prompt for skill mode - only skill-related tools +
@@ -2597,51 +2613,99 @@ Please always response in the same language as the user's input language.
 1. Strictly follow the instructions of the loaded skill.
 2. For each step, output Thought -> Phase -> Action -> Action Input.
 3. Wait for the system to return Observation before deciding on the next step.
-4. **[Mandatory Rule] If the task requires generating an analysis report, you MUST call `html_interpreter` for HTML rendering.** By default, generate complete HTML code yourself and pass it via the `html` parameter (include DOCTYPE, html, head, body, styles, and all content). Only use `template_path` mode if the skill explicitly provides HTML templates in its `templates/` directory and its documentation references them. When using template mode, provide ALL required placeholders in the `data` dictionary.
-5. If the task does not require generating a report, directly call terminate to return the final result. The Action Input format must be {{"result": "final answer"}}.
+4. **[Mandatory Rule] If the task requires generating an analysis report, you MUST
+call `html_interpreter` for HTML rendering.** By default, generate complete HTML
+code yourself and pass it via the `html` parameter (include DOCTYPE, html, head,
+body, styles, and all content). Only use `template_path` mode if the skill
+explicitly provides HTML templates in its `templates/` directory and its
+documentation references them. When using template mode, provide ALL required
+placeholders in the `data` dictionary.
+5. If the task does not require generating a report, directly call terminate to
+return the final result. The Action Input format must be
+{{"result": "final answer"}}.
 
 {skill_prompt_context}
 {execution_instruction}
 
 ## Skill Execution Norms
 ### Resource Usage
-- **Need to execute skill script** -> Use `execute_skill_script_file` with parameters {{"skill_name": "skill name", "script_file_name": "script file name", "args": {{parameters}}}}. This tool will automatically handle image copying and data recording.
-- **Need to understand indicator definitions/analysis framework** -> Use `get_skill_resource` and specify the `references/xxx.md` path to read the reference document.
-- **Encounter image file** -> If the model does not support image input, it will return an error prompt.
-- **Need to generate report** -> Call `html_interpreter`. **Default: directly pass complete HTML via the `html` parameter** — you generate the full HTML code yourself (including `<!DOCTYPE html>`, `<html>`, `<head>`, `<body>`, styles, content). The HTML can be as long as needed. **Only use `template_path` if the skill explicitly provides HTML templates in its `templates/` directory and its documentation tells you to use them.** Do not use `code_interpreter` to generate the report.
+- **Need to execute skill script** -> Use `execute_skill_script_file` with
+parameters {{"skill_name": "skill name", "script_file_name": "script file name",
+"args": {{parameters}}}}. This tool will automatically handle image copying and
+data recording.
+- **Need to understand indicator definitions/analysis framework** -> Use
+`get_skill_resource` and specify the `references/xxx.md` path to read the
+reference document.
+- **Encounter image file** -> If the model does not support image input, it will
+return an error prompt.
+- **Need to generate report** -> Call `html_interpreter`. **Default: directly pass
+complete HTML via the `html` parameter** — you generate the full HTML code
+yourself (including `<!DOCTYPE html>`, `<html>`, `<head>`, `<body>`, styles,
+content). The HTML can be as long as needed. **Only use `template_path` if the
+skill explicitly provides HTML templates in its `templates/` directory and its
+documentation tells you to use them.** Do not use `code_interpreter` to generate
+the report.
 
 ## Available Tools Description
-1. **execute_skill_script_file** (recommended for executing skill scripts): Execute script files in the skills scripts directory, automatically handling post-processing such as copying images to the static directory and recording calculation results.
-   Parameters: {{"skill_name": "skill name", "script_file_name": "script file name", "args": {{parameters}}}}
-   - Example: {{"skill_name": "{pre_matched_skill.metadata.name if pre_matched_skill else "skill"}", "script_file_name": "calculate_ratios.py", "args": {{"input_data": "..."}}}}
-   - **Must use this tool when executing skill scripts**, do not use shell_interpreter.
-2. **get_skill_resource**: Read reference documents, configurations, templates, and other non-script resource files in the skill.
+1. **execute_skill_script_file** (recommended for executing skill scripts): Execute
+script files in the skills scripts directory, automatically handling
+post-processing such as copying images to the static directory and recording
+calculation results.
+   Parameters: {{"skill_name": "skill name", "script_file_name": "script file
+name", "args": {{parameters}}}}
+   - Example: {{"skill_name": "{_skill_name}",
+"script_file_name": "calculate_ratios.py",
+"args": {{"input_data": "..."}}}}
+   - **Must use this tool when executing skill scripts**, do not use
+shell_interpreter.
+2. **get_skill_resource**: Read reference documents, configurations, templates, and
+other non-script resource files in the skill.
    Parameters: {{"skill_name": "skill name", "resource_path": "resource path"}}
-   - Read reference document: {{"skill_name": "{pre_matched_skill.metadata.name if pre_matched_skill else "skill"}", "resource_path": "references/analysis_framework.md"}}
-   - Note: For generating reports, prefer using html_interpreter directly with the `html` parameter. Only use template_path if the skill explicitly provides templates.
-3. **execute_skill_script**: Execute the inline script defined in the skill (backup). Parameters: {{"skill_name": "skill name", "script_name": "script name", "args": {{"parameter name": "parameter value"}}}}
-4. **shell_interpreter**: Execute shell/bash commands (only for non-skill script system commands, such as ls, cat, etc.).
+   - Read reference document: {{"skill_name": "{_skill_name}",
+"resource_path": "references/analysis_framework.md"}}
+   - Note: For generating reports, prefer using html_interpreter directly with the
+`html` parameter. Only use template_path if the skill explicitly provides
+templates.
+3. **execute_skill_script**: Execute the inline script defined in the skill
+(backup). Parameters: {{"skill_name": "skill name", "script_name": "script name",
+"args": {{"parameter name": "parameter value"}}}}
+4. **shell_interpreter**: Execute shell/bash commands (only for non-skill script
+system commands, such as ls, cat, etc.).
    Parameters: {{"code": "shell command"}}
-   - Each call is independent and does not retain state. If multi-step operations are needed, use `&&` or `;` to connect commands.
-   - **Note: Do not use this tool to execute skill scripts**, as it will not automatically handle images and data recording.
-5. **html_interpreter**: Render HTML as an interactive web report. This is the ONLY way to display reports on the right panel.
-   **Default usage (recommended)**: {{"html": "<html>your complete HTML code</html>", "title": "report title"}}
-   - Generate complete HTML yourself (DOCTYPE, html, head, body, CSS styles, content). No length limit.
-   - **Do not** use code_interpreter to write HTML. Directly pass the HTML string to this tool.
-   **Template mode (only when skill has templates/)**: {{"template_path": "skill-name/templates/template.html", "data": {{"KEY": "value"}}, "title": "title"}}
-   - Only use this if the skill's documentation explicitly provides template paths. If template_path returns "Template not found", immediately switch to the default `html` parameter usage.
+   - Each call is independent and does not retain state. If multi-step operations
+are needed, use `&&` or `;` to connect commands.
+   - **Note: Do not use this tool to execute skill scripts**, as it will not
+automatically handle images and data recording.
+5. **html_interpreter**: Render HTML as an interactive web report. This is the ONLY
+way to display reports on the right panel.
+   **Default usage (recommended)**: {{"html": "<html>your complete HTML code</html>",
+"title": "report title"}}
+   - Generate complete HTML yourself (DOCTYPE, html, head, body, CSS styles,
+content). No length limit.
+   - **Do not** use code_interpreter to write HTML. Directly pass the HTML string
+to this tool.
+   **Template mode (only when skill has templates/)**: {{"template_path":
+"skill-name/templates/template.html", "data": {{"KEY": "value"}}, "title": "title"}}
+   - Only use this if the skill's documentation explicitly provides template paths.
+If template_path returns "Template not found", immediately switch to the default
+`html` parameter usage.
    {available_images_hint}
-6. **terminate**: Return the final answer when the task is completed. Action Input must be {{"result": "your final answer content"}}.
+6. **terminate**: Return the final answer when the task is completed. Action Input
+must be {{"result": "your final answer content"}}.
 
 {file_context}
 {knowledge_context}
 {database_context}
 ## Phase (Must output for each step)
-Phase is a short text description expressing the intention or stage of the current step. Example: "Load sales analysis skill", "Execute data extraction script", "Render analysis report".
+Phase is a short text description expressing the intention or stage of the current
+step. Example: "Load sales analysis skill", "Execute data extraction script",
+"Render analysis report".
 ## ReAct Output Format
 Must output for each interaction round:
 Thought: Analyze current task status and think about what to do next
-Phase: Use a short text to describe the intention of the current step (e.g., "Load sales analysis skill", "Execute data extraction script", "Render analysis report")
+Phase: Use a short text to describe the intention of the current step (e.g.,
+"Load sales analysis skill", "Execute data extraction script",
+"Render analysis report")
 Action: The selected tool name (must be one of the tools listed above)
 Action Input: The JSON format of tool parameters
 """.strip()
@@ -2661,16 +2725,24 @@ Action Input: The JSON format of tool parameters
     else:
         # Full prompt with all tools when no skill is pre-selected
         workflow_prompt = f"""
-You are the DB-GPT intelligent assistant, capable of autonomously selecting tools to solve problems based on user tasks.
+You are the DB-GPT intelligent assistant, capable of autonomously selecting tools
+to solve problems based on user tasks.
 Please always response in the same language as the user's input language.
 
 ## Autonomous Decision Principles
 1. Carefully analyze the user's task requirements.
-2. Autonomously select required tools based on requirements (do not follow a fixed order, select as needed).
+2. Autonomously select required tools based on requirements (do not follow a fixed
+order, select as needed).
 3. For each step, output Thought -> Phase -> Action -> Action Input.
 4. Wait for the system to return Observation before deciding on the next step.
-5. When the task is completed, call the terminate tool to return the final result. The Action Input format must be {{"result": "final answer"}}.
-6. **[Mandatory Rule] If there is a requirement for an analysis report, you MUST call `html_interpreter` for HTML rendering. When the user requests generating a webpage, HTML report, or interactive report, the final presentation step must call `html_interpreter` to render it. It is forbidden to output HTML using only `code_interpreter` and then directly terminate. Correct process: code_interpreter writes to .html file -> html_interpreter(file_path=...) renders -> terminate.**
+5. When the task is completed, call the terminate tool to return the final result.
+The Action Input format must be {{"result": "final answer"}}.
+6. **[Mandatory Rule] If there is a requirement for an analysis report, you MUST call
+`html_interpreter` for HTML rendering. When the user requests generating a webpage,
+HTML report, or interactive report, the final presentation step must call
+`html_interpreter` to render it. It is forbidden to output HTML using only
+`code_interpreter` and then directly terminate. Correct process: code_interpreter
+writes to .html file -> html_interpreter(file_path=...) renders -> terminate.**
 
 ## Available Skills List (Pre-loaded)
 {skills_context}
@@ -2679,33 +2751,61 @@ Please always response in the same language as the user's input language.
 When using a skill, the following rules must be followed:
 
 ### 1. Understand the Workflow
-After loading the skill, carefully read the **Core Workflow** section in SKILL.md and execute it in order. If a step explicitly states conditions to skip (such as when user intent is clear), directly skip to the next step; do not force the execution of every step. Prioritize producing results quickly, and perform iterative optimization in subsequent steps.
+After loading the skill, carefully read the **Core Workflow** section in SKILL.md
+and execute it in order. If a step explicitly states conditions to skip (such as
+when user intent is clear), directly skip to the next step; do not force the
+execution of every step. Prioritize producing results quickly, and perform
+iterative optimization in subsequent steps.
 
 ### 2. Resource Usage Timing
-- **Need to calculate/process data** -> Use `execute_skill_script_file` to execute scripts in the skill's scripts directory (this tool automatically handles images and data recording). Parameters are {{"skill_name": "skill name", "script_file_name": "script.py", "args": {{parameters}}}}.
-- **Need to understand indicator definitions/analysis framework** -> Use `get_skill_resource` and specify the `references/xxx.md` path to read the reference document.
-- **Encounter image file** -> If the model does not support image input, it will return an error prompt.
+- **Need to calculate/process data** -> Use `execute_skill_script_file` to execute
+scripts in the skill's scripts directory (this tool automatically handles images
+and data recording). Parameters are {{"skill_name": "skill name",
+"script_file_name": "script.py", "args": {{parameters}}}}.
+- **Need to understand indicator definitions/analysis framework** -> Use
+`get_skill_resource` and specify the `references/xxx.md` path to read the
+reference document.
+- **Encounter image file** -> If the model does not support image input, it will
+return an error prompt.
 
 ### 3. Execution Order
-Complete each workflow step before moving to the next. Do not mix multiple tool calls in the same step.
+Complete each workflow step before moving to the next. Do not mix multiple tool
+calls in the same step.
 
 ### 4. Special Scenarios
-- For report generation: Same as the principle above, must finally call `html_interpreter` to render.
+- For report generation: Same as the principle above, must finally call
+`html_interpreter` to render.
 
 ## Available Tools Description
-1. **load_skill**: Load skill content by skill name and file path. Parameters: {{"skill_name": "skill name", "file_path": "skill file path"}}
-2. **execute_skill_script_file**: Execute script files in the skill's scripts directory. Parameters: {{"skill_name": "skill name", "script_file_name": "script file name", "args": {{parameters}}}}
-3. **get_skill_resource**: Read reference documents in the skill. Parameters: {{"skill_name": "skill name", "resource_path": "resource path"}}
-4. **execute_skill_script**: Execute the inline script defined in the skill. Parameters: {{"skill_name": "skill name", "script_name": "script name", "args": {{parameters}}}}
-5. **shell_interpreter**: Execute shell/bash commands. Parameters: {{"code": "shell command"}}
-6. **code_interpreter**: Execute arbitrary Python code. Parameters: {{"code": "python code string"}}
+1. **load_skill**: Load skill content by skill name and file path.
+Parameters: {{"skill_name": "skill name", "file_path": "skill file path"}}
+2. **execute_skill_script_file**: Execute script files in the skill's scripts
+directory. Parameters: {{"skill_name": "skill name",
+"script_file_name": "script file name", "args": {{parameters}}}}
+3. **get_skill_resource**: Read reference documents in the skill.
+Parameters: {{"skill_name": "skill name", "resource_path": "resource path"}}
+4. **execute_skill_script**: Execute the inline script defined in the skill.
+Parameters: {{"skill_name": "skill name", "script_name": "script name",
+"args": {{parameters}}}}
+5. **shell_interpreter**: Execute shell/bash commands.
+Parameters: {{"code": "shell command"}}
+6. **code_interpreter**: Execute arbitrary Python code.
+Parameters: {{"code": "python code string"}}
 7. **load_file**: Load uploaded file info. Parameters: none.
-8. **execute_analysis**: Execute quick analysis on uploaded Excel/CSV file. Parameters: none.
-9. **knowledge_retrieve**: Retrieve relevant info from knowledge base. Parameters: {{"query": "search query"}}
-10. **sql_query**: Execute a read-only SQL query against the selected database. Parameters: {{"sql": "SELECT statement"}}
+8. **execute_analysis**: Execute quick analysis on uploaded Excel/CSV file.
+Parameters: none.
+9. **knowledge_retrieve**: Retrieve relevant info from knowledge base.
+Parameters: {{"query": "search query"}}
+10. **sql_query**: Execute a read-only SQL query against the selected database.
+Parameters: {{"sql": "SELECT statement"}}
 11. **load_tools**: Resolve required tools for the selected skill. Parameters: none.
-12. **execute_tool**: Execute a tool by name with JSON args. Parameters: {{"tool_name": "tool name", "args": {{parameters}}}}
-13. **html_interpreter**: Render HTML as an interactive web report (the ONLY way to display reports on the right panel). Default usage: {{"html": "<html>complete HTML code</html>", "title": "title"}}. Template mode: {{"template_path": "skill/templates/xxx.html", "data": {{...}}, "title": "title"}}. File mode: {{"file_path": "/path/to/report.html"}}
+12. **execute_tool**: Execute a tool by name with JSON args.
+Parameters: {{"tool_name": "tool name", "args": {{parameters}}}}
+13. **html_interpreter**: Render HTML as an interactive web report (the ONLY way
+to display reports on the right panel). Default usage:
+{{"html": "<html>complete HTML code</html>", "title": "title"}}. Template mode:
+{{"template_path": "skill/templates/xxx.html", "data": {{...}}, "title": "title"}}.
+File mode: {{"file_path": "/path/to/report.html"}}
 14. **terminate**: Finish the task. Parameters: {{"result": "final answer"}}
 
 {file_context}
@@ -2713,7 +2813,8 @@ Complete each workflow step before moving to the next. Do not mix multiple tool 
 {database_context}
 
 ## Phase (Must output for each step)
-Phase is a short text description expressing the intention or stage of the current step. Example: "Select skill", "Analyze data", "Render report".
+Phase is a short text description expressing the intention or stage of the current
+step. Example: "Select skill", "Analyze data", "Render report".
 
 ## ReAct Output Format
 Must output for each interaction round:
@@ -2749,8 +2850,6 @@ Action Input: The JSON format of tool parameters
     all_resources = [tool_pack]
     if knowledge_resources:
         all_resources.extend(knowledge_resources)
-    combined_resource_pack = ToolPack(all_resources, name="React Agent Resource Pack")
-
     # Convert workflow_prompt to PromptTemplate so it is used as system prompt
     # Use jinja2 format to avoid issues with JSON braces { } in the prompt
     workflow_prompt_template = PromptTemplate(
@@ -2789,10 +2888,6 @@ Action Input: The JSON format of tool parameters
     pending_thoughts: Dict[
         int, List[str]
     ] = {}  # Buffer thinking content for delayed step creation
-    last_completed_step_id: Optional[str] = (
-        None  # Track last completed step for thought association
-    )
-
     # --- History persistence: collect step data during streaming ---
     history_steps: List[Dict[str, Any]] = []
     current_history_step: Optional[Dict[str, Any]] = None
@@ -2835,7 +2930,6 @@ Action Input: The JSON format of tool parameters
                 }
             )
         yield step_done(skill_step_id)
-        last_completed_step_id = skill_step_id
         history_steps.append(current_history_step)
         current_history_step = None
 
@@ -3068,7 +3162,6 @@ Action Input: The JSON format of tool parameters
             # Mark step as done and track as last completed
             status = "done" if action_output.get("is_exe_success", True) else "failed"
             yield step_done(react_step_id, status)
-            last_completed_step_id = react_step_id
 
             # --- History: finalize step ---
             if current_history_step is not None:

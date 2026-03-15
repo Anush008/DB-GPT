@@ -6,9 +6,9 @@ to load and use skills in DB-GPT agents.
 
 import asyncio
 
-from dbgpt.agent.core.profile.base import ProfileConfig
 from dbgpt.agent.core.agent import AgentContext
-from dbgpt.agent.middleware.agent import MiddlewareAgent, AgentConfig
+from dbgpt.agent.core.profile.base import ProfileConfig
+from dbgpt.agent.middleware.agent import AgentConfig, MiddlewareAgent
 from dbgpt.agent.skill.middleware_v2 import SkillsMiddlewareV2
 
 

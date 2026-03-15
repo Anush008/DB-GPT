@@ -9,7 +9,6 @@ import logging
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from ..core.base_agent import ConversableAgent
-from ..core.role import Role
 from ..middleware.base import MiddlewareManager
 from ..skill.middleware_v2 import SkillsMiddlewareV2
 
@@ -143,7 +142,7 @@ class MiddlewareAgent(ConversableAgent):
             AgentMessage or None.
         """
         if self.agent_config.enable_middleware and received_message:
-            from ..core.agent import AgentGenerateContext, AgentMessage
+            from ..core.agent import AgentGenerateContext
 
             context = AgentGenerateContext(
                 message=received_message,
@@ -176,7 +175,7 @@ class MiddlewareAgent(ConversableAgent):
             Tuple of (reply, model_name).
         """
         if self.agent_config.enable_middleware:
-            from ..core.agent import AgentGenerateContext, AgentMessage
+            from ..core.agent import AgentGenerateContext
 
             if messages:
                 last_message = messages[-1] if messages else None
@@ -191,7 +190,7 @@ class MiddlewareAgent(ConversableAgent):
         )
 
         if self.agent_config.enable_middleware:
-            from ..core.agent import AgentGenerateContext, AgentMessage
+            from ..core.agent import AgentGenerateContext
 
             if messages:
                 last_message = messages[-1] if messages else None

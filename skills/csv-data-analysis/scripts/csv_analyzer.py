@@ -106,7 +106,13 @@ def analyze_csv(file_path):
     """
     try:
         log(f"正在读取文件: {file_path}")
-        df = pd.read_csv(file_path)
+        ext = os.path.splitext(file_path)[1].lower()
+        if ext in (".xls", ".xlsx"):
+            df = pd.read_excel(file_path)
+        elif ext == ".tsv":
+            df = pd.read_csv(file_path, sep="\t")
+        else:
+            df = pd.read_csv(file_path)
 
         # ==========================================
         # 1. 基础概览数据
@@ -961,10 +967,17 @@ def main():
         print(json.dumps(result, ensure_ascii=False))
         sys.exit(1)
 
-    if not csv_file.lower().endswith(".csv"):
+    SUPPORTED_EXTENSIONS = (".csv", ".xls", ".xlsx", ".tsv")
+    if not csv_file.lower().endswith(SUPPORTED_EXTENSIONS):
         result = {
             "chunks": [
-                {"output_type": "text", "content": f"文件不是CSV格式: {csv_file}"}
+                {
+                    "output_type": "text",
+                    "content": (
+                        f"不支持的文件格式: {csv_file}，"
+                        f"支持的格式: {', '.join(SUPPORTED_EXTENSIONS)}"
+                    ),
+                }
             ]
         }
         print(json.dumps(result, ensure_ascii=False))

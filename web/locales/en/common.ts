@@ -485,4 +485,13 @@ export const CommonEn = {
   skills_github_importing: 'Importing skill...',
   skills_github_import_success: 'Skill imported successfully',
   skills_github_import_failed: 'Failed to import skill',
+  skills_import_hint: 'The import address should be the folder directory containing',
+  skills_import_hint_suffix: '. The system will automatically pull all files in the directory and package them.',
+  skills_import_folder_label: 'Skill folder address',
+  skills_import_folder_hint: '— If SKILL.md is in a subdirectory, enter the full path',
+  skills_import_url_required: 'Please enter the GitHub repository URL',
+  skills_import_example_label: 'Example:',
+  skills_import_url_valid: 'URL format is correct, click "Import" to start pulling',
+  skills_import_url_invalid: 'Please enter a valid GitHub URL',
+  skills_updated_at: 'Updated on {{date}}',
 } as const;

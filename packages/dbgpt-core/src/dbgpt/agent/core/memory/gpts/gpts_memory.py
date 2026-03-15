@@ -192,11 +192,18 @@ class GptsMemory:
                 # Check if the last message is a terminate action
                 if last_goal_message and last_goal_message.action_report:
                     try:
-                        action_out = ActionOutput.from_dict(json.loads(last_goal_message.action_report))
+                        action_out = ActionOutput.from_dict(
+                            json.loads(last_goal_message.action_report)
+                        )
                         if action_out and action_out.terminate:
                             # Extract terminate content for pure text display
-                            terminate_content = action_out.content or action_out.view or "Task completed"
-                            # Don't show the last goal message in agents vis (it will be shown as text)
+                            terminate_content = (
+                                action_out.content
+                                or action_out.view
+                                or "Task completed"
+                            )
+                            # Don't show the last goal message in agents vis
+                            # (it will be shown as text)
                             last_goal_message = None
                     except Exception:
                         pass  # If parsing fails, treat as normal message
@@ -208,7 +215,7 @@ class GptsMemory:
             message_keys = list(message_group.keys())
 
             for idx, key in enumerate(message_keys):
-                is_last = (idx == len(message_keys) - 1)
+                is_last = idx == len(message_keys) - 1
                 value = message_group[key]
                 num = num + 1
 
@@ -288,17 +295,24 @@ class GptsMemory:
         plan_entries = list(plan_group.items())
 
         for idx, (key, value) in enumerate(plan_entries):
-            is_last = (idx == len(plan_entries) - 1)
+            is_last = idx == len(plan_entries) - 1
 
             # Check if this is the last item and it's a terminate action
             if is_last and value:
                 last_message = value[-1] if value else None
                 if last_message and last_message.action_report:
                     try:
-                        action_out = ActionOutput.from_dict(json.loads(last_message.action_report))
-                        # If this is a terminate action, extract content and skip plan display
+                        action_out = ActionOutput.from_dict(
+                            json.loads(last_message.action_report)
+                        )
+                        # If this is a terminate action, extract content
+                        # and skip plan display
                         if action_out and action_out.terminate:
-                            terminate_content = action_out.content or action_out.view or "Task completed"
+                            terminate_content = (
+                                action_out.content
+                                or action_out.view
+                                or "Task completed"
+                            )
                             continue  # Skip adding to plan_items
                     except Exception:
                         pass  # If parsing fails, treat as normal plan item

@@ -55,19 +55,19 @@ system_app = SystemApp(app)
 def mount_routers(app: FastAPI):
     """Lazy import to avoid high time cost"""
     from dbgpt_app.knowledge.api import router as knowledge_router
+    from dbgpt_app.openapi.api_v1.agentic_data_api import router as agentic_data_api
     from dbgpt_app.openapi.api_v1.api_v1 import router as api_v1
     from dbgpt_app.openapi.api_v1.editor.api_editor_v1 import (
         router as api_editor_route_v1,
     )
+    from dbgpt_app.openapi.api_v1.examples_api import router as examples_router
     from dbgpt_app.openapi.api_v1.feedback.api_fb_v1 import router as api_fb_v1
-    from dbgpt_app.openapi.api_v2 import router as api_v2
-    from dbgpt_serve.agent.app.controller import router as gpts_v1
-    from dbgpt_serve.agent.app.endpoints import router as app_v2
     from dbgpt_app.openapi.api_v1.python_upload_api import (
         router as python_upload_router,
     )
-    from dbgpt_app.openapi.api_v1.examples_api import router as examples_router
-    from dbgpt_app.openapi.api_v1.agentic_data_api import router as agentic_data_api
+    from dbgpt_app.openapi.api_v2 import router as api_v2
+    from dbgpt_serve.agent.app.controller import router as gpts_v1
+    from dbgpt_serve.agent.app.endpoints import router as app_v2
 
     app.include_router(api_v1, prefix="/api", tags=["Chat"])
     app.include_router(api_v2, prefix="/api", tags=["ChatV2"])
@@ -172,8 +172,8 @@ def initialize_app(param: ApplicationConfig, args: List[str] = None):
 
     # Register default data sources
     try:
-        from dbgpt_serve.datasource.manages.connect_config_db import ConnectConfigDao
         from dbgpt.configs.model_config import ROOT_PATH
+        from dbgpt_serve.datasource.manages.connect_config_db import ConnectConfigDao
 
         dao = ConnectConfigDao()
         db_name = "Walmart_Sales"
@@ -188,7 +188,8 @@ def initialize_app(param: ApplicationConfig, args: List[str] = None):
                 comment="Default Walmart Sales example database",
             )
             logger.info(
-                f"Successfully registered default data source: {db_name} at {db_absolute_path}"
+                f"Successfully registered default data source: "
+                f"{db_name} at {db_absolute_path}"
             )
     except Exception as e:
         logger.error(f"Failed to register default data sources: {str(e)}")

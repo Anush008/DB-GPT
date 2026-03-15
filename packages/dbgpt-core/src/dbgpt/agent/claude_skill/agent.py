@@ -4,13 +4,13 @@ This module provides utilities to use Claude-style SKILL files
 with DB-GPT's ConversableAgent.
 """
 
-import asyncio
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from dbgpt.agent.core.agent import AgentContext
 from dbgpt.agent.core.base_agent import ConversableAgent
 from dbgpt.core import PromptTemplate
-from . import FileBasedSkill, get_registry, SkillRegistry
+
+from . import FileBasedSkill, SkillRegistry, get_registry
 
 
 class ClaudeSkillAgent(ConversableAgent):

@@ -162,8 +162,8 @@ class ToolPack(ResourcePack):
         self.append(ft, overwrite=overwrite)
 
     def _get_execution_tool(
-            self,
-            name: Optional[str] = None,
+        self,
+        name: Optional[str] = None,
     ) -> BaseTool:
         if not name or name not in self._resources:
             raise ToolNotFoundException("No tool found for execution")

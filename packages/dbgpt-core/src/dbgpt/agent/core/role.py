@@ -319,12 +319,14 @@ class Role(ABC, BaseModel):
                 object.__setattr__(self, "_task_progress", [])
             progress: List[Dict] = self._task_progress  # type: ignore[assignment]
             step_num = (current_retry_counter or 0) + 1
-            progress.append({
-                "step": step_num,
-                "action": action,
-                "phase": phase or "",
-                "status": "done",
-            })
+            progress.append(
+                {
+                    "step": step_num,
+                    "action": action,
+                    "phase": phase or "",
+                    "status": "done",
+                }
+            )
 
         write_memory_template = self.write_memory_template
         memory_content = self._render_template(write_memory_template, **memory_map)

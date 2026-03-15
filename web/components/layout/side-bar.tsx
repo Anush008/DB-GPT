@@ -1,7 +1,7 @@
 import { ChatContext } from '@/app/chat-context';
 import { delDialogue, getDialogueList } from '@/client/api/request';
 import { apiInterceptors } from '@/client/api/tools/interceptors';
-import { DarkSvg, SunnySvg } from '@/components/icons';
+import { DarkSvg, ModelSvg, SunnySvg } from '@/components/icons';
 import UserBar from '@/new-components/layout/UserBar';
 import type { IChatDialogueSchema } from '@/types/chat';
 import { STORAGE_LANG_KEY, STORAGE_THEME_KEY } from '@/utils/constants/index';
@@ -68,6 +68,7 @@ function SideBar() {
     pathname.startsWith('/construct/flow') ||
     pathname.startsWith('/construct/prompt') ||
     pathname.startsWith('/construct/dbgpts') ||
+    pathname.startsWith('/construct/models') ||
     pathname === '/models_evaluation';
   const { t, i18n } = useTranslation();
   const [logo, setLogo] = useState<string>('/logo_zh_latest.png');
@@ -191,6 +192,21 @@ function SideBar() {
       >
         <AppstoreOutlined className='text-blue-500' />
         <span>{t('app_management')}</span>
+      </div>
+      <div
+        onClick={() => {
+          router.push('/construct/models');
+          setSettingsOpen(false);
+        }}
+        className={cls(
+          'flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors',
+          {
+            'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400': pathname.startsWith('/construct/models'),
+          },
+        )}
+      >
+        <Icon component={ModelSvg} className='text-cyan-500' />
+        <span>{t('model_manage')}</span>
       </div>
       <div
         onClick={() => {

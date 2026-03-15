@@ -95,7 +95,6 @@ class DatasourceCreateRequest(BaseModel):
 class DatasourceQueryResponse(DatasourceCreateRequest):
     """Response model for datasource query"""
 
-
     db_name: Optional[str] = Field(
         None, description="Internal database name used for connector lookup."
     )

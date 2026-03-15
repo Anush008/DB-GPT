@@ -257,7 +257,8 @@ SKILLS_SYSTEM_PROMPT = """
 
 ## Skills System
 
-You have access to a skills library that provides specialized capabilities and domain knowledge.
+You have access to a skills library that provides specialized
+capabilities and domain knowledge.
 
 {skills_locations}
 
@@ -267,12 +268,16 @@ You have access to a skills library that provides specialized capabilities and d
 
 **How to Use Skills (Progressive Disclosure):**
 
-Skills follow a **progressive disclosure** pattern - you see their name and description above, but only read full instructions when needed:
+Skills follow a **progressive disclosure** pattern - you see their name and
+description above, but only read full instructions when needed:
 
-1. **Recognize when a skill applies**: Check if the user's task matches a skill's description
+1. **Recognize when a skill applies**: Check if the user's task matches
+a skill's description
 2. **Read the skill's full instructions**: Use the path shown in the skill list above
-3. **Follow the skill's instructions**: SKILL.md contains step-by-step workflows, best practices, and examples
-4. **Access supporting files**: Skills may include helper scripts, configs, or reference docs - use absolute paths
+3. **Follow the skill's instructions**: SKILL.md contains step-by-step workflows,
+best practices, and examples
+4. **Access supporting files**: Skills may include helper scripts, configs, or
+reference docs - use absolute paths
 
 **When to Use Skills:**
 - User's request matches a skill's domain (e.g., "research X" -> web-research skill)
@@ -288,7 +293,8 @@ User: "Can you research the latest developments in quantum computing?"
 3. Follow the skill's research workflow (search -> organize -> synthesize)
 4. Use any helper scripts with absolute paths
 
-Remember: Skills make you more capable and consistent. When in doubt, check if a skill exists for the task!
+Remember: Skills make you more capable and consistent. When in doubt, check if
+a skill exists for the task!
 """
 
 
@@ -392,7 +398,10 @@ class SkillsMiddleware:
 
         if not self._skills:
             paths = [f"`{source_path}`" for source_path in self.sources]
-            return f"(No skills available yet. You can create skills in {' or '.join(paths)})"
+            return (
+                f"(No skills available yet. You can create skills in"
+                f" {' or '.join(paths)})"
+            )
 
         lines = []
         for skill in self._skills.values():
@@ -470,7 +479,11 @@ class SkillsMiddleware:
         """
         keywords = []
 
-        pattern = r"(?:when|use|for|to)\s+(?:the\s+)?(?:user\s+)?(?:asks|requests|wants|needs)?\s*(?:to\s+)?([a-z\s]+?)(?:\s*(?:\.|,|;|or|\(|\)|use when|$))"
+        pattern = (
+            r"(?:when|use|for|to)\s+(?:the\s+)?(?:user\s+)?"
+            r"(?:asks|requests|wants|needs)?\s*(?:to\s+)?([a-z\s]+?)"
+            r"(?:\s*(?:\.|,|;|or|\(|\)|use when|$))"
+        )
         matches = re.findall(pattern, description, re.IGNORECASE)
 
         for match in matches:

@@ -15,9 +15,13 @@ import pytest
 from dbgpt_app.openapi.api_v1.agentic_data_api import _install_skill_from_dir
 
 try:
-    from dbgpt_app.openapi.api_v1.agentic_data_api import _extract_skill_from_zip
+    from dbgpt_app.openapi.api_v1.agentic_data_api import (
+        _extract_skill_from_zip,
+        _is_macos_junk,
+    )
 except ImportError:
     _extract_skill_from_zip = None  # type: ignore[assignment]
+    _is_macos_junk = None  # type: ignore[assignment]
 
 
 def _make_zip(files: dict) -> bytes:
@@ -188,3 +192,133 @@ class TestInstallSkillFromDir:
         new_content = (user_dir / "my-skill" / "SKILL.md").read_text()
         assert "version: 2" in new_content
         assert "version: 1" not in new_content
+
+
+class TestIsMacosJunk:
+    """Tests for _is_macos_junk helper."""
+
+    _needs = pytest.mark.skipif(
+        _is_macos_junk is None,
+        reason="_is_macos_junk not available",
+    )
+
+    @_needs
+    def test_macosx_dir(self):
+        assert _is_macos_junk("__MACOSX/foo/bar") is True
+
+    @_needs
+    def test_dot_underscore_file(self):
+        assert _is_macos_junk("my-skill/._SKILL.md") is True
+
+    @_needs
+    def test_normal_file(self):
+        assert _is_macos_junk("my-skill/SKILL.md") is False
+
+    @_needs
+    def test_nested_macosx(self):
+        assert _is_macos_junk("repo-main/__MACOSX/my-skill/SKILL.md") is True
+
+
+class TestExtractSkillFromZipEnhancements:
+    """Tests for the enhanced _extract_skill_from_zip (strict, __MACOSX filter)."""
+
+    _needs = pytest.mark.skipif(
+        _extract_skill_from_zip is None,
+        reason="_extract_skill_from_zip not available",
+    )
+
+    @_needs
+    def test_macosx_filtered_single_top_dir(self, tmp_path):
+        """ZIP with __MACOSX alongside skill dir should not create nested dirs."""
+        zip_bytes = _make_zip(
+            {
+                "my-skill/SKILL.md": "name: my-skill\n",
+                "my-skill/scripts/run.sh": "echo hello\n",
+                "__MACOSX/my-skill/._SKILL.md": "binary junk",
+            }
+        )
+        zip_path = tmp_path / "pkg.zip"
+        zip_path.write_bytes(zip_bytes)
+        dest = tmp_path / "target"
+
+        skill_name = _extract_skill_from_zip(zip_path, subpath=None, dest_dir=dest)
+
+        assert skill_name == "my-skill"
+        assert (dest / "SKILL.md").exists()
+        assert (dest / "scripts" / "run.sh").exists()
+        # __MACOSX content must NOT be extracted
+        assert not (dest / "__MACOSX").exists()
+        assert not (dest / "._SKILL.md").exists()
+
+    @_needs
+    def test_strict_false_no_skill_md(self, tmp_path):
+        """With strict=False, missing SKILL.md should NOT raise."""
+        zip_bytes = _make_zip(
+            {
+                "my-tool/config.json": '{"key": "value"}\n',
+                "my-tool/README.md": "# readme\n",
+            }
+        )
+        zip_path = tmp_path / "pkg.zip"
+        zip_path.write_bytes(zip_bytes)
+        dest = tmp_path / "target"
+
+        skill_name = _extract_skill_from_zip(
+            zip_path, subpath=None, dest_dir=dest, strict=False
+        )
+
+        assert skill_name == "my-tool"
+        assert (dest / "config.json").exists()
+        assert (dest / "README.md").exists()
+
+    @_needs
+    def test_strict_true_no_skill_md_raises(self, tmp_path):
+        """With strict=True (default), missing SKILL.md MUST raise."""
+        zip_bytes = _make_zip({"my-tool/config.json": '{"key": "value"}\n'})
+        zip_path = tmp_path / "pkg.zip"
+        zip_path.write_bytes(zip_bytes)
+        dest = tmp_path / "target"
+
+        with pytest.raises(ValueError, match="No SKILL.md found"):
+            _extract_skill_from_zip(zip_path, subpath=None, dest_dir=dest)
+
+    @_needs
+    def test_single_subdir_with_skill_md_auto_selected(self, tmp_path):
+        """When exactly one sub-directory has SKILL.md, select it automatically."""
+        zip_bytes = _make_zip(
+            {
+                "repo-main/my-skill/SKILL.md": "name: my-skill\n",
+                "repo-main/my-skill/scripts/run.sh": "echo hi\n",
+            }
+        )
+        zip_path = tmp_path / "pkg.zip"
+        zip_path.write_bytes(zip_bytes)
+        dest = tmp_path / "target"
+
+        skill_name = _extract_skill_from_zip(zip_path, subpath=None, dest_dir=dest)
+
+        assert skill_name == "my-skill"
+        assert (dest / "SKILL.md").exists()
+        assert (dest / "scripts" / "run.sh").exists()
+
+    @_needs
+    def test_flat_zip_no_top_dir(self, tmp_path):
+        """ZIP with files at root (no wrapping dir), strict=False."""
+        zip_bytes = _make_zip(
+            {
+                "config.json": '{"key": "value"}\n',
+                "README.md": "# Hi\n",
+            }
+        )
+        zip_path = tmp_path / "my-pkg.zip"
+        zip_path.write_bytes(zip_bytes)
+        dest = tmp_path / "target"
+
+        skill_name = _extract_skill_from_zip(
+            zip_path, subpath=None, dest_dir=dest, strict=False
+        )
+
+        # skill_name falls back to dest_dir.name when no archive_root
+        assert skill_name == "target"
+        assert (dest / "config.json").exists()
+        assert (dest / "README.md").exists()
