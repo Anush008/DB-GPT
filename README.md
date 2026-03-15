@@ -50,38 +50,38 @@
 
 </div>
 
-> **Connect to databases, files, and knowledge bases. Let AI autonomously write SQL and code, use skills, run in sandboxed environments, and generate charts, reports, and decisions.**
+> **An open-source AI data assistant that connects to your data, writes SQL and code, runs skills in sandboxed environments, and turns analysis into reports, insights, and action.**
 
 ## What is DB-GPT?
 
-DB-GPT is an open-source **agentic AI data assistant** built for the next generation of **AI + Data** products.
+DB-GPT is an open-source **agentic AI data assistant** for the next generation of **AI + Data** products.
 
 It helps users and teams:
-- connect to **multiple data sources** such as databases, CSV / Excel files, warehouses, and knowledge bases
-- ask questions in natural language and let AI **autonomously write SQL**
-- run **Python and code-based analysis** workflows
+- connect to **databases, CSV / Excel files, warehouses, and knowledge bases**
+- ask questions in natural language and let AI **write SQL autonomously**
+- run **Python- and code-driven analysis** workflows
 - load and execute reusable **skills** for domain-specific tasks
 - generate **charts, dashboards, HTML reports, and analysis summaries**
-- safely execute tasks in **sandboxed environments**
+- execute tasks safely in **sandboxed environments**
 
 DB-GPT is also a platform for building **AI-native data agents, workflows, and applications** with agents, AWEL, RAG, and multi-model support.
 
 ## Why DB-GPT?
 
 ### 1. Agentic data analysis
-DB-GPT can plan tasks, break work into steps, call tools, and iteratively complete analysis workflows.
+Plan tasks, break work into steps, call tools, and complete analysis workflows end to end.
 
 ### 2. Autonomous SQL + code execution
-DB-GPT can automatically write SQL and code to query data, clean datasets, compute metrics, and generate outputs.
+Generate SQL and code to query data, clean datasets, compute metrics, and produce outputs.
 
 ### 3. Multi-source data access
-DB-GPT works across structured and unstructured sources, including databases, spreadsheets, documents, and knowledge bases.
+Work across structured and unstructured sources, including databases, spreadsheets, documents, and knowledge bases.
 
 ### 4. Skills-driven extensibility
-DB-GPT supports reusable skills that encapsulate domain knowledge, analysis methods, and execution workflows.
+Package domain knowledge, analysis methods, and execution workflows into reusable skills.
 
 ### 5. Sandboxed execution
-DB-GPT can safely run code and tools in isolated environments for more reliable and controllable analysis.
+Run code and tools in isolated environments for safer, more reliable analysis.
 
 ## What you can do with DB-GPT
 
@@ -90,7 +90,7 @@ DB-GPT can safely run code and tools in isolated environments for more reliable 
 - Ask business questions in natural language and let AI **write SQL automatically**
 - Perform **financial report analysis** with code, charts, and narrative summaries
 - Create and reuse **SQL analysis skills** and domain workflows
-- Combine **code, SQL, retrieval, and tools** in one agentic workflow
+- Combine **code, SQL, retrieval, and tools** in a single agentic workflow
 - Build next-generation **AI + Data assistants** for your team or product
 
 ## Product Workflow
@@ -398,7 +398,7 @@ We protect data privacy and execution safety through private model deployment, p
 
 ## Vision
 
-We believe the future of data products is not dashboards alone.
+We believe the future of data products goes beyond dashboards.
 
 The next generation of **AI + Data** products will be:
 - **agentic**
