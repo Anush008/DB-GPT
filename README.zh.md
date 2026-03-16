@@ -70,9 +70,12 @@ DB-GPT 不只是一个助手界面，它同时也是一个平台，用于构建 
 
 ### 1. Agentic 数据分析
 它不只是回答问题，而是会进行任务规划、步骤拆解、工具调用和迭代式分析。
+![csv-data-analysis_skill](https://github.com/user-attachments/assets/de0073f6-6b69-42f1-9fd2-5b759ca88ed8)
 
 ### 2. 自主 SQL + 自主代码执行
 自动编写 SQL 和代码，用于查询数据、处理数据、计算指标并生成结果。
+![agentic_write_code](https://github.com/user-attachments/assets/aeebc2b8-6c50-4ebb-96fd-07b860faa044)
+![sql_query](https://github.com/user-attachments/assets/da45de20-3768-4f0d-ab20-e939ddf21361)
 
 ### 3. 多数据源分析
 同时处理结构化与非结构化数据，包括数据库、表格文件、文档和知识库。
@@ -80,8 +83,13 @@ DB-GPT 不只是一个助手界面，它同时也是一个平台，用于构建 
 ### 4. Skills 驱动的可扩展能力
 将领域知识、分析方法和执行流程沉淀为 skills，实现复用与扩展。
 
+![import_github_skill](https://github.com/user-attachments/assets/39f39c36-a014-4a2e-8e14-b3af3f1d2f1c)
+
+![agent_browse_use](https://github.com/user-attachments/assets/21864e9f-2179-4f6f-910f-18463ec2b46e)
+
 ### 5. 沙箱安全执行
 在隔离环境中运行代码和工具，让分析过程更安全、更可控。
+![sandbox](https://github.com/user-attachments/assets/bfbd78e0-15e2-42ac-876f-5b91847aadc1)
 
 ## 你可以用 DB-GPT 做什么？
 
@@ -106,14 +114,6 @@ DB-GPT 不只是一个助手界面，它同时也是一个平台，用于构建 
 
 ### 生成报告
 自动输出图表、Dashboard、HTML 报告和决策结论。
-
-![app_chat_v0 6](https://github.com/user-attachments/assets/a2f0a875-df8c-4f0d-89a3-eed321c02113)
-
-![app_manage_chat_data_v0 6](https://github.com/user-attachments/assets/c8cc85bb-e3c2-4fab-8fb9-7b4b469d0611)
-
-![chat_dashboard_display_v0 6](https://github.com/user-attachments/assets/b15d6ebe-54c4-4527-a16d-02fbbaf20dc9)
-
-![agent_prompt_awel_v0 6](https://github.com/user-attachments/assets/40761507-a1e1-49d4-b49a-3dd9a5ea41cc)
 
 
 ## 快速开始

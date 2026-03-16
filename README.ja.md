@@ -130,13 +130,30 @@ DB-GPTのアーキテクチャは以下の図に示されています：
 
 ---
 
-![app_chat_v0 6](https://github.com/user-attachments/assets/a2f0a875-df8c-4f0d-89a3-eed321c02113)
+## なぜDB-GPTなのか？
 
-![app_manage_chat_data_v0 6](https://github.com/user-attachments/assets/c8cc85bb-e3c2-4fab-8fb9-7b4b469d0611)
+### 1. エージェント型データ分析
+タスクを計画し、作業をステップに分解し、ツールを呼び出して、分析ワークフローをエンドツーエンドで完了します。
+![csv_data_analysis_demo](https://github.com/user-attachments/assets/4921fa40-20f7-4a9c-b908-c0b4e7caa9d6)
 
-![chat_dashboard_display_v0 6](https://github.com/user-attachments/assets/b15d6ebe-54c4-4527-a16d-02fbbaf20dc9)
+### 2. 自律型SQL + コード実行
+SQLとコードを生成してデータをクエリし、データセットをクリーン化し、メトリクスを計算し、出力を生成します。
+![agentic_write_code](https://github.com/user-attachments/assets/aeebc2b8-6c50-4ebb-96fd-07b860faa044)
+![sql_query](https://github.com/user-attachments/assets/da45de20-3768-4f0d-ab20-e939ddf21361)
 
-![agent_prompt_awel_v0 6](https://github.com/user-attachments/assets/40761507-a1e1-49d4-b49a-3dd9a5ea41cc)
+### 3. マルチソースデータアクセス
+構造化データと非構造化データの両方で動作し、データベース、スプレッドシート、ドキュメント、ナレッジベースが含まれます。
+
+### 4. スキル駆動の拡張性
+ドメイン知識、分析方法、実行ワークフローを再利用可能なスキルとしてパッケージ化します。
+
+![import_github_skill](https://github.com/user-attachments/assets/39f39c36-a014-4a2e-8e14-b3af3f1d2f1c)
+
+![agent_browse_use](https://github.com/user-attachments/assets/21864e9f-2179-4f6f-910f-18463ec2b46e)
+
+### 5. サンドボックス実行
+分離された環境でコードとツールを実行して、より安全で可靠性の高い分析を実現します。
+![sandbox](https://github.com/user-attachments/assets/bfbd78e0-15e2-42ac-876f-5b91847aadc1)
 
 
 ## インストール
