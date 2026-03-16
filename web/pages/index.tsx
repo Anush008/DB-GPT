@@ -469,7 +469,7 @@ const EXAMPLE_CARDS = [
     color: 'from-blue-500/10 to-cyan-500/10',
     borderColor: 'border-blue-200/60 dark:border-blue-800/40',
     iconBg: 'bg-blue-100 dark:bg-blue-900/40',
-    skillName: 'walmart-sales-analyzer',
+    skillName: 'csv-data-analysis',
   },
   {
     id: 'db_profile_report',
