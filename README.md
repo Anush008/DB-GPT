@@ -52,6 +52,8 @@
 
 > **An open-source AI data assistant that connects to your data, writes SQL and code, runs skills in sandboxed environments, and turns analysis into reports, insights, and action.**
 
+![welcome_page](https://github.com/user-attachments/assets/ff9beb32-7db5-487a-bd81-d4489d853ea5)
+
 ## What is DB-GPT?
 
 DB-GPT is an open-source **agentic AI data assistant** for the next generation of **AI + Data** products.
@@ -70,9 +72,12 @@ DB-GPT is also a platform for building **AI-native data agents, workflows, and a
 
 ### 1. Agentic data analysis
 Plan tasks, break work into steps, call tools, and complete analysis workflows end to end.
+![csv_data_analysis_demo_en](https://github.com/user-attachments/assets/4921fa40-20f7-4a9c-b908-c0b4e7caa9d6)
 
 ### 2. Autonomous SQL + code execution
 Generate SQL and code to query data, clean datasets, compute metrics, and produce outputs.
+![agentic_write_code](https://github.com/user-attachments/assets/aeebc2b8-6c50-4ebb-96fd-07b860faa044)
+![sql_query](https://github.com/user-attachments/assets/da45de20-3768-4f0d-ab20-e939ddf21361)
 
 ### 3. Multi-source data access
 Work across structured and unstructured sources, including databases, spreadsheets, documents, and knowledge bases.
@@ -80,8 +85,18 @@ Work across structured and unstructured sources, including databases, spreadshee
 ### 4. Skills-driven extensibility
 Package domain knowledge, analysis methods, and execution workflows into reusable skills.
 
+
+
+
+
+![import_github_skill](https://github.com/user-attachments/assets/39f39c36-a014-4a2e-8e14-b3af3f1d2f1c)
+
+![agent_browse_use](https://github.com/user-attachments/assets/21864e9f-2179-4f6f-910f-18463ec2b46e)
 ### 5. Sandboxed execution
 Run code and tools in isolated environments for safer, more reliable analysis.
+![sandbox](https://github.com/user-attachments/assets/bfbd78e0-15e2-42ac-876f-5b91847aadc1)
+
+
 
 ## What you can do with DB-GPT
 
@@ -106,14 +121,6 @@ Load reusable skills for repeatable business analysis workflows.
 
 ### Generate reports
 Produce charts, dashboards, HTML reports, and decision-ready outputs.
-
-![app_chat_v0 6](https://github.com/user-attachments/assets/a2f0a875-df8c-4f0d-89a3-eed321c02113)
-
-![app_manage_chat_data_v0 6](https://github.com/user-attachments/assets/c8cc85bb-e3c2-4fab-8fb9-7b4b469d0611)
-
-![chat_dashboard_display_v0 6](https://github.com/user-attachments/assets/b15d6ebe-54c4-4527-a16d-02fbbaf20dc9)
-
-![agent_prompt_awel_v0 6](https://github.com/user-attachments/assets/40761507-a1e1-49d4-b49a-3dd9a5ea41cc)
 
 
 ## Quick Start

@@ -218,7 +218,7 @@ step_choose_profile() {
   printf '\n'
 
   local choice
-  read -r -p "Enter choice [1]: " choice
+  prompt_input "Enter choice [1]: " choice
   choice="${choice:-1}"
 
   case "${choice}" in

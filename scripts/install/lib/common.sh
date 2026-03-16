@@ -27,6 +27,27 @@ success() {
   printf "${COLOR_GREEN}[OK]${COLOR_RESET} %s\n" "$*"
 }
 
+prompt_input() {
+  local prompt="$1"
+  local __resultvar="$2"
+  local answer=""
+
+  if [[ -r /dev/tty ]]; then
+    if read -r -p "${prompt}" answer < /dev/tty 2>/dev/null; then
+      printf -v "${__resultvar}" '%s' "${answer}"
+      return
+    fi
+  fi
+
+  if [[ -t 0 ]]; then
+    read -r -p "${prompt}" answer || die "Failed to read input from stdin."
+  else
+    die "Interactive input requires a terminal. Re-run with explicit flags such as --profile <name> or --yes."
+  fi
+
+  printf -v "${__resultvar}" '%s' "${answer}"
+}
+
 die() {
   error "$*"
   exit 1
@@ -63,7 +84,7 @@ confirm() {
   fi
 
   local answer
-  read -r -p "${prompt} [y/N]: " answer
+  prompt_input "${prompt} [y/N]: " answer
   [[ "${answer}" =~ ^[Yy]$ ]]
 }
 
