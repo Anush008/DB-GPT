@@ -287,7 +287,8 @@ DB-GPT is also a platform for building AI-native data systems.
 [More Information about Text2SQL finetune](https://github.com/eosphoros-ai/DB-GPT-Hub)
 
 ### Supported Models
-    <table>
+
+<table>
       <thead>
         <tr>
           <th>Provider</th>

@@ -285,7 +285,8 @@ DB-GPT 同时也是一个构建 AI Native 数据产品的平台，提供：
   |  ChatGLM2   |      ✅     |
 
 ### 支持模型
-    <table>
+    
+<table>
       <thead>
         <tr>
           <th>Provider</th>
