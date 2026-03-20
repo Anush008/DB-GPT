@@ -1,7 +1,7 @@
 <img src="./assets/LOGO_SMALL.png" alt="Logo" style="vertical-align: middle; height: 24px;" /> DB-GPT: AI Native Data App Development framework with AWEL and Agents
 
 <p align="left">
-  <img src="./assets/Twitter_LOGO.png" width="100%" />
+  <img src="./assets/dbgpt_vision.png" width="100%" />
 </p>
 
 <div align="center">

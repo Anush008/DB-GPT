@@ -1,7 +1,7 @@
 # <img src="./assets/LOGO_SMALL.png" alt="Logo" style="vertical-align: middle; height: 24px;" /> DB-GPT: Open-Source Agentic AI Data Assistant
 
 <p align="left">
-  <img src="./assets/Twitter_LOGO.png" width="100%" />
+  <img src="./assets/dbgpt_vision.png" width="100%" />
 </p>
 
 <div align="center">
@@ -82,6 +82,8 @@ Generate SQL and code to query data, clean datasets, compute metrics, and produc
 ### 3. Multi-source data access
 Work across structured and unstructured sources, including databases, spreadsheets, documents, and knowledge bases.
 
+![datasource](./assets/datasources.png)
+
 ### 4. Skills-driven extensibility
 Package domain knowledge, analysis methods, and execution workflows into reusable skills.
 
@@ -91,7 +93,6 @@ Package domain knowledge, analysis methods, and execution workflows into reusabl
 
 ![import_github_skill](https://github.com/user-attachments/assets/39f39c36-a014-4a2e-8e14-b3af3f1d2f1c)
 
-![agent_browse_use](https://github.com/user-attachments/assets/21864e9f-2179-4f6f-910f-18463ec2b46e)
 ### 5. Sandboxed execution
 Run code and tools in isolated environments for safer, more reliable analysis.
 ![sandbox](https://github.com/user-attachments/assets/bfbd78e0-15e2-42ac-876f-5b91847aadc1)
@@ -250,24 +251,6 @@ For Docker, local GPU models (vLLM, llama.cpp), or manual source-code setup, see
 - controlled tool use
 - reproducible outputs and artifacts
 
-## Platform & Ecosystem
-
-DB-GPT is also a platform for building AI-native data systems.
-
-- **AWEL** for agentic workflow orchestration
-- **Agents** for autonomous task execution
-- **RAG** for knowledge-enhanced reasoning
-- **SMMF** for multi-model management
-- **DB-GPT-Hub** for Text2SQL and finetuning workflows
-- **dbgpts** for apps, workflows, operators, and templates
-- [DB-GPT-Plugins](https://github.com/eosphoros-ai/DB-GPT-Plugins) for plugin-based extension
-- [GPT-Vis](https://github.com/eosphoros-ai/GPT-Vis) for visualization protocols
-
-#### DeepWiki
-- [DB-GPT](https://deepwiki.com/eosphoros-ai/DB-GPT)
-- [DB-GPT-HUB](https://deepwiki.com/eosphoros-ai/DB-GPT-Hub)
-- [dbgpts](https://deepwiki.com/eosphoros-ai/dbgpts)
-
 #### Text2SQL Finetune
 
   |     LLM     |  Supported  | 
@@ -417,10 +400,6 @@ The next generation of **AI + Data** products will be:
 - able to turn analysis into **reports, decisions, and action**
 
 DB-GPT aims to help developers and enterprises build that future.
-
-## Image
-🌐 [AutoDL Image](https://www.codewithgpu.com/i/eosphoros-ai/DB-GPT/dbgpt)
-
 
 
 ## Contribution

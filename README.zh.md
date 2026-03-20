@@ -1,7 +1,7 @@
 # <img src="./assets/LOGO_SMALL.png" alt="Logo" style="vertical-align: middle; height: 24px;" /> DB-GPT：开源 Agentic AI 数据分析智能助手
 
 <p align="left">
-  <img src="./assets/Twitter_LOGO.png" width="100%" />
+  <img src="./assets/dbgpt_vision.png" width="100%" />
 </p>
 
 
@@ -79,13 +79,12 @@ DB-GPT 不只是一个助手界面，它同时也是一个平台，用于构建 
 
 ### 3. 多数据源分析
 同时处理结构化与非结构化数据，包括数据库、表格文件、文档和知识库。
+![datasource](./assets/datasources.png)
 
 ### 4. Skills 驱动的可扩展能力
 将领域知识、分析方法和执行流程沉淀为 skills，实现复用与扩展。
 
 ![import_github_skill](https://github.com/user-attachments/assets/39f39c36-a014-4a2e-8e14-b3af3f1d2f1c)
-
-![agent_browse_use](https://github.com/user-attachments/assets/21864e9f-2179-4f6f-910f-18463ec2b46e)
 
 ### 5. 沙箱安全执行
 在隔离环境中运行代码和工具，让分析过程更安全、更可控。
@@ -250,18 +249,6 @@ cd ~/.dbgpt/DB-GPT && uv run dbgpt start webserver --config ~/.dbgpt/configs/<pr
 - 可控工具调用
 - 可复现的分析产物与 artifacts
 
-## 平台与生态
-
-DB-GPT 同时也是一个构建 AI Native 数据产品的平台，提供：
-
-- **AWEL**：用于 agentic workflow 编排
-- **Agents**：用于自主任务执行
-- **RAG**：用于知识增强推理
-- **SMMF**：用于多模型管理
-- **DB-GPT-Hub**：用于 Text2SQL / 微调工作流
-- **dbgpts**：用于应用、工作流、算子与模板生态
-- [DB-GPT-Plugins](https://github.com/eosphoros-ai/DB-GPT-Plugins)：插件扩展能力
-- [GPT-Vis](https://github.com/eosphoros-ai/DB-GPT-Web)：可视化协议
 
 #### DeepWiki
 - [DB-GPT](https://deepwiki.com/eosphoros-ai/DB-GPT)
@@ -433,8 +420,6 @@ DB-GPT 希望帮助开发者与企业共同构建这样的未来。
 
 
 ## Image
-
-🌐 [AutoDL镜像](https://www.codewithgpu.com/i/eosphoros-ai/DB-GPT/dbgpt)
 
 🌐 [小程序云部署](https://www.yuque.com/eosphoros/dbgpt-docs/ek12ly8k661tbyn8)
 

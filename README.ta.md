@@ -2,7 +2,7 @@
 
 <p align="left">
 
-<img src="./assets/Twitter_LOGO.png" width="100%" />
+<img src="./assets/dbgpt_vision.png" width="100%" />
 </p>
 
 <div align="center">
@@ -317,8 +317,6 @@ LLaMA/LLaMA2, Baichuan, ChatGLM, Wenxin, Tongyi, Zhipu மற்றும் ப
 - ஆதரவு தரவுமூலங்கள்
 - [தரவுமூலங்கள்](http://docs.dbgpt.cn/docs/modules/connections)
 
-## படம்
-🌐 [AutoDL படம்](https://www.codewithgpu.com/i/eosphoros-ai/DB-GPT/dbgpt)
 
 ## பங்களிப்பு
 

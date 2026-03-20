@@ -2,7 +2,7 @@
 
 <p align="left">
 
-<img src="./assets/Twitter_LOGO.png" width="100%" />
+<img src="./assets/dbgpt_vision.png" width="100%" />
 </p>
 
 <div align="center">
