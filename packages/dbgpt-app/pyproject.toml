@@ -11,8 +11,8 @@ requires-python = ">= 3.10"
 
 dependencies = [
     "dbgpt-acc-auto",
-    "dbgpt",
-    "dbgpt-ext",
+    "dbgpt[client,cli,agent,simple_framework,framework,code,proxy_openai,proxy_tongyi,proxy_zhipuai]",
+    "dbgpt-ext[rag,storage_chromadb]",
     "dbgpt-serve",
     "dbgpt-client",
     "dbgpt-sandbox",

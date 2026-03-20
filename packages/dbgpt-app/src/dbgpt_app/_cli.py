@@ -24,7 +24,7 @@ def _print_banner() -> None:
     from dbgpt.util.console.console import CliLogger
 
     _log = CliLogger()
-    _log.print(f"[bold bright_blue]{_BANNER_ART}[/bold bright_blue]")
+    _log.print(f"[bold green]{_BANNER_ART}[/bold green]")
     _log.print("")
     _log.print("   [dim]🚀 DB-GPT Quick Start[/dim]")
     _log.print("")
@@ -137,6 +137,32 @@ def start_webserver(
                 "No config file found. Please pass --config or run `dbgpt setup`."
             )
         resolved_config = config
+
+    from pathlib import Path
+
+    from dbgpt.cli._config import dbgpt_home
+    from dbgpt.util.console.console import CliLogger
+
+    _log = CliLogger()
+    _profile = Path(resolved_config).stem
+    _workspace = dbgpt_home() / "workspace"
+    _log.print("")
+    _info_lines = [
+        ("Profile:   ", str(_profile)),
+        ("Config:    ", str(resolved_config)),
+        ("Workspace: ", str(_workspace)),
+    ]
+    _max_len = max(len(f"  {lbl}{val}") for lbl, val in _info_lines)
+    _inner_w = _max_len + 2  # 1 space padding each side
+    _dash_line = "- " * ((_inner_w + 1) // 2)
+    _dash_line = _dash_line[:_inner_w]  # trim to exact width
+    _log.print(f"   +{_dash_line}+", highlight=False)
+    for _lbl, _val in _info_lines:
+        _content = f"  {_lbl}[bold]{_val}[/bold]"
+        _pad = _max_len - len(f"  {_lbl}{_val}")
+        _log.print(f"   : {_content}{' ' * _pad} :", highlight=False)
+    _log.print(f"   +{_dash_line}+", highlight=False)
+    _log.print("")
 
     from dbgpt_app.dbgpt_server import run_webserver
 

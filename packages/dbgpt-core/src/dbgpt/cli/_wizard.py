@@ -47,7 +47,7 @@ _PROVIDER_META = {
     "openai": "OpenAI or OpenAI API proxy",
     "kimi": "Moonshot AI",
     "qwen": "DashScope API",
-    "minimax": "abab series",
+    "minimax": "MiniMax API",
     "glm": "zhipu.ai API",
     "custom": "Any OpenAI compatible endpoint",
     "default": "Use OpenAI defaults",

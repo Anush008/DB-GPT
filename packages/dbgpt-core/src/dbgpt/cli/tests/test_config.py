@@ -280,7 +280,7 @@ class TestDefaultProfileConfig:
     """Tests for config generation with the 'default' (formerly skip) profile."""
 
     def test_default_profile_generates_env_var_placeholder(self, isolated_dbgpt_home):
-        """default profile should reference ${env:OPENAI_API_KEY:-sk-xxx} (no literal key)."""
+        """default profile should use env-var placeholder with default."""
         from dbgpt.cli._config import _render_profile_toml
         from dbgpt.cli._profiles import get_profile
 
