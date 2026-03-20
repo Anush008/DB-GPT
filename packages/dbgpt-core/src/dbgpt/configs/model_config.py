@@ -5,13 +5,34 @@ import os
 from functools import cache
 from typing import Optional
 
-ROOT_PATH = os.path.dirname(
-    os.path.dirname(
+
+def _detect_root_path() -> str:
+    """Detect the root path of the DB-GPT installation.
+
+    Determines whether running from a source checkout or a pip install,
+    and returns the appropriate root path.
+
+    Returns:
+        str: The repo root directory for source installs, or
+            ``DBGPT_HOME/workspace`` (defaulting to ``~/.dbgpt/workspace``)
+            for pip installs.
+    """
+    candidate = os.path.dirname(
         os.path.dirname(
-            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            os.path.dirname(
+                os.path.dirname(
+                    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                )
+            )
         )
     )
-)
+    if os.path.isfile(os.path.join(candidate, "pyproject.toml")):
+        return candidate
+    home = os.environ.get("DBGPT_HOME", os.path.expanduser("~/.dbgpt"))
+    return os.path.join(home, "workspace")
+
+
+ROOT_PATH = _detect_root_path()
 MODEL_PATH = os.path.join(ROOT_PATH, "models")
 PILOT_PATH = os.path.join(ROOT_PATH, "pilot")
 LOGDIR = os.getenv("DBGPT_LOG_DIR", os.path.join(ROOT_PATH, "logs"))
