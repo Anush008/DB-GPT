@@ -155,11 +155,19 @@ const sidebars = {
               type: "category",
               label: "Datasource Integrations",
               items: [
+                { type: "doc", id: "installation/integrations/mysql_install" },
+                { type: "doc", id: "installation/integrations/sqlite_install" },
                 { type: "doc", id: "installation/integrations/clickhouse_install" },
                 { type: "doc", id: "installation/integrations/postgres_install" },
                 { type: "doc", id: "installation/integrations/duckdb_install" },
+                { type: "doc", id: "installation/integrations/hive_install" },
                 { type: "doc", id: "installation/integrations/mssql_install" },
                 { type: "doc", id: "installation/integrations/oracle_install" },
+                { type: "doc", id: "installation/integrations/oceanbase_install" },
+                { type: "doc", id: "installation/integrations/gaussdb_install" },
+                { type: "doc", id: "installation/integrations/doris_install" },
+                { type: "doc", id: "installation/integrations/starrocks_install" },
+                { type: "doc", id: "installation/integrations/vertica_install" },
               ],
             },
             {
@@ -250,6 +258,14 @@ const sidebars = {
         },
       ],
     },
+    {
+      type: "category",
+      label: "Sandbox",
+      collapsed: true,
+      collapsible: true,
+      items: [{ type: "doc", id: "sandbox/index", label: "Overview" }],
+    },
+
 
     {
       type: "category",
@@ -353,8 +369,6 @@ const sidebars = {
       collapsible: true,
       items: [
         { type: "doc", id: "modules/rag", label: "RAG Overview" },
-        { type: "doc", id: "application/graph_rag", label: "GraphRAG" },
-        { type: "doc", id: "application/apps/chat_knowledge", label: "Chat Knowledge Base" },
         {
           type: "category",
           label: "RAG Integrations",
@@ -376,9 +390,9 @@ const sidebars = {
             { type: "doc", id: "awel/cookbook/first_rag_with_awel" },
           ],
         },
-        { type: "doc", id: "application/advanced_tutorial/rag", label: "Advanced RAG" },
       ],
     },
+
 
     {
       type: "category",
@@ -388,7 +402,6 @@ const sidebars = {
       items: [
         { type: "doc", id: "modules/connections", label: "Connections Overview" },
         { type: "doc", id: "application/datasources", label: "Datasources" },
-        { type: "doc", id: "agents/introduction/database", label: "Agent + Database" },
         {
           type: "category",
           label: "Datasource Integrations",
@@ -538,11 +551,19 @@ const sidebars = {
               type: "category",
               label: "Datasource Integrations",
               items: [
+                { type: "doc", id: "installation/integrations/mysql_install" },
+                { type: "doc", id: "installation/integrations/sqlite_install" },
                 { type: "doc", id: "installation/integrations/clickhouse_install" },
                 { type: "doc", id: "installation/integrations/postgres_install" },
                 { type: "doc", id: "installation/integrations/duckdb_install" },
+                { type: "doc", id: "installation/integrations/hive_install" },
                 { type: "doc", id: "installation/integrations/mssql_install" },
                 { type: "doc", id: "installation/integrations/oracle_install" },
+                { type: "doc", id: "installation/integrations/oceanbase_install" },
+                { type: "doc", id: "installation/integrations/gaussdb_install" },
+                { type: "doc", id: "installation/integrations/doris_install" },
+                { type: "doc", id: "installation/integrations/starrocks_install" },
+                { type: "doc", id: "installation/integrations/vertica_install" },
               ],
             },
             {
@@ -583,18 +604,25 @@ const sidebars = {
   sidebarDatasources: [
     { type: "doc", id: "modules/connections", label: "Connections Overview" },
     { type: "doc", id: "application/datasources", label: "Datasources" },
-    { type: "doc", id: "agents/introduction/database", label: "Agent + Database" },
     {
       type: "category",
       label: "Datasource Integrations",
       collapsed: false,
       collapsible: false,
       items: [
+        { type: "doc", id: "installation/integrations/mysql_install" },
+        { type: "doc", id: "installation/integrations/sqlite_install" },
         { type: "doc", id: "installation/integrations/clickhouse_install" },
         { type: "doc", id: "installation/integrations/postgres_install" },
         { type: "doc", id: "installation/integrations/duckdb_install" },
+        { type: "doc", id: "installation/integrations/hive_install" },
         { type: "doc", id: "installation/integrations/mssql_install" },
         { type: "doc", id: "installation/integrations/oracle_install" },
+        { type: "doc", id: "installation/integrations/oceanbase_install" },
+        { type: "doc", id: "installation/integrations/gaussdb_install" },
+        { type: "doc", id: "installation/integrations/doris_install" },
+        { type: "doc", id: "installation/integrations/starrocks_install" },
+        { type: "doc", id: "installation/integrations/vertica_install" },
       ],
     },
     {
@@ -611,6 +639,8 @@ const sidebars = {
       ],
     },
   ],
+  sidebarSandbox: [{ type: "doc", id: "sandbox/index", label: "Overview" }],
+
 
   sidebarAwel: [
     { type: "doc", id: "awel/awel", label: "What is AWEL?" },
@@ -711,7 +741,6 @@ const sidebars = {
   sidebarKnowledge: [
     { type: "doc", id: "modules/rag", label: "RAG Overview" },
     { type: "doc", id: "application/graph_rag", label: "GraphRAG" },
-    { type: "doc", id: "application/apps/chat_knowledge", label: "Chat Knowledge Base" },
     {
       type: "category",
       label: "RAG Integrations",
@@ -735,7 +764,6 @@ const sidebars = {
         { type: "doc", id: "awel/cookbook/first_rag_with_awel" },
       ],
     },
-    { type: "doc", id: "application/advanced_tutorial/rag", label: "Advanced RAG" },
   ],
 
   sidebarTools: [
@@ -911,6 +939,13 @@ module.exports = {
       collapsed: true,
       collapsible: true,
       items: sidebars.sidebarDatasources,
+    },
+    {
+      type: "category",
+      label: "Sandbox",
+      collapsed: true,
+      collapsible: true,
+      items: sidebars.sidebarSandbox,
     },
     {
       type: "category",
