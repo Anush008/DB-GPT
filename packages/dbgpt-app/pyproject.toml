@@ -1,6 +1,6 @@
 [project]
 name = "dbgpt-app"
-version = "0.8.0rc1"
+version = "0.8.0rc5"
 description = "Add your description here"
 authors = [
     { name = "csunny", email = "cfqcsunny@gmail.com" }
@@ -63,4 +63,22 @@ exclude = [
     "src/dbgpt_app/**/examples",
     "src/dbgpt_app/**/examples/*"
 ]
+
+[tool.hatch.build.targets.sdist.force-include]
+"../../skills/csv-data-analysis" = "skills/csv-data-analysis"
+"../../skills/skill-creator" = "skills/skill-creator"
+"../../skills/financial-report-analyzer" = "skills/financial-report-analyzer"
+"../../skills/walmart-sales-analyzer" = "skills/walmart-sales-analyzer"
+"../../skills/agent-browser" = "skills/agent-browser"
+"../../docker/examples/excel/Walmart_Sales.csv" = "examples/excel/Walmart_Sales.csv"
+"../../docker/examples/fin_report/pdf/2020-01-23__浙江海翔药业股份有限公司__002099__海翔药业__2019年__年度报告.pdf" = "examples/fin_report/pdf/2020-01-23__浙江海翔药业股份有限公司__002099__海翔药业__2019年__年度报告.pdf"
+
+[tool.hatch.build.targets.wheel.force-include]
+"skills/csv-data-analysis" = "dbgpt_app/_builtin_skills/csv-data-analysis"
+"skills/skill-creator" = "dbgpt_app/_builtin_skills/skill-creator"
+"skills/financial-report-analyzer" = "dbgpt_app/_builtin_skills/financial-report-analyzer"
+"skills/walmart-sales-analyzer" = "dbgpt_app/_builtin_skills/walmart-sales-analyzer"
+"skills/agent-browser" = "dbgpt_app/_builtin_skills/agent-browser"
+"examples/excel/Walmart_Sales.csv" = "dbgpt_app/_builtin_examples/excel/Walmart_Sales.csv"
+"examples/fin_report/pdf/2020-01-23__浙江海翔药业股份有限公司__002099__海翔药业__2019年__年度报告.pdf" = "dbgpt_app/_builtin_examples/fin_report/pdf/2020-01-23__浙江海翔药业股份有限公司__002099__海翔药业__2019年__年度报告.pdf"
 

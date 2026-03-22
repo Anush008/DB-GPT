@@ -89,10 +89,11 @@ def mount_routers(app: FastAPI):
 
 
 def mount_static_files(app: FastAPI, param: ApplicationConfig):
+    package_dir = os.path.dirname(os.path.abspath(__file__))
     if param.service.web.new_web_ui:
-        static_file_path = os.path.join(ROOT_PATH, "src", "dbgpt_app/static/web")
+        static_file_path = os.path.join(package_dir, "static", "web")
     else:
-        static_file_path = os.path.join(ROOT_PATH, "src", "dbgpt_app/static/old_web")
+        static_file_path = os.path.join(package_dir, "static", "old_web")
 
     os.makedirs(STATIC_MESSAGE_IMG_PATH, exist_ok=True)
     app.mount(
@@ -172,25 +173,37 @@ def initialize_app(param: ApplicationConfig, args: List[str] = None):
 
     # Register default data sources
     try:
-        from dbgpt.configs.model_config import ROOT_PATH
+        from dbgpt.configs.model_config import PILOT_PATH, ROOT_PATH
         from dbgpt_serve.datasource.manages.connect_config_db import ConnectConfigDao
 
         dao = ConnectConfigDao()
         db_name = "Walmart_Sales"
         if not dao.get_by_names(db_name):
-            db_absolute_path = os.path.join(
-                ROOT_PATH, "docker/examples/dashboard/Walmart_Sales.db"
+            candidate_paths = [
+                os.path.join(PILOT_PATH, "examples", "Walmart_Sales.db"),
+                os.path.join(
+                    ROOT_PATH, "docker", "examples", "dashboard", "Walmart_Sales.db"
+                ),
+            ]
+            db_absolute_path = next(
+                (p for p in candidate_paths if os.path.isfile(p)), None
             )
-            dao.add_file_db(
-                db_name=db_name,
-                db_type="sqlite",
-                db_path=db_absolute_path,
-                comment="Default Walmart Sales example database",
-            )
-            logger.info(
-                f"Successfully registered default data source: "
-                f"{db_name} at {db_absolute_path}"
-            )
+            if db_absolute_path is None:
+                logger.info(
+                    f"Skipping default data source '%s': file not found in any "
+                    f"{db_name} at {candidate_paths}"
+                )
+            else:
+                dao.add_file_db(
+                    db_name=db_name,
+                    db_type="sqlite",
+                    db_path=db_absolute_path,
+                    comment="Default Walmart Sales example database",
+                )
+                logger.info(
+                    f"Successfully registered default data source: "
+                    f"{db_name} at {db_absolute_path}"
+                )
     except Exception as e:
         logger.error(f"Failed to register default data sources: {str(e)}")
 

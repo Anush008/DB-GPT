@@ -375,3 +375,29 @@ KNOWLEDGE_CACHE_ROOT_PATH = os.path.join(
     KNOWLEDGE_UPLOAD_ROOT_PATH, "_knowledge_cache_"
 )
 BENCHMARK_DATA_ROOT_PATH = os.path.join(PILOT_PATH, "benchmark_meta_data")
+
+
+def _detect_skills_dir() -> str:
+    """Detect the skills directory path.
+
+    Priority:
+        1. ``DBGPT_SKILLS_DIR`` environment variable (highest)
+        2. ``{ROOT_PATH}/skills`` if it exists (source checkout)
+        3. ``~/.dbgpt/skills`` (pip install mode)
+
+    Returns:
+        str: Absolute path to the skills directory.
+    """
+    env_dir = os.environ.get("DBGPT_SKILLS_DIR")
+    if env_dir:
+        return env_dir
+
+    source_dir = os.path.join(ROOT_PATH, "skills")
+    if os.path.isdir(source_dir):
+        return source_dir
+
+    home = os.environ.get("DBGPT_HOME", os.path.expanduser("~/.dbgpt"))
+    return os.path.join(home, "skills")
+
+
+SKILLS_DIR = _detect_skills_dir()

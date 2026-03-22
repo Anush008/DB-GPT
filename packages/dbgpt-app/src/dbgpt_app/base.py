@@ -124,6 +124,12 @@ def _migration_db_storage(
     # dest_root is the parent of meta_data/ (e.g. ~/.dbgpt/workspace/pilot/)
     pilot_root = os.path.dirname(default_meta_data_path)
     _ensure_pilot_workspace(pilot_root)
+
+    # Provision builtin skills for pip-installed users.
+    from dbgpt.configs.model_config import SKILLS_DIR
+    from dbgpt_app.initialization.skills_provisioning import ensure_builtin_skills
+
+    ensure_builtin_skills(SKILLS_DIR)
     if not disable_alembic_upgrade:
         from dbgpt.storage.metadata.db_manager import db
         from dbgpt.util._db_migration_utils import _ddl_init_and_upgrade

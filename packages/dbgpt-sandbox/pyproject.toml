@@ -1,6 +1,6 @@
 [project]
 name = "dbgpt-sandbox"
-version = "0.8.0rc1"
+version = "0.8.0rc5"
 description = "A secure sandbox execution environment for DB-GPT Agent"
 authors = [
     { name = "csunny", email = "cfqcsunny@gmail.com" }
