@@ -1,6 +1,19 @@
+"""API endpoints for bundled example files.
+
+Provides a single ``POST /v1/examples/use`` endpoint that copies a bundled
+example file to the user's upload directory so it can be used in
+conversations.
+
+Example files are resolved in the following order:
+
+1. ``docker/examples/`` under the source-code project root (dev mode).
+2. ``dbgpt_app/_builtin_examples/`` inside the installed wheel (PyPI mode).
+"""
+
 import logging
 import os
 import shutil
+from typing import Optional
 
 from fastapi import APIRouter, Body, Depends
 
@@ -12,19 +25,28 @@ router = APIRouter()
 CFG = Config()
 logger = logging.getLogger(__name__)
 
-# Map of example IDs to their file paths (relative to project root)
+# Map of example IDs to their file info.
+# - ``source_path``: path relative to source-repo root (``docker/examples/…``).
+# - ``builtin_path``: path relative to ``_builtin_examples/`` inside the wheel.
+# - ``name``: the user-visible filename.
 EXAMPLE_FILES = {
     "walmart_sales": {
-        "path": "docker/examples/excel/Walmart_Sales.csv",
+        "source_path": "docker/examples/excel/Walmart_Sales.csv",
+        "builtin_path": "excel/Walmart_Sales.csv",
         "name": "Walmart_Sales.csv",
     },
     "csv_visual_report": {
-        "path": "docker/examples/excel/Walmart_Sales.csv",
+        "source_path": "docker/examples/excel/Walmart_Sales.csv",
+        "builtin_path": "excel/Walmart_Sales.csv",
         "name": "Walmart_Sales.csv",
     },
     "fin_report": {
-        "path": (
+        "source_path": (
             "docker/examples/fin_report/pdf/"
+            "2020-01-23__浙江海翔药业股份有限公司__002099__海翔药业__2019年__年度报告.pdf"
+        ),
+        "builtin_path": (
+            "fin_report/pdf/"
             "2020-01-23__浙江海翔药业股份有限公司__002099__海翔药业__2019年__年度报告.pdf"
         ),
         "name": (
@@ -32,10 +54,47 @@ EXAMPLE_FILES = {
         ),
     },
     "create_sql_skill": {
-        "path": "docker/examples/txt/sql_skill.txt",
+        "source_path": "docker/examples/txt/sql_skill.txt",
+        "builtin_path": "txt/sql_skill.txt",
         "name": "sql_skill.txt",
     },
 }
+
+
+def _resolve_example_source(example: dict) -> Optional[str]:
+    """Return the absolute path to an example file, or *None* if not found.
+
+    Resolution order:
+    1. ``docker/examples/…`` under ``SYSTEM_APP.work_dir`` or cwd (source-code
+       development mode).
+    2. ``_builtin_examples/…`` inside the installed ``dbgpt_app`` package
+       (PyPI install mode).
+    """
+    # --- 1. Source-code / work_dir mode ---
+    base_dir = os.getcwd()
+    if (
+        CFG.SYSTEM_APP
+        and hasattr(CFG.SYSTEM_APP, "work_dir")
+        and CFG.SYSTEM_APP.work_dir
+    ):
+        base_dir = CFG.SYSTEM_APP.work_dir
+
+    candidate = os.path.join(base_dir, example["source_path"])
+    if os.path.isfile(candidate):
+        return candidate
+
+    # --- 2. Builtin examples bundled in the wheel ---
+    try:
+        import dbgpt_app._builtin_examples as _be
+
+        builtin_root = os.path.dirname(_be.__file__)
+        candidate = os.path.join(builtin_root, example["builtin_path"])
+        if os.path.isfile(candidate):
+            return candidate
+    except (ImportError, AttributeError):
+        pass
+
+    return None
 
 
 @router.post("/v1/examples/use", response_model=Result[str])
@@ -51,7 +110,11 @@ async def use_example_file(
         example = EXAMPLE_FILES[example_id]
         user_id = user_token.user_id or "default"
 
-        # Determine base directory
+        source_path = _resolve_example_source(example)
+        if source_path is None:
+            return Result.failed(msg=f"Example file not found: {example['name']}")
+
+        # Determine upload base directory (same convention as python_upload_api)
         base_dir = os.getcwd()
         if (
             CFG.SYSTEM_APP
@@ -60,28 +123,6 @@ async def use_example_file(
         ):
             base_dir = CFG.SYSTEM_APP.work_dir
 
-        # Source file - try base_dir first, then project root
-        source_path = os.path.join(base_dir, example["path"])
-        if not os.path.exists(source_path):
-            project_root = os.path.dirname(
-                os.path.dirname(
-                    os.path.dirname(
-                        os.path.dirname(
-                            os.path.dirname(
-                                os.path.dirname(
-                                    os.path.dirname(os.path.abspath(__file__))
-                                )
-                            )
-                        )
-                    )
-                )
-            )
-            source_path = os.path.join(project_root, example["path"])
-
-        if not os.path.exists(source_path):
-            return Result.failed(msg=f"Example file not found: {example['name']}")
-
-        # Target directory - same as python_upload_api
         upload_dir = os.path.join(base_dir, "python_uploads", user_id)
         os.makedirs(upload_dir, exist_ok=True)
 

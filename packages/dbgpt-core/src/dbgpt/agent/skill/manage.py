@@ -523,14 +523,9 @@ class SkillManager(BaseComponent):
             if hasattr(metadata, "path"):
                 return metadata.path
 
-        skills_dir = os.environ.get("DBGPT_SKILLS_DIR")
-        if not skills_dir:
-            from dbgpt.configs.model_config import resolve_root_path
+        from dbgpt.configs.model_config import SKILLS_DIR
 
-            skills_dir = resolve_root_path("skills")
-
-        if not skills_dir:
-            skills_dir = "skills"
+        skills_dir = SKILLS_DIR
 
         # Search candidate subdirectories: direct, user/, claude/, project/, etc.
         subdirs = ["", "user", "claude", "project"]

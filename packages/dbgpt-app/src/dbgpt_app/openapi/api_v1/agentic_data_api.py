@@ -19,7 +19,7 @@ from dbgpt._private.pydantic import BaseModel as _BaseModel
 from dbgpt.agent.resource.tool.base import tool
 from dbgpt.agent.skill.manage import get_skill_manager
 from dbgpt.component import ComponentType
-from dbgpt.configs.model_config import resolve_root_path
+from dbgpt.configs.model_config import SKILLS_DIR, resolve_root_path
 from dbgpt.core import PromptTemplate
 from dbgpt.model.cluster import WorkerManagerFactory
 from dbgpt_app.openapi.api_view_model import (
@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 
 REACT_AGENT_MEMORY_CACHE: Dict[str, "GptsMemory"] = {}
 
-DEFAULT_SKILLS_DIR = resolve_root_path("skills") or "skills"
+DEFAULT_SKILLS_DIR = SKILLS_DIR
 AUTO_DATA_MARKER_PATTERN = re.compile(
     r"###([A-Z0-9_]+)_START###\s*(.*?)\s*###\1_END###", re.DOTALL
 )
