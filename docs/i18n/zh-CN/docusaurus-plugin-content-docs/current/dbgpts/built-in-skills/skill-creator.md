@@ -1,12 +1,12 @@
 # skill-creator
 
-## Overview
+## 概览
 
-`skill-creator` is the built-in meta-skill for designing, scaffolding, validating, and packaging new skills.
+`skill-creator` 是内置的 meta-skill，用于设计、搭建、校验和打包新的 skill。
 
-It is the canonical reference in this repository for how skills should be structured.
+它也是当前仓库中关于“skill 应该如何组织”的最佳实践参考。
 
-## Repo path
+## 仓库路径
 
 ```text
 skills/skill-creator/
@@ -21,32 +21,32 @@ skills/skill-creator/
 └── LICENSE.txt
 ```
 
-## When to use it
+## 适用场景
 
-- create a new skill
-- improve an existing skill
-- decide what belongs in `SKILL.md`, `scripts/`, `references/`, and `assets/`
-- validate and package a distributable `.skill` file
+- 创建新的 skill
+- 改进已有 skill
+- 判断什么内容应放进 `SKILL.md`、`scripts/`、`references/` 和 `assets/`
+- 校验并打包成可分发的 `.skill` 文件
 
-## Core workflow it teaches
+## 它教授的核心流程
 
-1. Understand the target use case.
-2. Plan reusable scripts, references, and assets.
-3. Initialize a skill scaffold.
-4. Implement and refine the bundled resources.
-5. Write or tighten `SKILL.md`.
-6. Validate and package the final skill.
+1. 理解目标 use case。
+2. 规划可复用脚本、参考资料和资源文件。
+3. 初始化一个 skill 骨架。
+4. 实现并打磨打包资源。
+5. 编写或完善 `SKILL.md`。
+6. 校验并打包最终 skill。
 
-## Important resources
+## 关键资源
 
-| Resource | Purpose |
+| 资源 | 作用 |
 |---|---|
-| `scripts/init_skill.py` | Creates a new skill scaffold |
-| `scripts/package_skill.py` | Packages a skill into a distributable artifact |
-| `scripts/quick_validate.py` | Validates skill structure and quality quickly |
-| `references/workflows.md` | Guidance for multi-step skill workflow design |
-| `references/output-patterns.md` | Guidance for output formats and quality patterns |
+| `scripts/init_skill.py` | 创建新的 skill 骨架 |
+| `scripts/package_skill.py` | 把 skill 打包成可分发产物 |
+| `scripts/quick_validate.py` | 快速校验 skill 结构和质量 |
+| `references/workflows.md` | 多步骤 skill 工作流设计指南 |
+| `references/output-patterns.md` | 输出格式与质量模式指南 |
 
-## Why it matters
+## 为什么它重要
 
-This built-in skill defines the best-practice model for authoring both custom skills and future built-in skills in DB-GPT.
+这个 built-in skill 定义了 DB-GPT 中编写自定义 skill 和未来内置 skill 的最佳实践模型。

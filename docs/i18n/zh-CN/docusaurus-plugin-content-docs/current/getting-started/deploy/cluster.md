@@ -1,13 +1,13 @@
 ---
 sidebar_position: 3
-title: Cluster Deployment
+title: 集群部署
 ---
 
-# Cluster Deployment
+# 集群部署
 
-Deploy DB-GPT as a distributed cluster — separate the webserver, model workers, and controller for scalability.
+将 DB-GPT 部署为分布式集群，将 webserver、model worker 和 controller 拆分开来，以提升扩展性。
 
-## Architecture overview
+## 架构概览
 
 ```mermaid
 graph TB
@@ -19,26 +19,26 @@ graph TB
   MC --> RW[Reranker Worker<br/>:8004]
 ```
 
-| Component | Role | Default Port |
+| 组件 | 角色 | 默认端口 |
 |---|---|---|
-| **Controller** | Service registry and routing | 8000 |
-| **LLM Worker** | Serves language models | 8001+ |
-| **Embedding Worker** | Serves embedding models | 8003+ |
-| **Reranker Worker** | Serves reranking models | 8004+ |
-| **API Server** | REST API gateway (optional) | 8100 |
-| **Webserver** | Web UI + application logic | 5670 |
+| **Controller** | 服务注册与路由 | 8000 |
+| **LLM Worker** | 提供语言模型服务 | 8001+ |
+| **Embedding Worker** | 提供 Embedding 模型服务 | 8003+ |
+| **Reranker Worker** | 提供重排模型服务 | 8004+ |
+| **API Server** | REST API 网关（可选） | 8100 |
+| **Webserver** | Web UI 与应用逻辑 | 5670 |
 
-## Option A — Manual cluster (CLI)
+## 方式 A：手动集群部署（CLI）
 
-### Step 1 — Start the controller
+### 第一步：启动 controller
 
 ```bash
 dbgpt start controller
 ```
 
-The controller starts on port `8000` by default.
+Controller 默认监听 `8000` 端口。
 
-### Step 2 — Start LLM workers
+### 第二步：启动 LLM Worker
 
 ```bash
 dbgpt start worker \
@@ -48,7 +48,7 @@ dbgpt start worker \
   --controller_addr http://127.0.0.1:8000
 ```
 
-Add more workers on different ports:
+你也可以在不同端口上启动更多 worker：
 
 ```bash
 dbgpt start worker \
@@ -59,10 +59,10 @@ dbgpt start worker \
 ```
 
 :::info
-Replace model names and paths with your own. Each worker must use a unique port.
+请将模型名称和路径替换为你自己的配置。每个 worker 都必须使用唯一端口。
 :::
 
-### Step 3 — Start embedding worker
+### 第三步：启动 Embedding Worker
 
 ```bash
 dbgpt start worker \
@@ -73,7 +73,7 @@ dbgpt start worker \
   --controller_addr http://127.0.0.1:8000
 ```
 
-### Step 4 — Start reranker worker (optional)
+### 第四步：启动 Reranker Worker（可选）
 
 ```bash
 dbgpt start worker \
@@ -85,13 +85,13 @@ dbgpt start worker \
   --controller_addr http://127.0.0.1:8000
 ```
 
-### Step 5 — Verify deployed models
+### 第五步：验证已部署模型
 
 ```bash
 dbgpt model list
 ```
 
-Expected output:
+预期输出：
 
 ```
 +-------------------+------------+------+---------+
@@ -104,7 +104,7 @@ Expected output:
 +-------------------+------------+------+---------+
 ```
 
-### Step 6 — Start the webserver
+### 第六步：启动 webserver
 
 ```bash
 LLM_MODEL=glm-4-9b-chat \
@@ -112,80 +112,80 @@ MODEL_SERVER=http://127.0.0.1:8000 \
 dbgpt start webserver --light --remote_embedding
 ```
 
-| Flag | Purpose |
+| 参数 | 作用 |
 |---|---|
-| `--light` | Don't start embedded model service |
-| `--remote_embedding` | Use remote embedding workers |
+| `--light` | 不启动内嵌模型服务 |
+| `--remote_embedding` | 使用远程 Embedding Worker |
 
 ---
 
-## Option B — Docker Compose cluster
+## 方式 B：Docker Compose 集群部署
 
-Use the pre-built cluster Compose file:
+使用预置好的集群 Compose 文件：
 
 ```bash
 docker compose -f docker/compose_examples/cluster-docker-compose.yml up -d
 ```
 
-This starts:
+该方式会启动：
 
-- **Controller** — Service registry
-- **LLM Worker** — `glm-4-9b-chat` on GPU
-- **Embedding Worker** — `text2vec-large-chinese` on GPU
-- **Webserver** — Web UI in lightweight mode
+- **Controller**：服务注册中心
+- **LLM Worker**：在 GPU 上运行 `glm-4-9b-chat`
+- **Embedding Worker**：在 GPU 上运行 `text2vec-large-chinese`
+- **Webserver**：以轻量模式运行 Web UI
 
 :::warning
-Edit the Compose file to set your model paths before running. The default expects models at `/data/models/`.
+运行前请先编辑 Compose 文件，设置你的模型路径。默认路径为 `/data/models/`。
 :::
 
-### High-availability cluster
+### 高可用集群
 
-For HA deployments with multiple controllers:
+如果要部署带多个 controller 的高可用集群：
 
 ```bash
 docker compose -f docker/compose_examples/ha-cluster-docker-compose.yml up -d
 ```
 
-## CLI reference
+## CLI 参考
 
 <details>
 <summary><strong>dbgpt start worker --help</strong></summary>
 
-Key options:
+关键参数：
 
-| Option | Description | Default |
+| 参数 | 说明 | 默认值 |
 |---|---|---|
-| `--model_name` | Model name (required) | — |
-| `--model_path` | Path to model files (required) | — |
-| `--worker_type` | Worker type (`llm`, `text2vec`) | `llm` |
-| `--port` | Worker port | 8001 |
-| `--controller_addr` | Controller address | — |
-| `--device` | Device (`cuda`, `cpu`, `mps`) | auto |
-| `--num_gpus` | Number of GPUs to use | all |
-| `--load_8bit` | Enable 8-bit quantization | false |
-| `--load_4bit` | Enable 4-bit quantization | false |
-| `--max_context_size` | Maximum context window | 4096 |
+| `--model_name` | 模型名称（必填） | — |
+| `--model_path` | 模型文件路径（必填） | — |
+| `--worker_type` | Worker 类型（`llm`、`text2vec`） | `llm` |
+| `--port` | Worker 端口 | 8001 |
+| `--controller_addr` | Controller 地址 | — |
+| `--device` | 设备类型（`cuda`、`cpu`、`mps`） | auto |
+| `--num_gpus` | 使用的 GPU 数量 | all |
+| `--load_8bit` | 启用 8-bit 量化 | false |
+| `--load_4bit` | 启用 4-bit 量化 | false |
+| `--max_context_size` | 最大上下文窗口 | 4096 |
 
 </details>
 
 <details>
 <summary><strong>dbgpt model --help</strong></summary>
 
-| Command | Description |
+| 命令 | 说明 |
 |---|---|
-| `dbgpt model list` | List all registered model instances |
-| `dbgpt model start` | Start a model instance |
-| `dbgpt model stop` | Stop a model instance |
-| `dbgpt model restart` | Restart a model instance |
-| `dbgpt model chat` | Chat with a model from CLI |
+| `dbgpt model list` | 列出所有已注册模型实例 |
+| `dbgpt model start` | 启动模型实例 |
+| `dbgpt model stop` | 停止模型实例 |
+| `dbgpt model restart` | 重启模型实例 |
+| `dbgpt model chat` | 在 CLI 中直接与模型对话 |
 
 </details>
 
-## Next steps
+## 下一步
 
-| Topic | Link |
+| 主题 | 链接 |
 |---|---|
-| Docker single-container | [Docker](/docs/getting-started/deploy/docker) |
-| Docker Compose | [Docker Compose](/docs/getting-started/deploy/docker-compose) |
-| Source code deployment | [Source Code](/docs/getting-started/deploy/source-code) |
-| SMMF deep dive | [Multi-Model Management](/docs/getting-started/concepts/smmf) |
+| Docker 单容器部署 | [Docker](/docs/getting-started/deploy/docker) |
+| Docker Compose 部署 | [Docker Compose](/docs/getting-started/deploy/docker-compose) |
+| 源码部署 | [Source Code](/docs/getting-started/deploy/source-code) |
+| 深入了解 SMMF | [Multi-Model Management](/docs/getting-started/concepts/smmf) |

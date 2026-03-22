@@ -1,10 +1,10 @@
-# Built-in Skills Overview
+# Built-in Skills 总览
 
-DB-GPT ships with built-in skills under the project-level `skills/` directory.
+DB-GPT 在项目级 `skills/` 目录下内置了一批可直接使用的 skills。
 
-This subsection mirrors the repository structure and gives each built-in skill its own page.
+这个小节按照仓库结构组织，为每一个 built-in skill 提供单独页面说明。
 
-## Repo mapping
+## 仓库映射
 
 ```text
 skills/
@@ -15,35 +15,35 @@ skills/
 └── walmart-sales-analyzer/
 ```
 
-## What built-in skills provide
+## Built-in skills 提供什么能力
 
-Built-in skills package repeatable workflows into reusable units.
+Built-in skill 会把可重复工作流打包成可复用单元。
 
-- `SKILL.md` defines when the skill should be used and how it should work
-- `scripts/` contains executable helpers when deterministic processing is needed
-- `references/` stores deeper domain guidance that can be loaded on demand
-- `templates/` or `assets/` provide output resources such as HTML report templates
+- `SKILL.md` 定义 skill 应该何时使用、如何执行
+- `scripts/` 存放在需要确定性处理时用到的可执行脚本
+- `references/` 存放按需加载的领域参考资料
+- `templates/` 或 `assets/` 存放 HTML 报告模板等输出资源
 
-## Current built-in skills
+## 当前内置 skills
 
-| Skill | Primary use | Key bundled resources |
-|------|--------------|-----------------------|
-| `agent-browser` | Browser automation for agents | command-driven workflow in `SKILL.md` |
-| `csv-data-analysis` | CSV / Excel / TSV analysis | `scripts/csv_analyzer.py`, `templates/report_template.html`, `references/reference.md` |
-| `financial-report-analyzer` | Financial report extraction and reporting | extraction, ratio, and chart scripts plus financial references and templates |
-| `skill-creator` | Creating and packaging new skills | `init_skill.py`, `package_skill.py`, design references |
-| `walmart-sales-analyzer` | Walmart sales trend analysis and reporting | report-generation scripts and `templates/report_template.html` |
+| Skill | 主要用途 | 关键资源 |
+|------|----------|----------|
+| `agent-browser` | 面向 agent 的浏览器自动化 | `SKILL.md` 中的命令式工作流 |
+| `csv-data-analysis` | CSV / Excel / TSV 数据分析 | `scripts/csv_analyzer.py`、`templates/report_template.html`、`references/reference.md` |
+| `financial-report-analyzer` | 财报提取、分析与报告生成 | 提取、比率分析、图表脚本，以及财务参考资料与模板 |
+| `skill-creator` | 创建并打包新的 skill | `init_skill.py`、`package_skill.py`、设计参考资料 |
+| `walmart-sales-analyzer` | Walmart 销售趋势分析与报告 | 报告生成脚本与 `templates/report_template.html` |
 
-## How to read this section
+## 如何阅读这一节
 
-Each built-in skill page includes:
+每个 built-in skill 页面通常会包含：
 
-- the skill's purpose
-- when to use it
-- its core workflow
-- the important scripts, references, and templates bundled with it
-- practical output expectations
+- skill 的用途
+- 适用场景
+- 核心工作流
+- 附带的重要脚本、参考资料与模板
+- 预期输出形式
 
-## Next step
+## 下一步
 
-Open the individual pages in this Built-in Skills section to see how each shipped skill maps to the repository's `skills/` folder.
+继续打开本小节下的具体页面，查看每个已内置 skill 如何映射到仓库中的 `skills/` 目录。

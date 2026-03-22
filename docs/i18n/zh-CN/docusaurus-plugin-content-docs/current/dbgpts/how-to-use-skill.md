@@ -1,53 +1,53 @@
 # How to Use Skill
 
-## Basic usage flow
+## 基本使用流程
 
-In practice, using a skill usually follows this pattern:
+在实际使用中，skill 往往遵循下面的模式：
 
-1. Identify the right skill for the task.
-2. Load the skill instructions.
-3. Follow the skill-defined workflow.
-4. Use the required built-in tools.
-5. Return the final result or render the final report.
+1. 先识别当前任务适合哪个 skill。
+2. 加载该 skill 的说明和指令。
+3. 按照 skill 定义的工作流执行。
+4. 调用 skill 所需的内置工具。
+5. 返回最终结果，或者渲染最终报告。
 
-## Common tool flow
+## 常见工具链路
 
-Depending on the skill, the execution path often looks like this:
+根据 skill 类型不同，执行路径通常类似这样：
 
-- `load_skill` → load the skill instructions
-- `sql_query` → retrieve structured data if needed
-- `code_interpreter` → compute metrics, transform data, generate charts
-- `shell_interpreter` → run shell commands when required
-- `html_interpreter` → render the final HTML report or page
+- `load_skill` → 加载 skill 指令
+- `sql_query` → 在需要时获取结构化数据
+- `code_interpreter` → 计算指标、转换数据、生成图表
+- `shell_interpreter` → 在需要时执行 shell 命令
+- `html_interpreter` → 渲染最终 HTML 报告或页面
 
-## Example scenarios
+## 示例场景
 
-### Financial report analysis
+### 财报分析
 
-The agent can:
+智能体可以：
 
-1. load the financial-report skill
-2. execute the required data extraction and analysis steps
-3. generate charts and metrics
-4. use `html_interpreter` to render the final report
+1. 加载 financial-report skill
+2. 执行需要的数据提取与分析步骤
+3. 生成图表与指标结果
+4. 使用 `html_interpreter` 渲染最终报告
 
-### CSV / Excel analysis
+### CSV / Excel 分析
 
-The agent can:
+智能体可以：
 
-1. load a data analysis skill
-2. inspect the uploaded file
-3. use Python analysis to calculate metrics and visualize results
-4. render the output as a report if needed
+1. 加载一个数据分析 skill
+2. 检查上传文件
+3. 使用 Python 分析计算指标并可视化结果
+4. 如果需要，再将结果渲染为报告
 
-## Good practices
+## 最佳实践
 
-- use skills when the workflow should be repeatable
-- follow the skill instructions strictly
-- prefer the tools required by the skill over ad-hoc alternatives
-- use `html_interpreter` for final report rendering when the skill produces a webpage or report
+- 当工作流需要可重复时，优先使用 skill
+- 严格遵循 skill 中定义的指令
+- 优先使用 skill 指定的工具，而不是临时替代方案
+- 当 skill 产出网页或报告时，优先使用 `html_interpreter` 做最终渲染
 
-## Related reading
+## 相关阅读
 
 - [dbgpts Introduction](./introduction.md)
 - [Tools Overview](../agents/introduction/tools.md)

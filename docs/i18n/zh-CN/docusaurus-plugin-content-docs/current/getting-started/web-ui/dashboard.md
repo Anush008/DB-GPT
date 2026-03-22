@@ -1,13 +1,13 @@
 ---
 sidebar_position: 3
-title: Dashboard
+title: 仪表盘
 ---
 
-# Dashboard
+# 仪表盘
 
-Create data visualizations and reports using natural language. DB-GPT converts your questions into SQL queries and renders the results as interactive charts.
+使用自然语言创建数据可视化和报告。DB-GPT 会将你的问题转换为 SQL 查询，并将结果渲染为交互式图表。
 
-## How it works
+## 工作原理
 
 ```mermaid
 graph LR
@@ -17,26 +17,26 @@ graph LR
   Data --> Chart[Chart Rendering]
 ```
 
-1. You ask a question about your data in natural language
-2. DB-GPT generates the appropriate SQL query
-3. The query runs against your connected database
-4. Results are rendered as charts, tables, or reports
+1. 你使用自然语言提出与数据相关的问题
+2. DB-GPT 自动生成对应的 SQL 查询
+3. 查询在已连接的数据库上执行
+4. 查询结果会被渲染为图表、表格或报告
 
-## Getting started
+## 快速开始
 
-### Prerequisites
+### 前置条件
 
-- A database connected to DB-GPT (see [Data Sources](/docs/getting-started/concepts/data-sources))
-- Test data loaded (optional — use the built-in examples)
+- 已连接一个 DB-GPT 支持的数据库（参考 [Data Sources](/docs/getting-started/concepts/data-sources)）
+- 已加载测试数据（可选，也可以使用内置示例）
 
-### Using the Dashboard
+### 使用 Dashboard
 
-1. Navigate to **Chat** in the sidebar
-2. Select **Chat Dashboard** mode (or start a Dashboard conversation)
-3. Choose your target database from the dropdown
-4. Ask a question about your data
+1. 在侧边栏进入 **Chat**
+2. 选择 **Chat Dashboard** 模式（或新建一个 Dashboard 会话）
+3. 从下拉菜单中选择目标数据库
+4. 针对数据提出问题
 
-**Example questions:**
+**示例问题：**
 
 ```
 Show me monthly sales trends as a line chart
@@ -44,26 +44,26 @@ What are the top 5 products by revenue? Show as a bar chart
 Create a pie chart of customer distribution by region
 ```
 
-## Chart types
+## 图表类型
 
-DB-GPT's visualization engine ([GPT-Vis](https://github.com/eosphoros-ai/GPT-Vis)) supports:
+DB-GPT 的可视化引擎（[GPT-Vis](https://github.com/eosphoros-ai/GPT-Vis)）支持以下图表：
 
-| Chart Type | Best For |
+| 图表类型 | 适用场景 |
 |---|---|
-| **Bar Chart** | Comparing categories |
-| **Line Chart** | Trends over time |
-| **Pie Chart** | Proportions and distributions |
-| **Table** | Detailed data display |
-| **Scatter Plot** | Correlations between variables |
-| **Area Chart** | Cumulative trends |
+| **Bar Chart** | 对比不同类别 |
+| **Line Chart** | 展示时间趋势 |
+| **Pie Chart** | 展示占比与分布 |
+| **Table** | 查看详细数据 |
+| **Scatter Plot** | 分析变量之间的相关性 |
+| **Area Chart** | 展示累计趋势 |
 
-:::tip Guiding visualization
-Include the desired chart type in your question for more precise results: *"Show monthly revenue as a line chart"*.
+:::tip 指定图表类型
+在问题中明确写出你想要的图表类型，可以获得更精确的结果，例如：*"Show monthly revenue as a line chart"*。
 :::
 
-## Loading test data
+## 加载测试数据
 
-DB-GPT includes sample data for testing:
+DB-GPT 内置了可用于测试的示例数据：
 
 ```bash
 # Linux / macOS
@@ -73,19 +73,19 @@ bash ./scripts/examples/load_examples.sh
 .\scripts\examples\load_examples.bat
 ```
 
-This loads sample datasets into SQLite that you can query immediately.
+这会将示例数据集导入 SQLite，你可以立即开始查询。
 
-## Tips for better results
+## 提升效果的建议
 
-- **Be specific** — "Show the total order amount per month for 2024" works better than "Show me some data"
-- **Name the chart type** — Mention "bar chart", "line chart", etc. for targeted visualizations
-- **Reference column names** — If you know the schema, use actual column names for precision
-- **Iterate** — Refine your question based on the initial results
+- **问题尽量具体**：例如 “Show the total order amount per month for 2024” 会比 “Show me some data” 更有效
+- **明确图表类型**：在问题中写出 “bar chart”、“line chart” 等，有助于定向生成可视化
+- **引用字段名**：如果你知道表结构，直接使用真实字段名可以提高准确性
+- **逐步迭代**：可根据初次结果不断优化问题
 
-## Next steps
+## 下一步
 
-| Topic | Link |
+| 主题 | 链接 |
 |---|---|
-| Connect more databases | [Data Sources](/docs/getting-started/concepts/data-sources) |
-| Chat modes overview | [Chat](/docs/getting-started/web-ui/chat) |
-| Text2SQL fine-tuning | [Fine-Tuning](/docs/application/fine_tuning_manual/text_to_sql) |
+| 连接更多数据库 | [Data Sources](/docs/getting-started/concepts/data-sources) |
+| 查看聊天模式概览 | [Chat](/docs/getting-started/web-ui/chat) |
+| Text2SQL 微调 | [Fine-Tuning](/docs/application/fine_tuning_manual/text_to_sql) |

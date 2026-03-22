@@ -1,172 +1,131 @@
 ---
 sidebar_position: 0
-title: Architecture
-summary: "High-level map of DB-GPT packages, subsystems, and request flow"
+title: 架构
+summary: "DB-GPT 仓库结构与以 ReAct 为中心的运行时架构"
 read_when:
-  - You want to understand how DB-GPT is split across packages and runtime layers
-  - You need the shortest mental model before diving into AWEL, agents, or RAG
+  - 你想快速理解 DB-GPT 在仓库中的组织方式
+  - 你需要理解 UI、API、agent、skill、tool 和数据资源之间如何连接
 ---
 
-# Architecture
+# 架构
 
-An overview of how DB-GPT is structured and how its components fit together.
+DB-GPT 是一个 Python 单体仓库（monorepo），其整体运行方式围绕以 ReAct 为中心的 agent runtime 展开。
+Web UI 将请求发送到应用层，ReAct Agent 在 agent runtime 循环中执行，并通过工具、技能、数据库与知识资源完成分析任务，最终将结果返回到 UI。
 
-## High-level view
+## 仓库结构
+
+```text
+DB-GPT/
+├── packages/
+│   ├── dbgpt-core/        # 核心 agent、memory、planning、RAG、模型抽象
+│   ├── dbgpt-app/         # 应用服务、API 路由、场景逻辑、UI 资源托管
+│   ├── dbgpt-serve/       # 服务层：knowledge、flow、agent resource、app service
+│   ├── dbgpt-ext/         # 扩展能力：datasource、storage backend、RAG connector
+│   ├── dbgpt-client/      # Python 客户端 SDK
+│   ├── dbgpt-sandbox/     # 安全代码/工具执行的沙箱运行时
+│   └── dbgpt-accelerator/ # 加速相关包
+├── web/                   # Next.js Web UI
+├── skills/                # 内置 skills 与可复用工作流
+├── configs/               # TOML 配置文件
+└── docs/                  # Docusaurus 文档站
+```
+
+## 各个 package 的职责
+
+| Package | 作用 |
+|---|---|
+| `dbgpt-core` | 核心 agent 框架、ReAct 解析/动作流、memory、planning、RAG、模型接口 |
+| `dbgpt-app` | FastAPI 应用服务、聊天 API、运行时编排、静态 UI 托管 |
+| `dbgpt-serve` | knowledge、datasource、flow、app、agent 等资源服务 |
+| `dbgpt-ext` | 外部连接器，例如数据库 / 存储 / RAG 集成 |
+| `dbgpt-client` | DB-GPT API 的客户端 SDK |
+| `dbgpt-sandbox` | 代码与工具执行的隔离运行时 |
+| `skills/` | 打包后的领域工作流、脚本、模板和参考资源 |
+
+## 高层架构
 
 ```mermaid
 flowchart TB
-    subgraph Client["Client Layer"]
-        WebUI["Web UI"]
-        CLI["CLI"]
-        API["REST API"]
+    User["User"] --> UI["Web UI / Chat Apps"]
+    UI --> API["dbgpt-app API"]
+
+    subgraph Runtime["agent_runtime"]
+        Agent["ReAct Agent"]
+        Loop["Thought -> Action -> Observation Loop"]
+        Action["Tool / Skill / Resource Selection"]
+        Agent --> Loop --> Action --> Agent
     end
 
-    subgraph App["Application Layer"]
-        AppMgr["App Manager"]
-        ChatMgr["Chat Manager"]
-        FlowMgr["AWEL Flow Manager"]
+    API --> Runtime
+
+    subgraph Resources["外部资源"]
+        DB["结构化数据库"]
+        KB["非结构化数据 / 知识空间"]
+        Skill["Skills"]
+        Tool["内置工具"]
+        Sandbox["Sandbox runtime"]
     end
 
-    subgraph Core["Core Layer"]
-        Agent["Agent Framework"]
-        AWEL["AWEL Engine"]
-        RAG["RAG Framework"]
-        SMMF["SMMF (Model Management)"]
-    end
+    Action --> DB
+    Action --> KB
+    Action --> Skill
+    Action --> Tool
+    Action --> Sandbox
 
-    subgraph Data["Data Layer"]
-        DS["Data Sources"]
-        KB["Knowledge Base"]
-        VectorDB["Vector Store"]
-        MetaDB["Metadata Store"]
-    end
-
-    Client --> App
-    App --> Core
-    Core --> Data
-    SMMF --> LLM["LLM Providers"]
+    Runtime --> Result["分析结果 / 报告 / 图表"]
+    Result --> UI
 ```
 
-## Package structure
+## 工作流程
 
-DB-GPT is a Python monorepo organized into multiple packages under `packages/`:
+1. 用户通过 Web UI 或其他客户端发起请求。
+2. `dbgpt-app` 接收请求，并将其路由到 agent 聊天 API。
+3. 请求进入 `agent_runtime` 执行循环。
+4. ReAct Agent 逐步推理，并决定下一步动作。
+5. Agent 按需加载并使用外部资源：
+   - 结构化数据库：用于 SQL 分析
+   - 非结构化知识空间：用于检索增强
+   - skills：用于复用工作流
+   - 内置工具：用于执行具体任务
+   - sandbox runtime：用于安全代码执行
+6. Agent 汇总观察结果，并生成最终分析输出。
+7. 结果以流式方式返回到 UI 展示给用户。
 
-| Package | Purpose |
-|---|---|
-| **dbgpt-core** | Core abstractions: agent, AWEL, RAG, model interfaces, storage |
-| **dbgpt-app** | Application server, chat logic, Web API endpoints |
-| **dbgpt-serve** | Service modules (knowledge, flow, app, datasource management) |
-| **dbgpt-ext** | Extensions: datasource connectors, storage backends, model providers |
-| **dbgpt-client** | Python client SDK for the DB-GPT REST API |
-| **dbgpt-accelerator** | GPU acceleration utilities (quantization, inference optimization) |
+## Agent runtime 模型
 
-```
-DB-GPT/
-├── packages/
-│   ├── dbgpt-core/        # Core abstractions
-│   ├── dbgpt-app/         # Application server
-│   ├── dbgpt-serve/       # Service modules
-│   ├── dbgpt-ext/         # Extensions
-│   ├── dbgpt-client/      # Python client SDK
-│   └── dbgpt-accelerator/ # GPU acceleration
-├── web/                   # Next.js Web UI
-├── configs/               # TOML configuration files
-└── docs/                  # Documentation (Docusaurus)
-```
+runtime 是驱动 ReAct 循环的概念性执行层。
+在代码层面，它通过 agent builder、resource manager、ReAct parser / action flow，以及与 UI 相连的 API streaming handler 共同实现。
 
-## Core subsystems
+关键实现锚点：
 
-### SMMF (Service-oriented Multi-Model Management Framework)
+- `packages/dbgpt-core/src/dbgpt/agent/expand/react_agent.py`
+- `packages/dbgpt-core/src/dbgpt/agent/util/react_parser.py`
+- `packages/dbgpt-app/src/dbgpt_app/openapi/api_v1/agentic_data_api.py`
+- `web/hooks/use-react-agent-chat.ts`
+- `packages/dbgpt-sandbox/src/dbgpt_sandbox/sandbox/execution_layer/runtime_factory.py`
 
-Manages multiple LLM and embedding model instances. Supports:
+## Agent 会使用哪些资源
 
-- API proxy models (OpenAI, DeepSeek, Qwen, etc.)
-- Local models via HuggingFace Transformers, vLLM, llama.cpp
-- Model switching and failover
-- Standalone and cluster deployment modes
+### 结构化数据
 
-Learn more: [SMMF Concept](/docs/getting-started/concepts/smmf) | [SMMF Module](/docs/modules/smmf)
+数据库和可查询的表格型数据源主要用于 SQL 分析、schema linking 和报表生成。
 
-### AWEL (Agentic Workflow Expression Language)
+### 非结构化数据
 
-A domain-specific language for building AI application workflows as directed acyclic graphs (DAGs). AWEL provides:
+知识空间和文档集合为非结构化内容提供检索支持。
 
-- Operators: Map, Reduce, Join, Branch, Stream transformers
-- Triggers: HTTP, scheduler-based
-- Visual editor: AWEL Flow in the Web UI
+### Skills
 
-Learn more: [AWEL Concept](/docs/getting-started/concepts/awel) | [AWEL Tutorial](/docs/awel/tutorial)
+内置 skills 将可复用的流程打包成可重复执行的任务单元，agent 可以在会话中按需加载和执行。
 
-### Agent Framework
+### 内置工具
 
-Data-driven multi-agent system with:
+工具包括 SQL 执行、shell / 代码执行、HTML 渲染、搜索，以及其他通过 resource manager 注册的任务型操作。
 
-- **Profile**: Agent identity and role definition
-- **Memory**: Sensory, short-term, long-term, and hybrid memory
-- **Planning**: Task decomposition and execution strategies
-- **Action**: Tool invocation and result processing
-- **Resource**: Tools, databases, knowledge bases, and resource packs
+## 结果如何交付给用户
 
-Learn more: [Agents Concept](/docs/getting-started/concepts/agents) | [Agent Guide](/docs/agents/introduction/)
+最终输出路径是面向用户的：
 
-### RAG Framework
+`ReAct Agent` → `agent_runtime` → `streamed result` → `Web UI`
 
-Retrieval-Augmented Generation with multiple retrieval strategies:
-
-- Vector similarity search (ChromaDB, Milvus, OceanBase)
-- Knowledge graph retrieval (Graph RAG)
-- Keyword-based retrieval (BM25)
-- Hybrid retrieval combining multiple strategies
-
-Learn more: [RAG Concept](/docs/getting-started/concepts/rag) | [RAG Module](/docs/modules/rag)
-
-## Configuration
-
-DB-GPT uses TOML configuration files in the `configs/` directory:
-
-```toml
-# configs/dbgpt-proxy-openai.toml
-[models]
-[[models.llms]]
-name = "chatgpt_proxyllm"
-provider = "proxy/openai"
-api_key = "your-api-key"
-
-[[models.embeddings]]
-name = "text-embedding-3-small"
-provider = "proxy/openai"
-api_key = "your-api-key"
-```
-
-Full reference: [Config Reference](/docs/config/config-reference)
-
-## Data flow
-
-A typical chat request flows through DB-GPT like this:
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant WebUI
-    participant Server
-    participant Agent
-    participant LLM
-    participant DataSource
-
-    User->>WebUI: Send message
-    WebUI->>Server: POST /api/v2/chat/completions
-    Server->>Agent: Route to agent
-    Agent->>DataSource: Query data (if needed)
-    DataSource-->>Agent: Data results
-    Agent->>LLM: Generate response
-    LLM-->>Agent: Model output
-    Agent-->>Server: Formatted response
-    Server-->>WebUI: Stream response
-    WebUI-->>User: Display answer
-```
-
-## What's next
-
-- [AWEL](/docs/getting-started/concepts/awel) — Understand workflow orchestration
-- [Agents](/docs/getting-started/concepts/agents) — Learn about the agent framework
-- [Model Providers](/docs/getting-started/providers/) — Configure your preferred LLM
+这种架构非常适合交互式数据分析、报表生成以及借助工具完成的复杂推理任务。

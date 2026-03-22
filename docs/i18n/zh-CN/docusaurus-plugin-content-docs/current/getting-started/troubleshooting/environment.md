@@ -1,61 +1,61 @@
 ---
 sidebar_position: 3
-title: Environment Variables
+title: 环境变量
 ---
 
-# Environment Variables
+# 环境变量
 
-Reference for commonly used environment variables in DB-GPT.
+这里汇总了 DB-GPT 中常用的环境变量。
 
 :::tip
-Most configuration is done through TOML config files. Environment variables are useful for secrets, Docker deployments, and overriding defaults.
+大部分配置都通过 TOML 配置文件完成。环境变量更适合用于密钥、Docker 部署以及覆盖默认值。
 :::
 
-## Model configuration
+## 模型配置
 
-| Variable | Description | Example |
+| 变量 | 说明 | 示例 |
 |---|---|---|
 | `OPENAI_API_KEY` | OpenAI API key | `sk-...` |
-| `OPENAI_API_BASE` | OpenAI-compatible API base URL | `https://api.openai.com/v1` |
+| `OPENAI_API_BASE` | OpenAI 兼容 API 的基础地址 | `https://api.openai.com/v1` |
 | `DEEPSEEK_API_KEY` | DeepSeek API key | `sk-...` |
 | `SILICONFLOW_API_KEY` | SiliconFlow API key | `sk-...` |
-| `DASHSCOPE_API_KEY` | Alibaba Cloud DashScope API key | `sk-...` |
+| `DASHSCOPE_API_KEY` | 阿里云 DashScope API key | `sk-...` |
 | `AIMLAPI_API_KEY` | AI/ML API key | — |
-| `LLM_MODEL` | Default LLM model name (cluster mode) | `glm-4-9b-chat` |
-| `MODEL_SERVER` | Model controller address (cluster mode) | `http://127.0.0.1:8000` |
+| `LLM_MODEL` | 默认 LLM 模型名称（集群模式） | `glm-4-9b-chat` |
+| `MODEL_SERVER` | 模型控制器地址（集群模式） | `http://127.0.0.1:8000` |
 
-## Server configuration
+## 服务端配置
 
-| Variable | Description | Default |
+| 变量 | 说明 | 默认值 |
 |---|---|---|
-| `DBGPT_LOG_LEVEL` | Logging level | `INFO` |
-| `LOCAL_DB_TYPE` | Metadata database type | `sqlite` |
-| `LOCAL_DB_PATH` | SQLite database path | `data/default_sqlite.db` |
+| `DBGPT_LOG_LEVEL` | 日志级别 | `INFO` |
+| `LOCAL_DB_TYPE` | 元数据库类型 | `sqlite` |
+| `LOCAL_DB_PATH` | SQLite 数据库路径 | `data/default_sqlite.db` |
 | `MYSQL_HOST` | MySQL host | `127.0.0.1` |
 | `MYSQL_PORT` | MySQL port | `3306` |
-| `MYSQL_USER` | MySQL username | `root` |
-| `MYSQL_PASSWORD` | MySQL password | — |
-| `MYSQL_DATABASE` | MySQL database name | `dbgpt` |
+| `MYSQL_USER` | MySQL 用户名 | `root` |
+| `MYSQL_PASSWORD` | MySQL 密码 | — |
+| `MYSQL_DATABASE` | MySQL 数据库名 | `dbgpt` |
 
-## GPU and hardware
+## GPU 与硬件
 
-| Variable | Description | Example |
+| 变量 | 说明 | 示例 |
 |---|---|---|
-| `CUDA_VISIBLE_DEVICES` | Restrict which GPUs are visible | `0,1` |
-| `DEVICE` | Force device type | `cuda`, `cpu`, `mps` |
+| `CUDA_VISIBLE_DEVICES` | 限制可见 GPU | `0,1` |
+| `DEVICE` | 强制指定设备类型 | `cuda`, `cpu`, `mps` |
 
-## Network and proxy
+## 网络与代理
 
-| Variable | Description | Example |
+| 变量 | 说明 | 示例 |
 |---|---|---|
-| `UV_INDEX_URL` | PyPI mirror for uv | `https://pypi.tuna.tsinghua.edu.cn/simple` |
-| `HTTP_PROXY` | HTTP proxy for outbound requests | `http://proxy:8080` |
-| `HTTPS_PROXY` | HTTPS proxy for outbound requests | `http://proxy:8080` |
-| `NO_PROXY` | Hosts to bypass proxy | `localhost,127.0.0.1` |
+| `UV_INDEX_URL` | uv 使用的 PyPI 镜像地址 | `https://pypi.tuna.tsinghua.edu.cn/simple` |
+| `HTTP_PROXY` | 外部请求的 HTTP 代理 | `http://proxy:8080` |
+| `HTTPS_PROXY` | 外部请求的 HTTPS 代理 | `http://proxy:8080` |
+| `NO_PROXY` | 不走代理的主机列表 | `localhost,127.0.0.1` |
 
-## Using environment variables in TOML configs
+## 在 TOML 配置中使用环境变量
 
-DB-GPT supports environment variable substitution in TOML config files:
+DB-GPT 支持在 TOML 配置文件中引用环境变量：
 
 ```toml
 [[models.llms]]
@@ -65,16 +65,16 @@ api_key = "${env:OPENAI_API_KEY}"
 api_key = "${env:OPENAI_API_KEY:-default-key}"
 ```
 
-**Syntax:**
+**语法：**
 
-| Pattern | Behavior |
+| 写法 | 行为 |
 |---|---|
-| `${env:VAR_NAME}` | Read from environment variable (error if missing) |
-| `${env:VAR_NAME:-default}` | Read from environment, use `default` if not set |
+| `${env:VAR_NAME}` | 从环境变量读取（缺失时报错） |
+| `${env:VAR_NAME:-default}` | 从环境变量读取，若未设置则使用 `default` |
 
-## Docker environment variables
+## Docker 环境变量
 
-When running with Docker, pass environment variables with `-e`:
+使用 Docker 运行时，可以通过 `-e` 传递环境变量：
 
 ```bash
 docker run -it --rm \
@@ -84,7 +84,7 @@ docker run -it --rm \
   eosphorosai/dbgpt-openai
 ```
 
-Or with Docker Compose in `docker-compose.yml`:
+或者在 `docker-compose.yml` 中配置：
 
 ```yaml
 services:
@@ -94,10 +94,10 @@ services:
       - DBGPT_LOG_LEVEL=INFO
 ```
 
-## Next steps
+## 下一步
 
-| Topic | Link |
+| 主题 | 链接 |
 |---|---|
-| Full config reference | [Config Reference](/docs/config/config-reference) |
-| Model providers | [Providers](/docs/getting-started/providers/) |
-| Troubleshooting index | [Troubleshooting](/docs/getting-started/troubleshooting/) |
+| 完整配置参考 | [Config Reference](/docs/config/config-reference) |
+| 模型提供方 | [Providers](/docs/getting-started/providers/) |
+| 故障排查总览 | [Troubleshooting](/docs/getting-started/troubleshooting/) |

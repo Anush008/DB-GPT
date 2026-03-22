@@ -8,14 +8,12 @@ import CommandCopyCard from "@site/src/components/mdx/CommandCopyCard";
 # DB-GPT
 
 <p align="center">
-  <img src={'/img/dbgpt.png'} width="560px" />
+  <img src={'../img/dbgpt_vision.png'} width="860px" />
 </p>
 
-> *"In the Data 3.0 era, based on models and databases, enterprises and developers can build their own bespoke applications with less code."*
-
 <p align="center">
-  <strong>An open-source AI data assistant that connects to your data, writes SQL and code, runs skills in sandboxed environments, and turns analysis into reports, insights, and action.</strong><br />
-  DB-GPT is also a platform for building AI-native data agents, workflows, and applications with agents, AWEL, RAG, and multi-model support.
+  <strong>一个开源的 AI 数据助手，能够连接你的数据、编写 SQL 和代码、在沙箱环境中运行技能，并将分析过程转化为报告、洞察与行动。</strong><br />
+  DB-GPT 也是一个用于构建 AI Native 数据 Agent、工作流与应用的平台，支持 Agents、AWEL、RAG 和多模型能力。
 </p>
 
 <p align="center">
@@ -24,39 +22,39 @@ import CommandCopyCard from "@site/src/components/mdx/CommandCopyCard";
   <a href="https://github.com/orgs/eosphoros-ai/discussions">Community</a>
 </p>
 
-## Start here
+## 从这里开始
 
 <div className="overview-cards-grid">
   <a href="./quickstart" className="overview-card">
     <div className="overview-card-icon">🚀</div>
     <div className="overview-card-content">
-      <h3 className="overview-card-title">Quick Start</h3>
-      <p className="overview-card-description">Get DB-GPT running in minutes with the one-line installer.</p>
+      <h3 className="overview-card-title">快速开始</h3>
+      <p className="overview-card-description">通过一行安装命令在几分钟内启动 DB-GPT。</p>
     </div>
   </a>
   <a href="./installation" className="overview-card">
     <div className="overview-card-icon">📦</div>
     <div className="overview-card-content">
-      <h3 className="overview-card-title">Installation</h3>
-      <p className="overview-card-description">Docker, source code, or manual setup for your environment.</p>
+      <h3 className="overview-card-title">安装部署</h3>
+      <p className="overview-card-description">支持 Docker、源码部署或按你的环境进行手动配置。</p>
     </div>
   </a>
   <a href="./use_cases" className="overview-card">
     <div className="overview-card-icon">💡</div>
     <div className="overview-card-content">
-      <h3 className="overview-card-title">Show Cases</h3>
-      <p className="overview-card-description">See DB-GPT in action across data analysis, Text2SQL, RAG, dashboards, and reports.</p>
+      <h3 className="overview-card-title">案例展示</h3>
+      <p className="overview-card-description">查看 DB-GPT 在数据分析、Text2SQL、RAG、仪表盘和报告生成中的实际能力展示。</p>
     </div>
   </a>
 </div>
 
-## Quick start
+## 快速开始
 
 <div className="quickstart-steps">
   <div className="quickstart-step">
     <div className="quickstart-step-index">1</div>
     <div className="quickstart-step-content">
-      <h3>Install DB-GPT</h3>
+      <h3>安装 DB-GPT</h3>
       <CommandCopyCard command={`curl -fsSL https://raw.githubusercontent.com/eosphoros-ai/DB-GPT/main/scripts/install/install.sh | bash`} />
     </div>
   </div>
@@ -64,7 +62,7 @@ import CommandCopyCard from "@site/src/components/mdx/CommandCopyCard";
   <div className="quickstart-step">
     <div className="quickstart-step-index">2</div>
     <div className="quickstart-step-content">
-      <h3>Install with a provider profile</h3>
+      <h3>使用 provider 配置安装</h3>
       <CommandCopyCard command={`curl -fsSL https://raw.githubusercontent.com/eosphoros-ai/DB-GPT/main/scripts/install/install.sh \
   | OPENAI_API_KEY=sk-xxx bash -s -- --profile openai`} />
     </div>
@@ -73,215 +71,215 @@ import CommandCopyCard from "@site/src/components/mdx/CommandCopyCard";
   <div className="quickstart-step">
     <div className="quickstart-step-index">3</div>
     <div className="quickstart-step-content">
-      <h3>Start the web server</h3>
+      <h3>启动 Web 服务</h3>
       <CommandCopyCard command={`cd ~/.dbgpt/DB-GPT && uv run dbgpt start webserver --config ~/.dbgpt/configs/<profile>.toml`} />
     </div>
   </div>
 </div>
 
-## What is DB-GPT?
+## 什么是 DB-GPT？
 
-DB-GPT is an open-source **agentic AI data assistant** for the next generation of **AI + Data** products.
+DB-GPT 是一个面向下一代 **AI + Data** 产品的开源 **Agentic AI 数据助手**。
 
-It helps users and teams:
+它帮助个人与团队：
 
-- connect to **databases, CSV / Excel files, warehouses, and knowledge bases**
-- ask questions in natural language and let AI **write SQL autonomously**
-- run **Python- and code-driven analysis** workflows
-- load and execute reusable **skills** for domain-specific tasks
-- generate **charts, dashboards, HTML reports, and analysis summaries**
-- execute tasks safely in **sandboxed environments**
+- 连接 **数据库、CSV / Excel 文件、数据仓库与知识库**
+- 使用自然语言提问，并让 AI **自动生成 SQL**
+- 运行 **Python / 代码驱动** 的分析流程
+- 加载并执行可复用的 **skills** 以完成领域任务
+- 生成 **图表、仪表盘、HTML 报告与分析摘要**
+- 在 **沙箱环境** 中安全执行任务
 
-## Why DB-GPT?
+## 为什么选择 DB-GPT？
 
 <div className="overview-cards-grid">
   <div className="overview-card overview-card--static">
     <div className="overview-card-icon">🧠</div>
     <div className="overview-card-content">
-      <h3 className="overview-card-title">Agentic data analysis</h3>
-      <p className="overview-card-description">Plan tasks, break work into steps, call tools, and complete analysis workflows end to end.</p>
+      <h3 className="overview-card-title">Agentic 数据分析</h3>
+      <p className="overview-card-description">能够规划任务、拆解步骤、调用工具，并端到端完成分析流程。</p>
     </div>
   </div>
   <div className="overview-card overview-card--static">
     <div className="overview-card-icon">💻</div>
     <div className="overview-card-content">
-      <h3 className="overview-card-title">Autonomous SQL + code execution</h3>
-      <p className="overview-card-description">Generate SQL and code to query data, clean datasets, compute metrics, and produce outputs.</p>
+      <h3 className="overview-card-title">自主 SQL + 代码执行</h3>
+      <p className="overview-card-description">自动生成 SQL 与代码，用于查询数据、清洗数据集、计算指标并生成结果。</p>
     </div>
   </div>
   <div className="overview-card overview-card--static">
     <div className="overview-card-icon">🗂️</div>
     <div className="overview-card-content">
-      <h3 className="overview-card-title">Multi-source data access</h3>
-      <p className="overview-card-description">Work across structured and unstructured sources, including databases, spreadsheets, documents, and knowledge bases.</p>
+      <h3 className="overview-card-title">多源数据接入</h3>
+      <p className="overview-card-description">同时处理结构化与非结构化数据，包括数据库、表格、文档和知识库。</p>
     </div>
   </div>
   <div className="overview-card overview-card--static">
     <div className="overview-card-icon">🧩</div>
     <div className="overview-card-content">
-      <h3 className="overview-card-title">Skills-driven extensibility</h3>
-      <p className="overview-card-description">Package domain knowledge, analysis methods, and execution workflows into reusable skills.</p>
+      <h3 className="overview-card-title">Skills 驱动的可扩展性</h3>
+      <p className="overview-card-description">将领域知识、分析方法和执行流程封装成可复用的 skills。</p>
     </div>
   </div>
   <div className="overview-card overview-card--static">
     <div className="overview-card-icon">📈</div>
     <div className="overview-card-content">
-      <h3 className="overview-card-title">Reporting and decision support</h3>
-      <p className="overview-card-description">Produce charts, dashboards, HTML reports, and decision-ready business outputs.</p>
+      <h3 className="overview-card-title">报告与决策支持</h3>
+      <p className="overview-card-description">生成图表、仪表盘、HTML 报告以及可直接用于决策的业务输出。</p>
     </div>
   </div>
   <div className="overview-card overview-card--static">
     <div className="overview-card-icon">🛡️</div>
     <div className="overview-card-content">
-      <h3 className="overview-card-title">Sandboxed execution</h3>
-      <p className="overview-card-description">Run code and tools in isolated environments for safer, more reliable analysis.</p>
+      <h3 className="overview-card-title">沙箱执行</h3>
+      <p className="overview-card-description">在隔离环境中运行代码和工具，让分析过程更加安全、可靠。</p>
     </div>
   </div>
 </div>
 
-## Product workflow
+## 产品工作流
 
 <div className="overview-cards-grid">
   <div className="overview-card overview-card--static">
     <div className="overview-card-icon">🔍</div>
     <div className="overview-card-content">
-      <h3 className="overview-card-title">Explore data</h3>
-      <p className="overview-card-description">Connect files, databases, and knowledge bases in one workspace.</p>
+      <h3 className="overview-card-title">探索数据</h3>
+      <p className="overview-card-description">在同一个工作空间中连接文件、数据库与知识库。</p>
     </div>
   </div>
   <div className="overview-card overview-card--static">
     <div className="overview-card-icon">🪄</div>
     <div className="overview-card-content">
-      <h3 className="overview-card-title">Plan and execute</h3>
-      <p className="overview-card-description">Let AI reason through the task, write SQL and code, and execute step by step.</p>
+      <h3 className="overview-card-title">规划并执行</h3>
+      <p className="overview-card-description">让 AI 理解任务、编写 SQL 与代码，并逐步执行。</p>
     </div>
   </div>
   <div className="overview-card overview-card--static">
     <div className="overview-card-icon">🧰</div>
     <div className="overview-card-content">
-      <h3 className="overview-card-title">Use skills</h3>
-      <p className="overview-card-description">Load reusable skills for repeatable business analysis workflows.</p>
+      <h3 className="overview-card-title">使用技能</h3>
+      <p className="overview-card-description">加载可复用的 skills，用于重复性的业务分析流程。</p>
     </div>
   </div>
   <div className="overview-card overview-card--static">
     <div className="overview-card-icon">📄</div>
     <div className="overview-card-content">
-      <h3 className="overview-card-title">Generate reports</h3>
-      <p className="overview-card-description">Produce charts, dashboards, HTML reports, and decision-ready outputs.</p>
+      <h3 className="overview-card-title">生成报告</h3>
+      <p className="overview-card-description">输出图表、仪表盘、HTML 报告以及可直接用于决策的结果。</p>
     </div>
   </div>
 </div>
 
-## Core capabilities
+## 核心能力
 
 <div className="overview-cards-grid">
   <div className="overview-card overview-card--static">
     <div className="overview-card-icon">🤖</div>
     <div className="overview-card-content">
       <h3 className="overview-card-title">Agentic Analysis</h3>
-      <p className="overview-card-description">Task planning, step-by-step execution, tool use, and iterative reasoning.</p>
+      <p className="overview-card-description">任务规划、逐步执行、工具调用与迭代式推理。</p>
     </div>
   </div>
   <div className="overview-card overview-card--static">
     <div className="overview-card-icon">🧮</div>
     <div className="overview-card-content">
       <h3 className="overview-card-title">SQL + Code Execution</h3>
-      <p className="overview-card-description">Natural language to SQL, Python-based analysis, metric calculation, and chart generation.</p>
+      <p className="overview-card-description">从自然语言到 SQL、基于 Python 的分析、指标计算和图表生成。</p>
     </div>
   </div>
   <div className="overview-card overview-card--static">
     <div className="overview-card-icon">🗃️</div>
     <div className="overview-card-content">
       <h3 className="overview-card-title">Multi-Source Data Access</h3>
-      <p className="overview-card-description">Relational databases, CSV / Excel, documents, knowledge bases, and mixed-source workflows.</p>
+      <p className="overview-card-description">关系型数据库、CSV / Excel、文档、知识库以及混合数据源工作流。</p>
     </div>
   </div>
   <div className="overview-card overview-card--static">
     <div className="overview-card-icon">🧠</div>
     <div className="overview-card-content">
       <h3 className="overview-card-title">Skills and Agents</h3>
-      <p className="overview-card-description">Reusable skills, domain workflows, agent orchestration, and customizable execution flows.</p>
+      <p className="overview-card-description">可复用 skills、领域工作流、agent 编排与可定制执行流程。</p>
     </div>
   </div>
   <div className="overview-card overview-card--static">
     <div className="overview-card-icon">📊</div>
     <div className="overview-card-content">
       <h3 className="overview-card-title">Reporting</h3>
-      <p className="overview-card-description">Database profiling reports, financial analysis reports, dashboards, summaries, and insights.</p>
+      <p className="overview-card-description">数据库分析报告、财报分析、仪表盘、摘要与业务洞察。</p>
     </div>
   </div>
   <div className="overview-card overview-card--static">
     <div className="overview-card-icon">🔐</div>
     <div className="overview-card-content">
       <h3 className="overview-card-title">Safe Execution</h3>
-      <p className="overview-card-description">Sandboxed code execution, controlled tool use, and reproducible outputs and artifacts.</p>
+      <p className="overview-card-description">沙箱代码执行、受控工具调用，以及可复现的输出与产物。</p>
     </div>
   </div>
 </div>
 
-## Platform & ecosystem
+## 平台与生态
 
 <div className="overview-cards-grid">
   <a href="./awel/awel" className="overview-card">
     <div className="overview-card-icon">🔄</div>
     <div className="overview-card-content">
       <h3 className="overview-card-title">AWEL</h3>
-      <p className="overview-card-description">Agentic workflow orchestration for structured AI + data pipelines.</p>
+      <p className="overview-card-description">面向结构化 AI + Data 流程的 Agentic 工作流编排能力。</p>
     </div>
   </a>
   <a href="./agents/introduction/introduction" className="overview-card">
     <div className="overview-card-icon">🤝</div>
     <div className="overview-card-content">
       <h3 className="overview-card-title">Agents</h3>
-      <p className="overview-card-description">Autonomous task execution with tools, memory, planning, and collaboration.</p>
+      <p className="overview-card-description">通过工具、记忆、规划与协作能力实现自治任务执行。</p>
     </div>
   </a>
   <a href="./modules/rag" className="overview-card">
     <div className="overview-card-icon">📚</div>
     <div className="overview-card-content">
       <h3 className="overview-card-title">RAG</h3>
-      <p className="overview-card-description">Knowledge-enhanced reasoning across documents, graphs, and private knowledge bases.</p>
+      <p className="overview-card-description">在文档、图谱和私有知识库之上进行知识增强推理。</p>
     </div>
   </a>
   <a href="./modules/smmf" className="overview-card">
     <div className="overview-card-icon">⚙️</div>
     <div className="overview-card-content">
       <h3 className="overview-card-title">SMMF</h3>
-      <p className="overview-card-description">Service-oriented multi-model management for open-source and API-based models.</p>
+      <p className="overview-card-description">面向开源模型和 API 模型的服务化多模型管理框架。</p>
     </div>
   </a>
   <a href="./application/fine_tuning_manual/dbgpt_hub" className="overview-card">
     <div className="overview-card-icon">🎛️</div>
     <div className="overview-card-content">
       <h3 className="overview-card-title">DB-GPT-Hub</h3>
-      <p className="overview-card-description">Text2SQL and fine-tuning workflows for domain adaptation and model improvement.</p>
+      <p className="overview-card-description">用于领域适配与模型增强的 Text2SQL 与微调工作流。</p>
     </div>
   </a>
   <a href="./modules/connections" className="overview-card">
     <div className="overview-card-icon">🔗</div>
     <div className="overview-card-content">
       <h3 className="overview-card-title">Connections</h3>
-      <p className="overview-card-description">Connect databases, files, warehouses, and external data systems.</p>
+      <p className="overview-card-description">连接数据库、文件、数据仓库以及外部数据系统。</p>
     </div>
   </a>
 </div>
 
-## Terminology
+## 术语说明
 
-| Term | Description |
+| 术语 | 说明 |
 |------|-------------|
-| **DB-GPT** | DataBase Generative Pre-trained Transformer — open-source framework around databases and LLMs |
-| **Data App** | An intelligent data application built on DB-GPT |
-| **Text2SQL** | Generate SQL from natural language using LLM capabilities |
-| **KBQA** | Knowledge-Based Q&A system |
-| **GBI** | Generative Business Intelligence — analysis and decisions through dialogue |
-| **LLMOps** | End-to-end workflow for training, tuning, deploying, and monitoring LLMs |
-| **Embedding** | Methods to convert text, audio, video into vectors |
-| **RAG** | Retrieval Augmented Generation |
+| **DB-GPT** | DataBase Generative Pre-trained Transformer，一个围绕数据库与大模型构建的开源框架 |
+| **Data App** | 基于 DB-GPT 构建的智能数据应用 |
+| **Text2SQL** | 利用大模型能力将自然语言转换为 SQL |
+| **KBQA** | 基于知识库的问答系统 |
+| **GBI** | Generative Business Intelligence，通过对话完成分析与决策 |
+| **LLMOps** | 大模型训练、调优、部署与监控的端到端流程 |
+| **Embedding** | 将文本、音频、视频等内容转换为向量的方法 |
+| **RAG** | Retrieval Augmented Generation，检索增强生成 |
 | **AWEL** | Agentic Workflow Expression Language |
-| **AWEL Flow** | Workflow orchestration using AWEL |
+| **AWEL Flow** | 基于 AWEL 的工作流编排 |
 | **SMMF** | Service-oriented Multi-model Management Framework |
 
-## Community
+## 社区
 
-If you encounter problems, submit an [issue](https://github.com/eosphoros-ai/DB-GPT/issues), join [discussions](https://github.com/orgs/eosphoros-ai/discussions), or check the [releases](https://github.com/eosphoros-ai/DB-GPT/releases).
+如果你在使用过程中遇到问题，可以提交 [issue](https://github.com/eosphoros-ai/DB-GPT/issues)、参与 [discussions](https://github.com/orgs/eosphoros-ai/discussions)，或查看 [releases](https://github.com/eosphoros-ai/DB-GPT/releases)。

@@ -1,25 +1,25 @@
 ---
 sidebar_position: 2
-title: Docker Compose Deployment
+title: Docker Compose 部署
 ---
 
-# Docker Compose Deployment
+# Docker Compose 部署
 
-Deploy DB-GPT with MySQL using Docker Compose — a production-ready setup with persistent storage.
+通过 Docker Compose 搭配 MySQL 部署 DB-GPT。这种方式适合生产场景，并支持持久化存储。
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-## Prerequisites
+## 前置条件
 
-- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) installed
-- An API key from a supported provider
+- 已安装 [Docker](https://docs.docker.com/get-docker/) 和 [Docker Compose](https://docs.docker.com/compose/install/)
+- 已获取一个受支持 provider 的 API Key
 
-## Quick start
+## 快速开始
 
-The root `docker-compose.yml` deploys DB-GPT with a MySQL database and SiliconFlow as the default LLM provider.
+根目录下的 `docker-compose.yml` 会部署一个带 MySQL 数据库的 DB-GPT，并默认使用 SiliconFlow 作为 LLM provider。
 
-### Step 1 — Set your API key
+### 第一步：设置 API Key
 
 <Tabs>
   <TabItem value="siliconflow" label="SiliconFlow" default>
@@ -28,7 +28,7 @@ The root `docker-compose.yml` deploys DB-GPT with a MySQL database and SiliconFl
 export SILICONFLOW_API_KEY="your-siliconflow-api-key"
 ```
 
-Get your key at [SiliconFlow](https://cloud.siliconflow.cn/account/ak).
+可在 [SiliconFlow](https://cloud.siliconflow.cn/account/ak) 获取 API Key。
 
   </TabItem>
   <TabItem value="aiml" label="AI/ML API">
@@ -37,12 +37,12 @@ Get your key at [SiliconFlow](https://cloud.siliconflow.cn/account/ak).
 export AIMLAPI_API_KEY="your-aiml-api-key"
 ```
 
-Get your key at [AI/ML API](https://aimlapi.com/).
+可在 [AI/ML API](https://aimlapi.com/) 获取 API Key。
 
   </TabItem>
 </Tabs>
 
-### Step 2 — Start the services
+### 第二步：启动服务
 
 <Tabs>
   <TabItem value="siliconflow" label="SiliconFlow" default>
@@ -61,7 +61,7 @@ AIMLAPI_API_KEY=${AIMLAPI_API_KEY} docker compose up -d
   </TabItem>
 </Tabs>
 
-You should see output like:
+你应该会看到类似下面的输出：
 
 ```
 [+] Running 3/3
@@ -70,62 +70,62 @@ You should see output like:
  ✔ Container db-gpt-webserver-1  Started   0.2s
 ```
 
-### Step 3 — Open the Web UI
+### 第三步：打开 Web UI
 
-Visit **[http://localhost:5670](http://localhost:5670)** in your browser.
+在浏览器中访问 **[http://localhost:5670](http://localhost:5670)**。
 
-:::warning First start may take a moment
-The webserver waits for MySQL to finish initializing. If it fails on first start, it will auto-restart. Check logs with `docker logs db-gpt-webserver-1 -f`.
+:::warning 首次启动可能需要一点时间
+Webserver 会等待 MySQL 初始化完成。如果第一次启动失败，容器通常会自动重启。你可以通过 `docker logs db-gpt-webserver-1 -f` 查看日志。
 :::
 
-## What gets deployed
+## 部署内容
 
-The default `docker-compose.yml` creates:
+默认的 `docker-compose.yml` 会创建以下服务：
 
-| Service | Image | Port | Purpose |
+| 服务 | 镜像 | 端口 | 用途 |
 |---|---|---|---|
-| `db` | `mysql/mysql-server` | 3306 | MySQL database for metadata |
-| `webserver` | `eosphorosai/dbgpt-openai:latest` | 5670 | DB-GPT application server |
+| `db` | `mysql/mysql-server` | 3306 | 用于元数据存储的 MySQL 数据库 |
+| `webserver` | `eosphorosai/dbgpt-openai:latest` | 5670 | DB-GPT 应用服务 |
 
-## Common operations
+## 常见操作
 
-### View logs
+### 查看日志
 
 ```bash
-# Webserver logs
+# Webserver 日志
 docker logs db-gpt-webserver-1 -f
 
-# Database logs
+# 数据库日志
 docker logs db-gpt-db-1 -f
 ```
 
-### Stop services
+### 停止服务
 
 ```bash
 docker compose down
 ```
 
-### Restart services
+### 重启服务
 
 ```bash
 docker compose restart
 ```
 
-### Reset everything (including data)
+### 重置所有内容（包括数据）
 
 ```bash
 docker compose down -v
 ```
 
 :::warning
-The `-v` flag removes all volumes, including the MySQL database. All data will be lost.
+`-v` 参数会删除所有 volumes，包括 MySQL 数据库数据。所有数据都会丢失。
 :::
 
-## Customization
+## 自定义配置
 
-### Use a different config file
+### 使用不同的配置文件
 
-Mount your own TOML config and override the startup command:
+你可以挂载自己的 TOML 配置，并覆盖启动命令：
 
 ```yaml
 webserver:
@@ -135,9 +135,9 @@ webserver:
     - ./your-config.toml:/app/configs/your-config.toml
 ```
 
-### Mount local models
+### 挂载本地模型
 
-For GPU deployments, mount a local models directory:
+对于 GPU 部署，可以挂载本地模型目录：
 
 ```yaml
 webserver:
@@ -151,27 +151,27 @@ webserver:
             capabilities: [gpu]
 ```
 
-## Other Compose examples
+## 其他 Compose 示例
 
-DB-GPT ships with additional Compose files for specific scenarios:
+DB-GPT 还提供了适用于不同场景的 Compose 文件：
 
-| File | Use case |
+| 文件 | 适用场景 |
 |---|---|
-| `docker-compose.yml` | Default proxy deployment with MySQL |
-| `docker/compose_examples/cluster-docker-compose.yml` | Multi-worker cluster with GPU |
-| `docker/compose_examples/ha-cluster-docker-compose.yml` | High-availability cluster |
-| `docker/compose_examples/dbgpt-oceanbase-docker-compose.yml` | OceanBase database backend |
+| `docker-compose.yml` | 默认代理模式 + MySQL 部署 |
+| `docker/compose_examples/cluster-docker-compose.yml` | 带 GPU 的多 Worker 集群 |
+| `docker/compose_examples/ha-cluster-docker-compose.yml` | 高可用集群 |
+| `docker/compose_examples/dbgpt-oceanbase-docker-compose.yml` | OceanBase 数据库后端 |
 
-Example:
+示例：
 
 ```bash
 docker compose -f docker/compose_examples/cluster-docker-compose.yml up -d
 ```
 
-## Next steps
+## 下一步
 
-| Topic | Link |
+| 主题 | 链接 |
 |---|---|
-| Cluster deployment | [Cluster](/docs/getting-started/deploy/cluster) |
-| Docker (single container) | [Docker](/docs/getting-started/deploy/docker) |
-| Source code deployment | [Source Code](/docs/getting-started/deploy/source-code) |
+| 集群部署 | [Cluster](/docs/getting-started/deploy/cluster) |
+| Docker（单容器）部署 | [Docker](/docs/getting-started/deploy/docker) |
+| 源码部署 | [Source Code](/docs/getting-started/deploy/source-code) |

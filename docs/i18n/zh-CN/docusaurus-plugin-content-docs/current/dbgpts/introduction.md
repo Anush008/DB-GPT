@@ -1,50 +1,50 @@
-# Skills Overview
+# Skills 总览
 
-> The skill definition on this page is adapted from the [Agent Skills](https://agentskills.io/what-are-skills) description, which frames skills as lightweight, self-contained capability packages that agents can discover, load, and apply on demand.
+> 本页对 skill 的定义参考了 [Agent Skills](https://agentskills.io/what-are-skills) 的描述：skill 是一种轻量、自包含的能力包，智能体可以按需发现、加载并执行。
 
-## What is a skill?
+## 什么是 skill？
 
-In DB-GPT, a skill is a reusable capability package that gives an agent a structured way to solve a task.
+在 DB-GPT 中，skill 是一种可复用的能力包，为智能体提供完成某类任务的结构化方式。
 
-Instead of relying only on free-form reasoning, a skill provides a stable execution pattern for a specific kind of work.
+相比只依赖自由推理，skill 为特定类型的工作提供了更稳定、更可重复的执行模式。
 
 <img
   src="https://github.com/user-attachments/assets/39f39c36-a014-4a2e-8e14-b3af3f1d2f1c"
-  alt="DB-GPT skills overview"
+  alt="DB-GPT 技能总览"
   className="showcase-hero-image"
 />
 
-> The originally shared image source is no longer reachable. This page now uses a working DB-GPT skills screenshot from the current project README. If you want the exact screenshot from your attachment, send me a usable file path or re-upload it and I will swap it to a local asset.
+> 原始分享的图片地址已经失效。当前页面改为使用项目 README 中可正常访问的 DB-GPT skills 截图。如果你希望替换成你之前附件里的原始图片，请提供可用文件路径或重新上传，我可以改成仓库本地资源。
 
-## Skill definition
+## Skill 的定义
 
-Adapted from the Agent Skills description, a skill can be understood as:
+结合 Agent Skills 的定义，可以把 skill 理解为：
 
-- a **lightweight extension format** for giving agents specialized knowledge and workflows
-- a **package of know-how**, not just facts, APIs, or prompts
-- a **progressive-disclosure unit** that can be discovered first and fully loaded only when needed
-- a **self-contained bundle** of instructions, scripts, templates, and reference files
-- a way to make agent behavior more **consistent, repeatable, and domain-aware**
+- 一种为智能体提供专业知识和工作流的**轻量扩展格式**
+- 一种**经验与方法的打包形式**，而不只是事实、API 或 prompt
+- 一种**渐进式暴露**的能力单元：先发现，真正需要时再完整加载
+- 一个自包含的指令、脚本、模板和参考资料集合
+- 一种让智能体行为更**稳定、可重复、具备领域感知**的方式
 
-In DB-GPT terms, a skill is not just “something the model knows.” It is a packaged workflow that helps the agent decide:
+在 DB-GPT 语境里，skill 不只是“模型知道什么”，而是一个打包好的工作流，帮助智能体决定：
 
-- what problem it is solving
-- what tools it should use
-- what order the steps should follow
-- what outputs should be produced
-- what constraints it should obey
+- 它要解决什么问题
+- 它应该调用哪些工具
+- 执行步骤应遵循怎样的顺序
+- 需要产出什么结果
+- 需要遵守哪些约束
 
-## What a skill usually contains
+## 一个 skill 通常包含什么
 
-A DB-GPT skill package often includes:
+一个 DB-GPT skill 包通常包括：
 
-- a name
-- instructions in `SKILL.md`
-- optional scripts
-- optional templates
-- optional static resources or examples
+- 名称
+- `SKILL.md` 中的说明与指令
+- 可选脚本
+- 可选模板
+- 可选静态资源或示例
 
-At its core, a skill is a folder containing a `SKILL.md` file. This file includes metadata and instructions that tell an agent how to perform a specific task. Skills can also bundle scripts, templates, and reference materials.
+从本质上说，skill 是一个包含 `SKILL.md` 的目录。这个文件定义元数据与执行指令，告诉智能体如何完成某类任务。skill 还可以附带脚本、模板和参考资料。
 
 ```text
 my-skill/
@@ -54,112 +54,112 @@ my-skill/
 └── assets/           # Optional: templates, output resources, static files
 ```
 
-## Skill anatomy
+## Skill 结构
 
-Following the structure used by DB-GPT's own skill-creator guidance, a skill is organized as a small self-contained package:
+按照 DB-GPT 当前 skill-creator 的实践，一个 skill 通常组织为一个小型、自包含的能力包：
 
-| Part | Required | Purpose |
-|------|----------|---------|
-| `SKILL.md` | Yes | Defines the skill's identity and instructions |
-| `scripts/` | No | Stores executable code such as Python or shell helpers |
-| `references/` | No | Stores documents that can be loaded into context only when needed |
-| `assets/` | No | Stores templates, fonts, icons, boilerplate files, or other output resources |
+| 部分 | 必需 | 作用 |
+|------|------|------|
+| `SKILL.md` | 是 | 定义 skill 的身份信息与执行指令 |
+| `scripts/` | 否 | 存放可执行代码，如 Python 或 shell 辅助脚本 |
+| `references/` | 否 | 存放按需加载进上下文的参考文档 |
+| `assets/` | 否 | 存放模板、字体、图标、样板文件或其他输出资源 |
 
 ### `SKILL.md`
 
-`SKILL.md` is the entry point of the skill. It usually contains:
+`SKILL.md` 是 skill 的入口文件，通常包含：
 
-- metadata such as `name` and `description`
-- the workflow instructions the agent should follow
-- guidance on when to read additional references or use bundled resources
+- `name`、`description` 等元数据
+- 智能体应遵循的工作流指令
+- 什么时候读取附加参考资料或使用打包资源的说明
 
 ### `scripts/`
 
-Use `scripts/` for executable helpers, such as:
+`scripts/` 用于放置可执行辅助程序，例如：
 
-- Python data-processing utilities
-- shell scripts
-- report-generation helpers
-- automation code used by the skill
+- Python 数据处理脚本
+- shell 脚本
+- 报告生成辅助代码
+- skill 运行中需要的自动化代码
 
 ### `references/`
 
-Use `references/` for supporting knowledge that should not always live inside `SKILL.md`, such as:
+`references/` 用于保存不适合一直塞进 `SKILL.md` 的补充知识，例如：
 
-- API documentation
-- business logic references
-- schemas
-- workflow guides
-- policy or domain documents
+- API 文档
+- 业务逻辑说明
+- schema 定义
+- 工作流指南
+- 领域规范或策略文档
 
-This keeps `SKILL.md` smaller while still making deeper context available when the task requires it.
+这样既能保持 `SKILL.md` 精简，又能在需要时为智能体提供更深的上下文。
 
 ### `assets/`
 
-Use `assets/` for files that support the output rather than the reasoning process, such as:
+`assets/` 用于存放更多面向输出而不是推理过程的资源，例如：
 
-- HTML templates
-- icons and logos
-- fonts
-- boilerplate frontend files
-- report resources
+- HTML 模板
+- 图标与 logo
+- 字体
+- 前端样板文件
+- 报告资源
 
-## Why skills matter
+## 为什么 skill 很重要
 
-Skills are useful when:
+在以下场景中，skill 很有价值：
 
-- a workflow should be standardized
-- the task requires domain-specific reasoning
-- reporting or analysis should follow a known pattern
-- the agent should use curated instructions instead of improvising everything
+- 工作流需要标准化
+- 任务需要领域化推理
+- 报告或分析需要遵循固定模式
+- 希望智能体优先使用整理好的指令，而不是完全临场发挥
 
-## How skills work
+## Skill 如何工作
 
-The common execution pattern is:
+常见执行流程如下：
 
-1. The agent identifies that a task matches a skill.
-2. The skill instructions are loaded.
-3. The agent follows the skill-defined workflow.
-4. The required tools are executed.
-5. The final answer, report, or page is returned.
+1. 智能体识别当前任务适合某个 skill。
+2. 加载该 skill 的指令。
+3. 按照 skill 定义的工作流执行。
+4. 调用所需工具。
+5. 返回最终答案、报告或页面。
 
-## Skills and built-in tools
+## Skill 与内置工具
 
-Skills often orchestrate the built-in execution tools together:
+skill 经常会编排多个内置执行工具一起工作：
 
-- `load_skill` → load the skill instructions
-- `sql_query` → retrieve structured data if needed
-- `code_interpreter` → compute metrics, transform data, and generate charts
-- `shell_interpreter` → run shell commands when required
-- `html_interpreter` → render the final report or webpage
+- `load_skill` → 加载 skill 指令
+- `sql_query` → 按需获取结构化数据
+- `code_interpreter` → 计算指标、转换数据、生成图表
+- `shell_interpreter` → 在需要时执行 shell 命令
+- `html_interpreter` → 渲染最终报告或网页
 
-## Practical examples
+## 实际示例
 
-### Financial report analysis
+### 财报分析
 
-A financial-report skill can define:
+一个财报分析 skill 可以定义：
 
-- how to inspect uploaded reports
-- how to compute indicators and compare periods
-- how to generate charts and summaries
-- how to render the final HTML report
+- 如何检查上传的财报
+- 如何计算指标并进行期间对比
+- 如何生成图表与摘要
+- 如何渲染最终 HTML 报告
 
-### CSV / Excel analysis
+### CSV / Excel 分析
 
-A data-analysis skill can define:
+一个数据分析 skill 可以定义：
 
-- how to inspect a dataset
-- how to calculate core metrics
-- how to visualize outputs
-- how to turn the result into a reusable report
+- 如何检查数据集
+- 如何计算核心指标
+- 如何可视化结果
+- 如何把结果整理成可复用报告
 
-## Good practices
+## 最佳实践
 
-- use skills when the workflow should be repeatable
-- follow the skill instructions strictly
-- prefer the tools required by the skill over ad-hoc alternatives
-- use `html_interpreter` for final report rendering when the skill produces a webpage or report
+- 当工作流需要可重复时，优先使用 skill
+- 严格遵循 skill 中定义的指令
+- 优先使用 skill 指定的工具，而不是临时替代方案
+- 当 skill 产出网页或报告时，优先使用 `html_interpreter` 做最终渲染
 
-## Next step
+## 下一步
 
-See [How to Use Skill](./how-to-use-skill.md) for the practical workflow.
+想看具体使用方式，请继续阅读 [How to Use Skill](./how-to-use-skill.md)。

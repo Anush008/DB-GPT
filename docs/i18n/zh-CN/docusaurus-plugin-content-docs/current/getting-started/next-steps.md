@@ -1,58 +1,58 @@
 ---
 sidebar_position: 99
-title: Next Steps
-summary: "Where to go after the first successful DB-GPT setup"
+title: 下一步
+summary: "完成首次启动之后，接下来最值得阅读的文档路线"
 read_when:
-  - You already completed the quick start and want the next useful docs
-  - You are deciding whether to go deeper into apps, APIs, deployment, or operations
+  - 你已经完成快速开始，想继续往下深入
+  - 你正在决定接下来先看应用、API、部署还是运维相关内容
 ---
 
-# Next Steps
+# 下一步
 
-You have the basics working. Use this page to jump to the next useful docs.
+现在基础环境已经可用，你可以从这个页面跳转到下一批最有价值的文档。
 
-## Build applications
+## 构建应用
 
-| Goal | Resource |
+| 目标 | 资源 |
 |---|---|
-| Build a data analysis app | [App Development Guide](/docs/cookbook/app/data_analysis_app_develop) |
-| Create custom agents | [Agent Development](/docs/agents/introduction/) |
-| Build AWEL workflows in Python | [AWEL Tutorial](/docs/awel/tutorial) |
-| Use the visual AWEL editor | [AWEL Flow](/docs/getting-started/tools/awel-flow) |
+| 构建数据分析应用 | [App Development Guide](/docs/cookbook/app/data_analysis_app_develop) |
+| 创建自定义 agent | [Agent Development](/docs/agents/introduction/) |
+| 用 Python 构建 AWEL 工作流 | [AWEL Tutorial](/docs/awel/tutorial) |
+| 使用可视化 AWEL 编辑器 | [AWEL Flow](/docs/getting-started/tools/awel-flow) |
 
-## Deepen your knowledge
+## 深入理解系统
 
-| Topic | Resource |
+| 主题 | 资源 |
 |---|---|
-| AWEL language deep dive | [AWEL Documentation](/docs/awel/) |
-| Agent modules (memory, planning, tools) | [Agent Modules](/docs/agents/modules/profile/) |
-| RAG advanced configuration | [RAG Tutorial](/docs/application/advanced_tutorial/rag) |
-| Multi-model management (SMMF) | [SMMF Guide](/docs/application/advanced_tutorial/smmf) |
+| AWEL 深入文档 | [AWEL Documentation](/docs/awel/) |
+| Agent 模块（memory、planning、tools） | [Agent Modules](/docs/agents/modules/profile/) |
+| RAG 高级配置 | [RAG Tutorial](/docs/application/advanced_tutorial/rag) |
+| 多模型管理（SMMF） | [SMMF Guide](/docs/application/advanced_tutorial/smmf) |
 | Graph RAG | [Graph RAG Development](/docs/cookbook/rag/graph_rag_app_develop) |
 
-## Production deployment
+## 生产部署
 
-| Topic | Resource |
+| 主题 | 资源 |
 |---|---|
-| Docker deployment | [Docker Guide](/docs/getting-started/deploy/docker) |
+| Docker 部署 | [Docker Guide](/docs/getting-started/deploy/docker) |
 | Docker Compose | [Docker Compose Guide](/docs/getting-started/deploy/docker-compose) |
-| Cluster deployment | [Cluster Guide](/docs/getting-started/deploy/cluster) |
-| Observability & debugging | [Debugging Guide](/docs/application/advanced_tutorial/debugging) |
-| CLI reference | [CLI Guide](/docs/application/advanced_tutorial/cli) |
+| 集群部署 | [Cluster Guide](/docs/getting-started/deploy/cluster) |
+| 可观测性与调试 | [Debugging Guide](/docs/application/advanced_tutorial/debugging) |
+| CLI 参考 | [CLI Guide](/docs/application/advanced_tutorial/cli) |
 
-## API integration
+## API 集成
 
-| Topic | Resource |
+| 主题 | 资源 |
 |---|---|
-| REST API overview | [API Introduction](/docs/api/introduction) |
+| REST API 总览 | [API Introduction](/docs/api/introduction) |
 | Chat API | [Chat API](/docs/api/chat) |
 | App API | [App API](/docs/api/app) |
 | Knowledge API | [Knowledge API](/docs/api/knowledge) |
 | Flow API | [Flow API](/docs/api/flow) |
 
-## Community & resources
+## 社区与资源
 
-| Resource | Link |
+| 资源 | 链接 |
 |---|---|
 | GitHub Repository | [eosphoros-ai/DB-GPT](https://github.com/eosphoros-ai/DB-GPT) |
 | Community Apps | [dbgpts](https://github.com/eosphoros-ai/dbgpts) |
@@ -65,8 +65,8 @@ You have the basics working. Use this page to jump to the next useful docs.
 
 ## FAQ
 
-Common questions organized by topic:
+按主题整理的常见问题：
 
-- [Installation FAQ](/docs/faq/install) — Setup and dependency issues
-- [LLM FAQ](/docs/faq/llm) — Model configuration and performance
-- [Knowledge Base FAQ](/docs/faq/kbqa) — RAG and document retrieval
+- [Installation FAQ](/docs/faq/install) —— 安装与依赖问题
+- [LLM FAQ](/docs/faq/llm) —— 模型配置与性能问题
+- [Knowledge Base FAQ](/docs/faq/kbqa) —— RAG 与文档检索问题

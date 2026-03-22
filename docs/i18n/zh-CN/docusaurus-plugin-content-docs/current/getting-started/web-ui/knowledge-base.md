@@ -1,129 +1,129 @@
 ---
 sidebar_position: 2
-title: Knowledge Base
+title: 知识库
 ---
 
-# Knowledge Base
+# 知识库
 
-Build and manage knowledge bases for Retrieval-Augmented Generation (RAG). Upload documents, configure retrieval, and use them in chat.
+构建并管理用于检索增强生成（RAG）的知识库。你可以上传文档、配置检索参数，并在对话中使用它们。
 
-## Creating a knowledge base
+## 创建知识库
 
-### Step 1 — Navigate to Knowledge
+### 第一步：进入 Knowledge 页面
 
-Click **Knowledge** in the sidebar to open the knowledge management page.
+点击侧边栏中的 **Knowledge**，打开知识库管理页面。
 
-### Step 2 — Create a new knowledge base
+### 第二步：创建新的知识库
 
-1. Click **Create** (or the **+** button)
-2. Fill in:
-   - **Name** — A descriptive name for the knowledge base
-   - **Description** — Brief description of the content
-   - **Embedding Model** — The embedding model to use for vectorization (must match your configured embedding)
-3. Click **Create**
+1. 点击 **Create**（或 **+** 按钮）
+2. 填写以下信息：
+   - **Name**：知识库名称
+   - **Description**：知识库内容简介
+   - **Embedding Model**：用于向量化的 Embedding 模型（必须与当前配置一致）
+3. 点击 **Create**
 
-### Step 3 — Upload documents
+### 第三步：上传文档
 
-1. Open the knowledge base you just created
-2. Click **Upload** to add documents
-3. Select one or more files
-4. Wait for processing to complete (chunking, embedding, and indexing)
+1. 打开刚刚创建的知识库
+2. 点击 **Upload** 添加文档
+3. 选择一个或多个文件
+4. 等待系统完成处理（分块、向量化、索引构建）
 
-:::info Supported file formats
-| Format | Extensions |
+:::info 支持的文件格式
+| 格式 | 扩展名 |
 |---|---|
 | Documents | `.pdf`, `.docx`, `.doc`, `.txt`, `.md` |
 | Spreadsheets | `.xlsx`, `.xls`, `.csv` |
 | Web | `.html`, `.htm` |
 | Data | `.json` |
-| Code | `.py`, `.java`, `.js`, `.ts`, etc. |
+| Code | `.py`, `.java`, `.js`, `.ts` 等 |
 :::
 
-## Using a knowledge base in chat
+## 在对话中使用知识库
 
-1. Go to **Chat** and create a new conversation
-2. Select **Chat Knowledge** mode
-3. Choose your knowledge base from the dropdown
-4. Ask questions — the LLM will use your documents as context
+1. 进入 **Chat** 并创建新会话
+2. 选择 **Chat Knowledge** 模式
+3. 从下拉菜单中选择知识库
+4. 开始提问，LLM 会将你的文档作为上下文使用
 
-## Knowledge base settings
+## 知识库设置
 
-Each knowledge base has configurable settings:
+每个知识库都支持以下可配置项：
 
-| Setting | Description | Default |
+| 配置项 | 说明 | 默认值 |
 |---|---|---|
-| **Chunk Size** | Maximum characters per chunk | 512 |
-| **Chunk Overlap** | Overlap between consecutive chunks | 50 |
-| **Top K** | Number of chunks to retrieve per query | 5 |
-| **Score Threshold** | Minimum relevance score for retrieval | 0.3 |
+| **Chunk Size** | 每个文本块的最大字符数 | 512 |
+| **Chunk Overlap** | 相邻文本块之间的重叠长度 | 50 |
+| **Top K** | 每次查询返回的文本块数量 | 5 |
+| **Score Threshold** | 检索的最小相关性分数 | 0.3 |
 
-:::tip Tuning retrieval
-- **Large documents**: Increase chunk size to preserve context
-- **Precise answers**: Increase Top K and lower the score threshold
-- **Noisy results**: Raise the score threshold
+:::tip 检索调优建议
+- **文档较大**：增大 Chunk Size，以保留更多上下文
+- **希望答案更全面**：提高 Top K，并适当降低分数阈值
+- **结果噪声较多**：提高分数阈值
 :::
 
-## Storage types
+## 存储类型
 
-DB-GPT supports multiple vector storage backends:
+DB-GPT 支持多种向量存储后端：
 
-| Backend | Description | Install Extra |
+| 后端 | 说明 | 安装 Extra |
 |---|---|---|
-| **ChromaDB** | Default, embedded, no setup needed | `storage_chromadb` |
-| **Milvus** | Distributed vector database for production | `storage_milvus` |
-| **OceanBase** | Cloud-native distributed database | `storage_oceanbase` |
+| **ChromaDB** | 默认方案，内嵌式，无需额外部署 | `storage_chromadb` |
+| **Milvus** | 面向生产环境的分布式向量数据库 | `storage_milvus` |
+| **OceanBase** | 云原生分布式数据库 | `storage_oceanbase` |
 
-To use a non-default backend, add the corresponding extra to your install command:
+如果要使用非默认后端，需要在安装命令中添加对应的 extra：
 
 ```bash
 uv sync --all-packages --extra "storage_milvus" ...
 ```
 
-## Advanced features
+## 高级特性
 
 <details>
 <summary><strong>Graph RAG</strong></summary>
 
-DB-GPT supports knowledge graphs for structured retrieval:
+DB-GPT 支持基于知识图谱的结构化检索：
 
-- Extracts entities and relationships from documents
-- Enables graph-based queries alongside vector search
-- Useful for complex domain knowledge with interconnected concepts
+- 从文档中抽取实体及其关系
+- 在向量检索之外支持图谱检索
+- 适用于概念关联复杂的领域知识场景
 
-See [Graph RAG](/docs/application/graph_rag) for setup instructions.
+配置方式可参考 [Graph RAG](/docs/application/graph_rag)。
 
 </details>
 
 <details>
-<summary><strong>Keyword retrieval (BM25)</strong></summary>
+<summary><strong>关键词检索（BM25）</strong></summary>
 
-For hybrid retrieval combining vector and keyword search:
+如果需要结合向量检索与关键词检索的混合检索能力：
 
 ```bash
 uv sync --all-packages --extra "rag_bm25" ...
 ```
 
-This enables BM25 indexing alongside vector embeddings for improved recall.
+这会启用 BM25 索引，并与向量检索配合使用，以提升召回效果。
 
 </details>
 
-## Managing knowledge bases
+## 管理知识库
 
-| Action | How |
+| 操作 | 说明 |
 |---|---|
-| **View** | Click on a knowledge base to see its documents and settings |
-| **Add documents** | Use the Upload button within the knowledge base |
-| **Delete documents** | Select documents and click Delete |
-| **Delete knowledge base** | Use the Delete button on the knowledge base card |
+| **View** | 点击知识库查看其中的文档和设置 |
+| **Add documents** | 在知识库内使用 Upload 按钮添加文档 |
+| **Delete documents** | 选中文档后点击 Delete |
+| **Delete knowledge base** | 在知识库卡片上点击 Delete |
 
-:::warning Deleting is permanent
-Deleting a knowledge base removes all associated vector embeddings and indexed data. The original uploaded files are not recoverable.
+:::warning 删除操作不可恢复
+删除知识库会同时移除其相关的向量数据和索引数据，原始上传文件也无法恢复。
 :::
 
-## Next steps
+## 下一步
 
-| Topic | Link |
+| 主题 | 链接 |
 |---|---|
-| Use knowledge in chat | [Chat](/docs/getting-started/web-ui/chat) |
-| RAG concepts | [RAG](/docs/getting-started/concepts/rag) |
-| Advanced RAG configuration | [RAG Tutorial](/docs/application/advanced_tutorial/rag) |
+| 在对话中使用知识库 | [Chat](/docs/getting-started/web-ui/chat) |
+| RAG 概念 | [RAG](/docs/getting-started/concepts/rag) |
+| 高级 RAG 配置 | [RAG Tutorial](/docs/application/advanced_tutorial/rag) |

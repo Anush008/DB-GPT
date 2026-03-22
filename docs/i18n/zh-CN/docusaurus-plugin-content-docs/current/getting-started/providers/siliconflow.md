@@ -5,14 +5,14 @@ title: SiliconFlow
 
 # SiliconFlow
 
-Configure DB-GPT to use SiliconFlow's hosted model API. SiliconFlow provides access to multiple open-source models through a unified API, hosted in China.
+配置 DB-GPT 使用 SiliconFlow 托管模型 API。SiliconFlow 提供统一 API，可接入多种开源模型，并且服务位于国内环境中。
 
-## Prerequisites
+## 前置条件
 
-- A [SiliconFlow API key](https://siliconflow.cn/)
-- DB-GPT installed with `proxy_openai` extra
+- 一个可用的 [SiliconFlow API key](https://siliconflow.cn/)
+- 已安装带 `proxy_openai` 扩展的 DB-GPT
 
-## Install dependencies
+## 安装依赖
 
 ```bash
 uv sync --all-packages \
@@ -23,9 +23,9 @@ uv sync --all-packages \
   --extra "dbgpts"
 ```
 
-## Configuration
+## 配置方式
 
-Edit `configs/dbgpt-proxy-siliconflow.toml`:
+编辑 `configs/dbgpt-proxy-siliconflow.toml`：
 
 ```toml
 [models]
@@ -47,31 +47,31 @@ api_key = "${env:SILICONFLOW_API_KEY}"
 ```
 
 :::tip
-Set the environment variable:
+建议使用环境变量：
 
 ```bash
 export SILICONFLOW_API_KEY="your-siliconflow-api-key"
 ```
 :::
 
-## Available models
+## 可用模型
 
-SiliconFlow hosts a wide range of open-source models. Some popular choices:
+SiliconFlow 托管了很多开源模型，常见可选模型包括：
 
-| Model | Config name | Notes |
+| 模型 | 配置名 | 说明 |
 |---|---|---|
-| Qwen2.5-Coder-32B | `Qwen/Qwen2.5-Coder-32B-Instruct` | Code-focused |
-| Qwen2.5-72B | `Qwen/Qwen2.5-72B-Instruct` | General purpose |
-| DeepSeek-V3 | `deepseek-ai/DeepSeek-V3` | Strong reasoning |
-| GLM-4-9B | `THUDM/glm-4-9b-chat` | Chinese & English |
+| Qwen2.5-Coder-32B | `Qwen/Qwen2.5-Coder-32B-Instruct` | 偏代码场景 |
+| Qwen2.5-72B | `Qwen/Qwen2.5-72B-Instruct` | 通用用途 |
+| DeepSeek-V3 | `deepseek-ai/DeepSeek-V3` | 推理能力强 |
+| GLM-4-9B | `THUDM/glm-4-9b-chat` | 中英文兼顾 |
 
 :::info
-Check [SiliconFlow's model list](https://siliconflow.cn/) for the latest available models and pricing.
+最新模型列表和价格请参考 [SiliconFlow 官方页面](https://siliconflow.cn/)。
 :::
 
-## Features
+## 特性
 
-SiliconFlow configuration also supports **rerankers** for enhanced RAG retrieval:
+SiliconFlow 配置还支持 **reranker**，用于增强 RAG 检索效果：
 
 ```toml
 [[models.rerankers]]
@@ -80,21 +80,21 @@ provider = "proxy/siliconflow"
 api_key = "${env:SILICONFLOW_API_KEY}"
 ```
 
-## Start the server
+## 启动服务
 
 ```bash
 uv run dbgpt start webserver --config configs/dbgpt-proxy-siliconflow.toml
 ```
 
-## Troubleshooting
+## 故障排查
 
-| Issue | Solution |
+| 问题 | 解决方法 |
 |---|---|
-| Authentication failed | Verify your SiliconFlow API key |
-| Model not available | Check SiliconFlow's current model offerings |
-| Slow responses | Some larger models may have higher latency |
+| 鉴权失败 | 检查 SiliconFlow API key 是否正确 |
+| 模型不可用 | 查看 SiliconFlow 当前支持的模型列表 |
+| 响应较慢 | 大模型通常延迟更高，属于正常现象 |
 
-## What's next
+## 下一步
 
-- [Getting Started](/docs/getting-started/quick-start) — Full setup walkthrough
-- [Model Providers](/docs/getting-started/providers/) — Try other providers
+- [Getting Started](/docs/getting-started/quick-start) —— 查看完整首跑流程
+- [Model Providers](/docs/getting-started/providers/) —— 继续查看其他提供方

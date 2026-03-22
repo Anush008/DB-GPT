@@ -1,15 +1,15 @@
 ---
 sidebar_position: 5
-title: Data Sources
+title: 数据源
 ---
 
-# Data Sources
+# 数据源
 
-DB-GPT connects to a wide range of data sources, enabling natural language interaction with your databases, spreadsheets, and data warehouses.
+DB-GPT 可以连接多种数据源，让你通过自然语言与数据库、电子表格和数据仓库交互。
 
-## Supported data sources
+## 支持的数据源
 
-| Data Source | Type | Status |
+| 数据源 | 类型 | 状态 |
 |---|---|---|
 | **SQLite** | Relational | Built-in (default) |
 | **MySQL** | Relational | Supported |
@@ -21,7 +21,7 @@ DB-GPT connects to a wide range of data sources, enabling natural language inter
 | **Excel** | Spreadsheet | Supported |
 | **CSV** | Flat file | Supported |
 
-## How it works
+## 工作原理
 
 ```mermaid
 flowchart LR
@@ -34,43 +34,43 @@ flowchart LR
     Format --> User
 ```
 
-1. **User** asks a question in natural language
-2. **Text2SQL** engine analyzes the question and linked database schema
-3. **SQL** is generated based on the question context
-4. **Database** executes the query
-5. **Result** is formatted and returned (optionally with charts)
+1. **用户** 用自然语言提问
+2. **Text2SQL** 引擎分析问题与关联 schema
+3. 根据问题上下文生成 **SQL**
+4. **数据库** 执行查询
+5. **结果** 被格式化并返回（可选图表）
 
-## Adding a data source
+## 添加数据源
 
-### Via Web UI
+### 通过 Web UI
 
-1. Open the DB-GPT Web UI
-2. Go to **Data Sources** in the sidebar
-3. Click **Add Data Source**
-4. Select the database type and fill in connection details
-5. Test the connection and save
+1. 打开 DB-GPT Web UI
+2. 在侧边栏进入 **Data Sources**
+3. 点击 **Add Data Source**
+4. 选择数据库类型并填写连接信息
+5. 测试连接并保存
 
-### Via configuration
+### 通过配置
 
-Data source connections can also be configured in the TOML config file or managed through the REST API.
+数据源连接也可以直接在 TOML 配置文件中设置，或者通过 REST API 管理。
 
 ## Text2SQL
 
-DB-GPT excels at converting natural language to SQL queries:
+DB-GPT 擅长将自然语言转换为 SQL 查询：
 
-- **Schema linking** — Automatically maps natural language terms to table/column names
-- **Multi-turn conversation** — Refine queries through follow-up questions
-- **Chart generation** — Visualize query results as charts and dashboards
-- **Fine-tuning** — Optimize Text2SQL accuracy for your specific domain
+- **Schema linking** —— 自动将自然语言映射到表名和字段名
+- **多轮对话** —— 通过追问逐步修正查询
+- **图表生成** —— 将查询结果可视化为图表和 dashboard
+- **微调** —— 针对特定业务域提升 Text2SQL 准确率
 
 :::tip
-For best Text2SQL results, ensure your database tables and columns have descriptive names and comments.
+为了获得更好的 Text2SQL 效果，建议数据库表名、字段名和注释都尽量语义清晰。
 :::
 
-## What's next
+## 下一步
 
-- [Chat DB](/docs/application/apps/chat_db) — Chat with your database
-- [Chat Excel](/docs/application/apps/chat_excel) — Chat with Excel files
-- [Chat Dashboard](/docs/application/apps/chat_dashboard) — Build data dashboards
-- [Datasource Integrations](/docs/installation/integrations) — Install additional connectors
-- [Connections Module](/docs/modules/connections) — Deep dive into data source management
+- [Chat DB](/docs/application/apps/chat_db) —— 与数据库对话
+- [Chat Excel](/docs/application/apps/chat_excel) —— 与 Excel 文件对话
+- [Chat Dashboard](/docs/application/apps/chat_dashboard) —— 生成数据看板
+- [Datasource Integrations](/docs/installation/integrations) —— 安装更多连接器
+- [Connections Module](/docs/modules/connections) —— 深入理解数据源管理机制

@@ -1,34 +1,34 @@
 ---
 sidebar_position: 0
-title: Source Code Deployment
+title: 源码部署
 summary: "Run DB-GPT from source with uv, configure a provider, and verify the webserver"
 read_when:
   - You want the repo-based install instead of Docker
   - You need the most flexible setup for development or customization
 ---
 
-# Source Code Deployment
+# 源码部署
 
-Deploy DB-GPT directly from source code. This is the most flexible option for development, debugging, and custom integrations.
+直接通过源码部署 DB-GPT。这是最灵活的方式，适合开发、调试以及自定义集成场景。
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-## Hardware requirements
+## 硬件要求
 
-| Mode | CPU × RAM | GPU | Notes |
+| 模式 | CPU × 内存 | GPU | 说明 |
 |---|---|---|---|
-| API proxy | 4C × 8 GB | None | Proxy mode does not use local GPU |
-| Local model | 8C × 32 GB | ≥ 24 GB VRAM | NVIDIA GPU with CUDA support |
+| API proxy | 4C × 8 GB | 无 | 代理模式不使用本地 GPU |
+| Local model | 8C × 32 GB | ≥ 24 GB VRAM | 需要支持 CUDA 的 NVIDIA GPU |
 
-## Step 1 — Clone the repository
+## 第一步：克隆仓库
 
 ```bash
 git clone https://github.com/eosphoros-ai/DB-GPT.git
 cd DB-GPT
 ```
 
-## Step 2 — Install uv
+## 第二步：安装 uv
 
 <Tabs>
   <TabItem value="sh" label="macOS / Linux" default>
@@ -50,13 +50,13 @@ pipx install uv --global
   </TabItem>
 </Tabs>
 
-Verify:
+验证：
 
 ```bash
 uv --version
 ```
 
-## Step 3 — Install dependencies
+## 第三步：安装依赖
 
 <Tabs>
   <TabItem value="openai" label="OpenAI (proxy)" default>
@@ -83,7 +83,7 @@ uv sync --all-packages \
 ```
 
 :::info
-DeepSeek uses the OpenAI-compatible proxy, so the extras are the same as OpenAI.
+DeepSeek 使用 OpenAI 兼容代理，因此所需 extras 与 OpenAI 相同。
 :::
 
   </TabItem>
@@ -116,15 +116,15 @@ uv sync --all-packages \
 </Tabs>
 
 <details>
-<summary><strong>Use the interactive install helper</strong></summary>
+<summary><strong>使用交互式安装辅助工具</strong></summary>
 
-DB-GPT provides an interactive helper to generate the right `uv sync` command:
+DB-GPT 提供了一个交互式辅助工具，用于生成合适的 `uv sync` 命令：
 
 ```bash
 uv run install_help.py install-cmd --interactive
 ```
 
-Or list all available extras:
+或者列出所有可用的 extras：
 
 ```bash
 uv run install_help.py list
@@ -132,39 +132,39 @@ uv run install_help.py list
 
 </details>
 
-## Step 4 — Configure your model
+## 第四步：配置模型
 
-Edit the TOML config file for your chosen provider. See [Model Providers](/docs/getting-started/providers/) for details.
+编辑与你所选 provider 对应的 TOML 配置文件。详情请参考 [Model Providers](/docs/getting-started/providers/)。
 
 <Tabs>
   <TabItem value="openai" label="OpenAI" default>
 
-Edit `configs/dbgpt-proxy-openai.toml`:
+编辑 `configs/dbgpt-proxy-openai.toml`：
 
 ```toml
 [models]
 [[models.llms]]
 name = "chatgpt_proxyllm"
 provider = "proxy/openai"
-api_key = "your-openai-api-key"    # <-- replace
+api_key = "your-openai-api-key"    # <-- 替换为你的 key
 
 [[models.embeddings]]
 name = "text-embedding-3-small"
 provider = "proxy/openai"
-api_key = "your-openai-api-key"    # <-- replace
+api_key = "your-openai-api-key"    # <-- 替换为你的 key
 ```
 
   </TabItem>
   <TabItem value="deepseek" label="DeepSeek">
 
-Edit `configs/dbgpt-proxy-deepseek.toml`:
+编辑 `configs/dbgpt-proxy-deepseek.toml`：
 
 ```toml
 [models]
 [[models.llms]]
 name = "deepseek-reasoner"
 provider = "proxy/deepseek"
-api_key = "your-deepseek-api-key"  # <-- replace
+api_key = "your-deepseek-api-key"  # <-- 替换为你的 key
 
 [[models.embeddings]]
 name = "BAAI/bge-large-zh-v1.5"
@@ -172,13 +172,13 @@ provider = "hf"
 ```
 
 :::info
-If using a HuggingFace embedding, also add `--extra "hf"` and `--extra "cpu"` to the install command.
+如果使用 HuggingFace Embedding，请在安装命令中额外加入 `--extra "hf"` 和 `--extra "cpu"`。
 :::
 
   </TabItem>
   <TabItem value="ollama" label="Ollama">
 
-Make sure [Ollama](https://ollama.ai) is running, then edit `configs/dbgpt-proxy-ollama.toml`:
+请先确保 [Ollama](https://ollama.ai) 已运行，然后编辑 `configs/dbgpt-proxy-ollama.toml`：
 
 ```toml
 [models]
@@ -196,11 +196,11 @@ api_base = "http://localhost:11434"
   </TabItem>
 </Tabs>
 
-:::tip Environment variables
-Use `"${env:OPENAI_API_KEY}"` syntax in TOML to read from environment variables instead of hardcoding keys.
+:::tip 环境变量
+你可以在 TOML 中使用 `"${env:OPENAI_API_KEY}"` 这样的写法从环境变量读取 key，而不是将密钥硬编码到文件里。
 :::
 
-## Step 5 — Start the server
+## 第五步：启动服务
 
 <Tabs>
   <TabItem value="openai" label="OpenAI" default>
@@ -226,32 +226,32 @@ uv run dbgpt start webserver --config configs/dbgpt-proxy-ollama.toml
   </TabItem>
 </Tabs>
 
-## Step 6 — Open the Web UI
+## 第六步：打开 Web UI
 
-Open your browser and visit **[http://localhost:5670](http://localhost:5670)**.
+在浏览器中访问 **[http://localhost:5670](http://localhost:5670)**。
 
-:::tip Verify it works
-If the Web UI loads and you can start a chat conversation, your DB-GPT is running.
+:::tip 验证是否成功
+如果 Web UI 能正常打开，且你可以发起聊天会话，就说明 DB-GPT 已成功运行。
 :::
 
-## Common first-run issues
+## 首次运行常见问题
 
 - **`uv sync` fails**
-  - Re-check Python and uv: [Prerequisites](/docs/getting-started/prerequisites)
-  - If you are in China, use a mirror via `UV_INDEX_URL`
+  - 重新检查 Python 与 uv： [Prerequisites](/docs/getting-started/prerequisites)
+  - 如果你在中国大陆，可通过 `UV_INDEX_URL` 使用镜像源
 - **Provider auth fails**
-  - Verify the selected TOML file under `configs/`
-  - Check the matching provider guide: [Model Providers](/docs/getting-started/providers/)
+  - 确认 `configs/` 下所选 TOML 文件是否正确
+  - 参考对应 provider 指南：[Model Providers](/docs/getting-started/providers/)
 - **Server starts but UI is blank**
-  - Confirm the terminal shows the webserver started cleanly
-  - Check whether another process is already using port `5670`
+  - 确认终端中服务已正常启动且没有报错
+  - 检查是否有其他进程占用了 `5670` 端口
 
-## Database configuration
+## 数据库配置
 
 <Tabs>
   <TabItem value="sqlite" label="SQLite (default)" default>
 
-SQLite is the default — tables are created automatically. No extra setup needed.
+SQLite 是默认选项，相关表会自动创建，无需额外配置。
 
 ```toml
 [service.web.database]
@@ -262,13 +262,13 @@ path = "pilot/meta_data/dbgpt.db"
   </TabItem>
   <TabItem value="mysql" label="MySQL">
 
-1. Create the database:
+1. 创建数据库：
 
 ```bash
 mysql -h127.0.0.1 -uroot -p{your_password} < ./assets/schema/dbgpt.sql
 ```
 
-2. Update your TOML config:
+2. 更新 TOML 配置：
 
 ```toml
 [service.web.database]
@@ -283,7 +283,7 @@ password = "your-password"
   </TabItem>
 </Tabs>
 
-## Load test data (optional)
+## 加载测试数据（可选）
 
 ```bash
 # Linux / macOS
@@ -293,24 +293,24 @@ bash ./scripts/examples/load_examples.sh
 .\scripts\examples\load_examples.bat
 ```
 
-## Run web front-end separately (optional)
+## 单独运行前端（可选）
 
-For front-end development or custom UI work:
+如果你需要进行前端开发或自定义 UI：
 
 ```bash
 cd web && npm install
 cp .env.template .env
-# Edit .env — set API_BASE_URL=http://localhost:5670
+# 编辑 .env，将 API_BASE_URL 设为 http://localhost:5670
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
 
-## Next steps
+## 下一步
 
-| Topic | Link |
+| 主题 | 链接 |
 |---|---|
-| Configure more model providers | [Model Providers](/docs/getting-started/providers/) |
-| Deploy with Docker | [Docker](/docs/getting-started/deploy/docker) |
-| Deploy as a cluster | [Cluster](/docs/getting-started/deploy/cluster) |
-| Explore the Web UI | [Web UI Guide](/docs/getting-started/web-ui/) |
+| 配置更多模型提供方 | [Model Providers](/docs/getting-started/providers/) |
+| 使用 Docker 部署 | [Docker](/docs/getting-started/deploy/docker) |
+| 以集群方式部署 | [Cluster](/docs/getting-started/deploy/cluster) |
+| 了解 Web UI | [Web UI Guide](/docs/getting-started/web-ui/) |

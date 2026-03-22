@@ -1,82 +1,82 @@
 ---
 sidebar_position: 1
-title: Installation Issues
+title: 安装问题
 ---
 
-# Installation Issues
+# 安装问题
 
-Common problems during DB-GPT installation and how to fix them.
+这里整理了 DB-GPT 安装过程中常见的问题及对应的解决方法。
 
-## Python version errors
+## Python 版本错误
 
-**Symptom:** `Python 3.10+ required` or version mismatch errors.
+**现象：** 出现 `Python 3.10+ required` 或版本不匹配相关报错。
 
-**Fix:**
+**解决方法：**
 
 ```bash
 python --version
-# Must be 3.10 or newer
+# 必须为 3.10 或更高版本
 ```
 
-If you have multiple Python versions, specify the version explicitly:
+如果你的环境中存在多个 Python 版本，可以显式指定使用的版本：
 
 ```bash
 uv python pin 3.11
 uv sync --all-packages ...
 ```
 
-## uv not found
+## 找不到 uv
 
-**Symptom:** `command not found: uv`
+**现象：** `command not found: uv`
 
-**Fix:**
+**解决方法：**
 
 ```bash
-# Install uv
+# 安装 uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Verify
+# 验证
 uv --version
 ```
 
-If installed but not found, ensure it's on your PATH:
+如果已经安装但仍然找不到命令，请确认它已加入 PATH：
 
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-## Dependency resolution failures
+## 依赖解析失败
 
-**Symptom:** `uv sync` fails with dependency conflict errors.
+**现象：** `uv sync` 因依赖冲突而失败。
 
-**Fix:**
+**解决方法：**
 
-1. Make sure you're using the latest uv:
+1. 确认你使用的是最新版本的 uv：
 
 ```bash
 uv self update
 ```
 
-2. Clean the cache and retry:
+2. 清理缓存后重试：
 
 ```bash
 uv cache clean
 uv sync --all-packages --extra "base" ...
 ```
 
-3. If using China mirrors, set the index URL:
+3. 如果你使用国内镜像，可以设置索引地址：
 
 ```bash
 UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple uv sync --all-packages ...
 ```
 
-## Build failures for native extensions
+## 原生扩展构建失败
 
-**Symptom:** Compilation errors during `uv sync`, especially for packages like `tokenizers`, `grpcio`, or `psutil`.
+**现象：** 在 `uv sync` 过程中出现编译错误，尤其常见于 `tokenizers`、`grpcio`、`psutil` 等包。
 
-**Fix:**
+**解决方法：**
 
-Install build tools:
+先安装构建工具：
 
 ```bash
 # Ubuntu/Debian
@@ -89,81 +89,81 @@ xcode-select --install
 sudo yum groupinstall "Development Tools"
 ```
 
-For Rust-dependent packages (e.g., `tokenizers`):
+对于依赖 Rust 的包（例如 `tokenizers`）：
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 source $HOME/.cargo/env
 ```
 
-## CUDA / GPU issues
+## CUDA / GPU 问题
 
-**Symptom:** `CUDA not available` or GPU not detected.
+**现象：** `CUDA not available` 或无法检测到 GPU。
 
-**Fix:**
+**解决方法：**
 
-1. Verify CUDA installation:
+1. 验证 CUDA 是否安装正确：
 
 ```bash
 nvidia-smi
-# Should show your GPU and CUDA version
+# 应显示 GPU 信息以及 CUDA 版本
 ```
 
-2. Install the matching CUDA extra:
+2. 安装匹配的 CUDA extra：
 
 ```bash
-# For CUDA 12.1
+# 对应 CUDA 12.1
 uv sync --all-packages --extra "cuda121" ...
 
-# For CUDA 12.4
+# 对应 CUDA 12.4
 uv sync --all-packages --extra "cuda124" ...
 ```
 
-3. Verify PyTorch sees the GPU:
+3. 验证 PyTorch 是否能识别 GPU：
 
 ```bash
 uv run python -c "import torch; print(torch.cuda.is_available())"
 ```
 
-## Port conflicts
+## 端口冲突
 
-**Symptom:** `Address already in use` on port 5670.
+**现象：** 5670 端口提示 `Address already in use`。
 
-**Fix:**
+**解决方法：**
 
 ```bash
-# Find what's using the port
+# 查找占用该端口的进程
 lsof -i :5670
 
-# Kill the process
+# 结束该进程
 kill -9 <PID>
 ```
 
-Or start on a different port:
+或者改用其他端口启动：
 
 ```bash
 uv run dbgpt start webserver --config configs/your-config.toml --port 5671
 ```
 
-## Docker-specific issues
+## Docker 相关问题
 
-### Permission denied
+### 权限不足
 
-**Symptom:** `permission denied` when running Docker commands.
+**现象：** 执行 Docker 命令时出现 `permission denied`。
 
-**Fix:**
+**解决方法：**
 
 ```bash
-# Add your user to the docker group
+# 将当前用户加入 docker 用户组
 sudo usermod -aG docker $USER
-# Log out and back in
+# 退出并重新登录
 ```
 
-### NVIDIA runtime not found
+### 找不到 NVIDIA runtime
 
-**Symptom:** `docker: Error response from daemon: could not select device driver`
+**现象：** `docker: Error response from daemon: could not select device driver`
 
-**Fix:** Install the NVIDIA Container Toolkit:
+**解决方法：** 安装 NVIDIA Container Toolkit：
 
 ```bash
 # Ubuntu
@@ -174,40 +174,40 @@ sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
 sudo systemctl restart docker
 ```
 
-## Database issues
+## 数据库问题
 
-### MySQL connection refused
+### MySQL 连接被拒绝
 
-**Symptom:** `Can't connect to MySQL server` during startup.
+**现象：** 启动时出现 `Can't connect to MySQL server`。
 
-**Fix:**
+**解决方法：**
 
-1. Verify MySQL is running:
+1. 验证 MySQL 是否已启动：
 
 ```bash
 mysql -h127.0.0.1 -uroot -p -e "SELECT 1"
 ```
 
-2. Check config values match your MySQL instance:
+2. 检查配置值是否与你的 MySQL 实例一致：
 
 ```toml
 [service.web.database]
 type = "mysql"
-host = "127.0.0.1"    # Not 'localhost' — use IP
+host = "127.0.0.1"    # 不要写成 'localhost'，请直接使用 IP
 port = 3306
 user = "root"
 database = "dbgpt"
 password = "your-password"
 ```
 
-3. Create the database if it doesn't exist:
+3. 如果数据库不存在，先创建：
 
 ```bash
 mysql -h127.0.0.1 -uroot -p < ./assets/schema/dbgpt.sql
 ```
 
-## Still stuck?
+## 还是没解决？
 
-- Check the detailed [FAQ](/docs/faq/install) for more solutions
-- Search [GitHub Issues](https://github.com/eosphoros-ai/DB-GPT/issues)
-- Ask in [GitHub Discussions](https://github.com/orgs/eosphoros-ai/discussions)
+- 查看更详细的 [FAQ](/docs/faq/install)
+- 搜索 [GitHub Issues](https://github.com/eosphoros-ai/DB-GPT/issues)
+- 在 [GitHub Discussions](https://github.com/orgs/eosphoros-ai/discussions) 中提问

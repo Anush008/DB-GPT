@@ -1,68 +1,68 @@
 ---
 sidebar_position: 0
-title: Web UI Overview
-summary: "What is available in the DB-GPT Web UI and where each main feature lives"
+title: Web UI 总览
+summary: "了解 DB-GPT Web UI 中有哪些主要能力，以及它们分别在哪里"
 read_when:
-  - You already started DB-GPT and want to know what to click first
-  - You want a quick map of chat, knowledge, dashboard, and app screens
+  - 你已经启动了 DB-GPT，想知道先点哪里
+  - 你想快速了解 chat、knowledge、dashboard 和 app 界面的分布
 ---
 
-# Web UI Overview
+# Web UI 总览
 
-DB-GPT ships with a web interface at **[http://localhost:5670](http://localhost:5670)**.
+DB-GPT 默认自带 Web 界面，地址为 **[http://localhost:5670](http://localhost:5670)**。
 
-## Main areas
+## 主要区域
 
-- [Chat](/docs/getting-started/web-ui/chat) — normal chat, data chat, Excel chat, knowledge chat
-- [Knowledge Base](/docs/getting-started/web-ui/knowledge-base) — upload files and build RAG datasets
-- [Dashboard](/docs/getting-started/web-ui/dashboard) — generate charts and reports from natural language
-- [App Management](/docs/getting-started/web-ui/app-management) — create and manage DB-GPT applications
+- [Chat](/docs/getting-started/web-ui/chat) —— 普通对话、数据对话、Excel 对话、知识库对话
+- [Knowledge Base](/docs/getting-started/web-ui/knowledge-base) —— 上传文件并构建 RAG 数据集
+- [Dashboard](/docs/getting-started/web-ui/dashboard) —— 从自然语言生成图表和报告
+- [App Management](/docs/getting-started/web-ui/app-management) —— 创建和管理 DB-GPT 应用
 
-## Feature map
+## 功能地图
 
-| Feature | Description | Section |
+| 功能 | 描述 | 所在区域 |
 |---|---|---|
-| **Chat** | Multi-turn conversation with LLMs | [Chat](/docs/getting-started/web-ui/chat) |
-| **Chat Data** | Natural language queries on connected databases (Text2SQL) | [Chat](/docs/getting-started/web-ui/chat) |
-| **Chat Excel** | Upload and query Excel files with natural language | [Chat](/docs/getting-started/web-ui/chat) |
-| **Chat Knowledge** | RAG conversations over your uploaded documents | [Knowledge Base](/docs/getting-started/web-ui/knowledge-base) |
-| **Dashboard** | Auto-generated charts and reports from data | [Dashboard](/docs/getting-started/web-ui/dashboard) |
-| **App Store** | Browse and install community applications | [App Management](/docs/getting-started/web-ui/app-management) |
-| **AWEL Flow** | Visual workflow editor for building AI pipelines | [AWEL Flow](/docs/getting-started/tools/awel-flow) |
-| **Agent Workspace** | Configure and run multi-agent tasks | [App Management](/docs/getting-started/web-ui/app-management) |
+| **Chat** | 与 LLM 进行多轮对话 | [Chat](/docs/getting-started/web-ui/chat) |
+| **Chat Data** | 基于已连接数据库进行自然语言问数（Text2SQL） | [Chat](/docs/getting-started/web-ui/chat) |
+| **Chat Excel** | 上传并用自然语言分析 Excel 文件 | [Chat](/docs/getting-started/web-ui/chat) |
+| **Chat Knowledge** | 基于上传文档做 RAG 对话 | [Knowledge Base](/docs/getting-started/web-ui/knowledge-base) |
+| **Dashboard** | 自动生成图表和数据报告 | [Dashboard](/docs/getting-started/web-ui/dashboard) |
+| **App Store** | 浏览并安装社区应用 | [App Management](/docs/getting-started/web-ui/app-management) |
+| **AWEL Flow** | 可视化工作流编辑器 | [AWEL Flow](/docs/getting-started/tools/awel-flow) |
+| **Agent Workspace** | 配置并运行多智能体任务 | [App Management](/docs/getting-started/web-ui/app-management) |
 
-## Accessing the Web UI
+## 访问 Web UI
 
-After starting the DB-GPT server, the Web UI is available at:
+启动 DB-GPT 服务后，可以通过以下地址访问 Web UI：
 
 ```
 http://localhost:5670
 ```
 
-:::tip Running the front-end separately
-For front-end development, you can run the Next.js app independently:
+:::tip 单独运行前端
+如果你要做前端开发，也可以单独运行 Next.js 应用：
 
 ```bash
 cd web && npm install
 cp .env.template .env
-# Set API_BASE_URL=http://localhost:5670
+# 设置 API_BASE_URL=http://localhost:5670
 npm run dev
 ```
 
-Then visit [http://localhost:3000](http://localhost:3000).
+然后访问 [http://localhost:3000](http://localhost:3000)。
 :::
 
-## What to try first
+## 建议先尝试什么
 
-1. Open **Chat** and confirm the configured model responds
-2. Open **Knowledge Base** if you want RAG over documents
-3. Open **Dashboard** if you want Text2SQL and charts
-4. Open **Apps** if you want reusable app configurations
+1. 打开 **Chat**，确认配置的模型能正常回复
+2. 如果你想做文档问答，打开 **Knowledge Base**
+3. 如果你想做 Text2SQL 和图表分析，打开 **Dashboard**
+4. 如果你想复用应用配置，打开 **Apps**
 
-## Next steps
+## 下一步
 
-| Topic | Link |
+| 主题 | 链接 |
 |---|---|
-| Start chatting | [Chat](/docs/getting-started/web-ui/chat) |
-| Set up knowledge base | [Knowledge Base](/docs/getting-started/web-ui/knowledge-base) |
-| Build workflows | [AWEL Flow](/docs/getting-started/tools/awel-flow) |
+| 开始聊天 | [Chat](/docs/getting-started/web-ui/chat) |
+| 搭建知识库 | [Knowledge Base](/docs/getting-started/web-ui/knowledge-base) |
+| 构建工作流 | [AWEL Flow](/docs/getting-started/tools/awel-flow) |

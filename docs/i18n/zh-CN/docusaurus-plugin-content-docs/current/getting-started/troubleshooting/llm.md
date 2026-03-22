@@ -1,26 +1,26 @@
 ---
 sidebar_position: 2
-title: Model Issues
+title: 模型问题
 ---
 
-# Model Issues
+# 模型问题
 
-Common problems with model configuration, loading, and generation.
+这里汇总了模型配置、加载和推理过程中常见的问题。
 
-## API key errors
+## API Key 错误
 
-**Symptom:** `401 Unauthorized`, `Invalid API key`, or `Authentication failed`.
+**现象：** `401 Unauthorized`、`Invalid API key` 或 `Authentication failed`。
 
-**Fix:**
+**解决方法：**
 
-1. Verify your API key is correctly set in the TOML config:
+1. 确认你的 API Key 已在 TOML 配置中正确设置：
 
 ```toml
 [[models.llms]]
-api_key = "sk-..."  # Must be a valid key
+api_key = "sk-..."  # 必须为有效的 key
 ```
 
-2. Or use environment variables:
+2. 或者使用环境变量：
 
 ```toml
 [[models.llms]]
@@ -31,109 +31,109 @@ api_key = "${env:OPENAI_API_KEY}"
 export OPENAI_API_KEY="sk-your-actual-key"
 ```
 
-3. Check that the key has sufficient permissions and credits with the provider.
+3. 确认该 Key 在服务提供方侧拥有足够权限，并且账户余额或额度正常。
 
-## Model not found
+## 找不到模型
 
-**Symptom:** `Model 'xxx' not found` or `No model registered`.
+**现象：** `Model 'xxx' not found` 或 `No model registered`。
 
-**Fix:**
+**解决方法：**
 
-1. Check the model name in your config matches the provider's expected format:
+1. 检查配置中的模型名称是否符合服务提供方要求的格式：
 
-| Provider | Example Name |
+| Provider | 示例名称 |
 |---|---|
 | OpenAI | `chatgpt_proxyllm`, `gpt-4o` |
 | DeepSeek | `deepseek-chat`, `deepseek-reasoner` |
-| Ollama | `qwen2.5:latest` (must be pulled first) |
+| Ollama | `qwen2.5:latest`（需先拉取） |
 | HuggingFace | `THUDM/glm-4-9b-chat-hf` |
 
-2. For Ollama, ensure the model is downloaded:
+2. 对于 Ollama，请确认模型已经下载：
 
 ```bash
 ollama pull qwen2.5:latest
-ollama list  # Verify it appears
+ollama list  # 确认列表中已存在
 ```
 
-3. For cluster deployments, verify workers are registered:
+3. 对于集群部署，确认 worker 已注册：
 
 ```bash
 dbgpt model list
 ```
 
-## Ollama connection refused
+## Ollama 连接被拒绝
 
-**Symptom:** `Connection refused` when using Ollama provider.
+**现象：** 使用 Ollama provider 时出现 `Connection refused`。
 
-**Fix:**
+**解决方法：**
 
-1. Ensure Ollama is running:
+1. 确认 Ollama 服务已启动：
 
 ```bash
 ollama serve
-# Or check: curl http://localhost:11434/api/tags
+# 或检查：curl http://localhost:11434/api/tags
 ```
 
-2. If running DB-GPT in Docker, use the host network address instead of `localhost`:
+2. 如果 DB-GPT 运行在 Docker 中，请不要使用 `localhost`，而应改为宿主机地址：
 
 ```toml
 [[models.llms]]
 api_base = "http://host.docker.internal:11434"  # Docker for Mac/Windows
-# Or use the host's actual IP address
+# 或使用宿主机的实际 IP 地址
 ```
 
-## Out of memory (OOM)
+## 内存不足（OOM）
 
-**Symptom:** `CUDA out of memory` or `RuntimeError: CUDA error`.
+**现象：** `CUDA out of memory` 或 `RuntimeError: CUDA error`。
 
-**Fix:**
+**解决方法：**
 
-1. Use a smaller model:
+1. 改用更小的模型：
 
 ```toml
 [[models.llms]]
-name = "Qwen2.5-Coder-0.5B-Instruct"  # Smaller model
+name = "Qwen2.5-Coder-0.5B-Instruct"  # 更小的模型
 ```
 
-2. Enable quantization:
+2. 启用量化：
 
 ```bash
 dbgpt start worker --model_name ... --load_4bit
 ```
 
-3. Limit GPU memory:
+3. 限制 GPU 使用：
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 uv run dbgpt start webserver ...
 ```
 
-4. Or switch to an API proxy (no GPU needed):
+4. 或切换为 API 代理模式（无需本地 GPU）：
 
 ```toml
 [[models.llms]]
-provider = "proxy/openai"  # Uses remote API instead of local GPU
+provider = "proxy/openai"  # 使用远程 API，而不是本地 GPU
 ```
 
-## Slow model responses
+## 模型响应过慢
 
-**Symptom:** Very slow response times or timeouts.
+**现象：** 响应时间很长，或者发生超时。
 
-**Possible causes and fixes:**
+**可能原因及解决方法：**
 
-| Cause | Fix |
+| 原因 | 解决方法 |
 |---|---|
-| Model downloading on first run | Wait for download to complete (check logs) |
-| Insufficient GPU VRAM | Use quantization or a smaller model |
-| Slow network to API | Check connectivity to provider endpoint |
-| Large context window | Reduce `max_context_size` in config |
+| 首次运行时模型仍在下载 | 等待下载完成（查看日志） |
+| GPU 显存不足 | 使用量化或更小的模型 |
+| 到 API 的网络较慢 | 检查与服务端点的连通性 |
+| 上下文窗口过大 | 在配置中降低 `max_context_size` |
 
-## Embedding model errors
+## Embedding 模型错误
 
-**Symptom:** `Embedding model not found` or knowledge base operations fail.
+**现象：** `Embedding model not found`，或知识库相关操作失败。
 
-**Fix:**
+**解决方法：**
 
-1. Ensure an embedding model is configured:
+1. 确认已配置 Embedding 模型：
 
 ```toml
 [[models.embeddings]]
@@ -142,28 +142,28 @@ provider = "proxy/openai"
 api_key = "your-key"
 ```
 
-2. For HuggingFace embeddings, ensure the model is downloaded or accessible:
+2. 对于 HuggingFace Embedding，请确认模型已下载或可访问：
 
 ```toml
 [[models.embeddings]]
 name = "BAAI/bge-large-zh-v1.5"
 provider = "hf"
-# path = "/path/to/local/model"  # Optional: local path
+# path = "/path/to/local/model"  # 可选：本地模型路径
 ```
 
-3. Add the HuggingFace extra if using local embeddings:
+3. 如果使用本地 HuggingFace Embedding，请安装对应 extra：
 
 ```bash
 uv sync --all-packages --extra "hf" --extra "cpu" ...
 ```
 
-## Reranker not working
+## Reranker 不生效
 
-**Symptom:** RAG results not improving with reranker enabled.
+**现象：** 启用 reranker 后，RAG 效果没有改善。
 
-**Fix:**
+**解决方法：**
 
-Ensure reranker is configured in your TOML:
+确认在 TOML 中已配置 reranker：
 
 ```toml
 [[models.rerankers]]
@@ -171,7 +171,7 @@ name = "BAAI/bge-reranker-base"
 provider = "hf"
 ```
 
-Or for SiliconFlow:
+或者使用 SiliconFlow：
 
 ```toml
 [[models.rerankers]]
@@ -180,8 +180,8 @@ provider = "proxy/siliconflow"
 api_key = "${env:SILICONFLOW_API_KEY}"
 ```
 
-## Still stuck?
+## 还是没解决？
 
-- Check [LLM FAQ](/docs/faq/llm) for more solutions
-- Review the [Model Providers](/docs/getting-started/providers/) documentation
-- Search [GitHub Issues](https://github.com/eosphoros-ai/DB-GPT/issues)
+- 查看 [LLM FAQ](/docs/faq/llm)
+- 参考 [Model Providers](/docs/getting-started/providers/) 文档
+- 搜索 [GitHub Issues](https://github.com/eosphoros-ai/DB-GPT/issues)

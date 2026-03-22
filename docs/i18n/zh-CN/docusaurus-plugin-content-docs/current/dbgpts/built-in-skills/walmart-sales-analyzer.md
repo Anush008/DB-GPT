@@ -1,12 +1,12 @@
 # walmart-sales-analyzer
 
-## Overview
+## 概览
 
-`walmart-sales-analyzer` is a built-in analysis skill for Walmart sales datasets.
+`walmart-sales-analyzer` 是一个面向 Walmart 销售数据集的内置分析 skill。
 
-It focuses on trends between weekly sales and unemployment rates, then packages the findings into a business-facing HTML report.
+它重点分析周销售额与失业率之间的关系趋势，并最终生成一份面向业务场景的 HTML 报告。
 
-## Repo path
+## 仓库路径
 
 ```text
 skills/walmart-sales-analyzer/
@@ -22,36 +22,36 @@ skills/walmart-sales-analyzer/
     └── report_template.html
 ```
 
-## When to use it
+## 适用场景
 
-- analyze Walmart sales CSV data
-- explore sales vs unemployment relationships
-- generate comparison charts and trends
-- render a polished business HTML report
+- 分析 Walmart 销售 CSV 数据
+- 研究销售额与失业率之间的关系
+- 生成对比图表与趋势图
+- 输出适合业务阅读的 HTML 报告
 
-## Core workflow
+## 核心工作流
 
-1. Validate that the uploaded file contains Walmart sales data.
-2. Run `generate_html_report.py` or the related chart scripts.
-3. Pass the analysis text and titles into `html_interpreter`.
-4. Render the final report with the bundled template.
+1. 先校验上传文件是否属于 Walmart 销售数据。
+2. 运行 `generate_html_report.py` 或相关图表脚本。
+3. 将分析文本和标题传给 `html_interpreter`。
+4. 使用 skill 自带模板渲染最终报告。
 
-## Important resources
+## 关键资源
 
-| Resource | Purpose |
+| 资源 | 作用 |
 |---|---|
-| `scripts/generate_html_report.py` | End-to-end report generation entry point |
-| `scripts/generate_correlation_heatmap.py` | Correlation analysis chart |
-| `scripts/generate_sales_unemployment_scatter.py` | Sales vs unemployment regression chart |
-| `scripts/generate_time_series_trend.py` | Store trend tracking |
-| `scripts/generate_store_avg_comparison.py` | Average store comparison |
-| `templates/report_template.html` | Final responsive report template |
+| `scripts/generate_html_report.py` | 端到端报告生成入口 |
+| `scripts/generate_correlation_heatmap.py` | 相关性热力图 |
+| `scripts/generate_sales_unemployment_scatter.py` | 销售额与失业率回归散点图 |
+| `scripts/generate_time_series_trend.py` | 门店时间序列趋势图 |
+| `scripts/generate_store_avg_comparison.py` | 门店平均值对比 |
+| `templates/report_template.html` | 最终响应式报告模板 |
 
-## Output expectations
+## 输出预期
 
-This skill emphasizes:
+这个 skill 重点强调：
 
-- visual trend explanation
-- business interpretation
-- regional and store comparison
-- executive summary and recommendations
+- 趋势的可视化解释
+- 面向业务的分析解读
+- 区域与门店对比
+- 执行摘要与建议结论

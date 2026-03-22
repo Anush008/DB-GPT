@@ -5,14 +5,14 @@ title: Ollama
 
 # Ollama
 
-Configure DB-GPT to use [Ollama](https://ollama.ai) for running models locally. Ollama provides the easiest way to run open-source models on your own machine.
+配置 DB-GPT 使用 [Ollama](https://ollama.ai) 在本地运行模型。Ollama 是在个人机器上部署开源模型最简单的方式之一。
 
-## Prerequisites
+## 前置条件
 
-- [Ollama](https://ollama.ai) installed and running
-- DB-GPT installed with `proxy_ollama` extra
+- 已安装并启动 [Ollama](https://ollama.ai)
+- 已安装带 `proxy_ollama` 扩展的 DB-GPT
 
-## Install Ollama
+## 安装 Ollama
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
@@ -40,21 +40,21 @@ Download the installer from [ollama.ai](https://ollama.ai).
   </TabItem>
 </Tabs>
 
-### Pull models
+### 拉取模型
 
 ```bash
-# Pull a chat model
+# 拉取聊天模型
 ollama pull deepseek-r1:1.5b
 
-# Pull an embedding model
+# 拉取 embedding 模型
 ollama pull bge-m3:latest
 ```
 
 :::tip
-Use `ollama list` to see all downloaded models.
+使用 `ollama list` 可以查看已下载模型。
 :::
 
-## Install DB-GPT dependencies
+## 安装 DB-GPT 依赖
 
 ```bash
 uv sync --all-packages \
@@ -65,9 +65,9 @@ uv sync --all-packages \
   --extra "dbgpts"
 ```
 
-## Configuration
+## 配置方式
 
-Edit `configs/dbgpt-proxy-ollama.toml`:
+编辑 `configs/dbgpt-proxy-ollama.toml`：
 
 ```toml
 [models]
@@ -85,53 +85,53 @@ api_key = ""
 ```
 
 :::info
-The `api_key` can be left empty for local Ollama. If running Ollama on a different machine, update `api_base` to point to that host.
+对于本地 Ollama，`api_key` 可以留空。如果 Ollama 运行在另一台机器上，则需要把 `api_base` 改成对应地址。
 :::
 
-## Popular model choices
+## 常见模型选择
 
-### Chat models
+### 聊天模型
 
-| Model | Pull command | Size | Notes |
+| 模型 | 拉取命令 | 大小 | 说明 |
 |---|---|---|---|
-| DeepSeek-R1 1.5B | `ollama pull deepseek-r1:1.5b` | ~1 GB | Small, fast, reasoning |
-| Qwen2.5 7B | `ollama pull qwen2.5:7b` | ~4.7 GB | Good balance |
-| Llama 3.1 8B | `ollama pull llama3.1:8b` | ~4.7 GB | Meta's latest |
-| Mistral 7B | `ollama pull mistral:7b` | ~4.1 GB | Fast general use |
+| DeepSeek-R1 1.5B | `ollama pull deepseek-r1:1.5b` | ~1 GB | 小模型、速度快、推理能力不错 |
+| Qwen2.5 7B | `ollama pull qwen2.5:7b` | ~4.7 GB | 综合平衡较好 |
+| Llama 3.1 8B | `ollama pull llama3.1:8b` | ~4.7 GB | Meta 新一代模型 |
+| Mistral 7B | `ollama pull mistral:7b` | ~4.1 GB | 通用场景、速度快 |
 
-### Embedding models
+### Embedding 模型
 
-| Model | Pull command | Notes |
+| 模型 | 拉取命令 | 说明 |
 |---|---|---|
-| bge-m3 | `ollama pull bge-m3:latest` | Multilingual |
-| nomic-embed-text | `ollama pull nomic-embed-text` | English-focused |
+| bge-m3 | `ollama pull bge-m3:latest` | 多语言 |
+| nomic-embed-text | `ollama pull nomic-embed-text` | 更偏英文场景 |
 
-## Start the server
+## 启动服务
 
-Make sure Ollama is running first:
+先确保 Ollama 已经在运行：
 
 ```bash
-# Start Ollama (if not running as a service)
+# 如果没有以服务方式启动，则手动启动 Ollama
 ollama serve
 ```
 
-Then start DB-GPT:
+然后启动 DB-GPT：
 
 ```bash
 uv run dbgpt start webserver --config configs/dbgpt-proxy-ollama.toml
 ```
 
-## Troubleshooting
+## 故障排查
 
-| Issue | Solution |
+| 问题 | 解决方法 |
 |---|---|
-| Connection refused | Ensure Ollama is running: `ollama serve` |
-| Model not found | Pull the model first: `ollama pull model-name` |
-| Slow responses | Try a smaller model or ensure GPU is being used |
-| Out of memory | Use a smaller quantized model (e.g., `qwen2.5:7b-q4_0`) |
+| Connection refused | 确认 Ollama 已启动：`ollama serve` |
+| Model not found | 先执行 `ollama pull model-name` 拉取模型 |
+| 响应较慢 | 尝试更小模型，或确认是否使用了 GPU |
+| 内存不足 | 换更小的量化模型，例如 `qwen2.5:7b-q4_0` |
 
-## What's next
+## 下一步
 
-- [Getting Started](/docs/getting-started/quick-start) — Full setup walkthrough
-- [Ollama Advanced](/docs/installation/advanced_usage/ollama) — Advanced Ollama configuration
-- [Model Providers](/docs/getting-started/providers/) — Try other providers
+- [Getting Started](/docs/getting-started/quick-start) —— 查看完整首跑流程
+- [Ollama Advanced](/docs/installation/advanced_usage/ollama) —— 查看 Ollama 进阶配置
+- [Model Providers](/docs/getting-started/providers/) —— 继续查看其他提供方
