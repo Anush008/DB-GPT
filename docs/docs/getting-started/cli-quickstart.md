@@ -26,7 +26,7 @@ The default installation includes the **core framework** (CLI, FastAPI, SQLAlche
 **OpenAI-compatible LLM support** (also works with Kimi, Qwen, MiniMax, Z.AI),
 **DashScope / Tongyi** support, **RAG document parsing**, and **ChromaDB** vector store.
 
-Need additional providers or data sources? See [Optional Modules](#optional-modules).
+Need additional providers or data sources? See [Optional Modules](#7-optional-modules).
 :::
 
 After installation the `dbgpt` command is available in your terminal.

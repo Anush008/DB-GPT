@@ -15,6 +15,18 @@
     "message": "安装部署",
     "description": "The label for category Installation in sidebar docsSidebar"
   },
+  "sidebar.docsSidebar.doc.Quick Install": {
+    "message": "快速安装",
+    "description": "The label for the doc item Quick Install in sidebar docsSidebar, linking to the doc installation/quick-install"
+  },
+  "sidebar.docsSidebar.doc.CLI Install": {
+    "message": "CLI 安装",
+    "description": "The label for the doc item CLI Install in sidebar docsSidebar, linking to the doc getting-started/cli-quickstart"
+  },
+  "sidebar.docsSidebar.doc.Source Install": {
+    "message": "源码安装",
+    "description": "The label for the doc item Source Install in sidebar docsSidebar, linking to the doc getting-started/deploy/source-code"
+  },
   "sidebar.docsSidebar.category.Model Service Deployment": {
     "message": "模型服务部署",
     "description": "The label for category Model Service Deployment in sidebar docsSidebar"
