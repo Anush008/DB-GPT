@@ -31,6 +31,8 @@
 3. 生成图表与指标结果
 4. 使用 `html_interpreter` 渲染最终报告
 
+![财报分析 Skill 示例](/img/skill/use_financial_report_analysis_skill_zh.png)
+
 ### CSV / Excel 分析
 
 智能体可以：
@@ -39,6 +41,9 @@
 2. 检查上传文件
 3. 使用 Python 分析计算指标并可视化结果
 4. 如果需要，再将结果渲染为报告
+
+![CSV 数据分析 Skill 示例](/img/skill/use_csv_data_skill_zh.png)
+
 
 ## 最佳实践
 

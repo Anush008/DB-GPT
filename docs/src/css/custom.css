@@ -51,7 +51,7 @@ html {
   background:
     radial-gradient(820px 520px at 8% -10%, rgba(255, 79, 64, 0.045), transparent 60%),
     radial-gradient(900px 560px at 100% 0%, rgba(15, 107, 76, 0.04), transparent 60%),
-    linear-gradient(180deg, #fbf4e7 0%, #fffaf0 34%, #fffdf8 100%);
+    color-mix(in srgb, var(--ifm-background-surface-color) 88%, transparent);
 }
 
 body {
@@ -98,7 +98,7 @@ html[data-theme='dark'] {
   background:
     radial-gradient(820px 520px at 10% -10%, rgba(255, 79, 64, 0.08), transparent 60%),
     radial-gradient(920px 540px at 100% 0%, rgba(95, 223, 162, 0.05), transparent 62%),
-    linear-gradient(180deg, #0b1a22 0%, #0a1720 36%, #0e231f 100%);
+    color-mix(in srgb, var(--ifm-background-surface-color) 88%, transparent);
 }
 
 /* GitHub */

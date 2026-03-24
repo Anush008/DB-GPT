@@ -535,7 +535,7 @@ const sidebars = {
     {
       type: "category",
       label: "Built-in Skills",
-      collapsed: false,
+      collapsed: true,
       collapsible: true,
       items: [
         { type: "doc", id: "dbgpts/built-in-skills/overview", label: "Overview" },
@@ -547,6 +547,7 @@ const sidebars = {
       ],
     },
     { type: "doc", id: "dbgpts/how-to-use-skill", label: "How to Use Skill" },
+    { type: "doc", id: "dbgpts/how-to-use-custom-skill", label: "Use Custom Skills" },
   ],
 
   sidebarDatasources: [
@@ -872,6 +873,7 @@ module.exports = {
       label: "Installation",
       collapsed: true,
       collapsible: true,
+      link: { type: "doc", id: "installation/index" },
       items: sidebars.sidebarInstallation[0].items,
     },
     {

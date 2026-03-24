@@ -208,7 +208,9 @@ uv run dbgpt start webserver --config configs/dbgpt-local-glm.toml
 
 打开浏览器并访问：`http://localhost:5670`
 
-![](../../../static/img/data_analysis/app.png)
+<p align="left">
+  <img src={'/img/data_analysis/app.png'} width="720px" />
+</p>
 
 ### 4.1 知识库接入
 
@@ -216,59 +218,81 @@ uv run dbgpt start webserver --config configs/dbgpt-local-glm.toml
 
 点击“应用管理”，选择“知识库”
 
-![](../../../static/img/data_analysis/5_1_1.png)
+<p align="left">
+  <img src={'/img/data_analysis/5_1_1.png'} width="720px" />
+</p>
 
 2. 创建知识库
 
-![](../../../static/img/data_analysis/5_1_2.png)
+<p align="left">
+  <img src={'/img/data_analysis/5_1_2.png'} width="720px" />
+</p>
 
 3. 知识库配置
 
 填写相关配置信息。
 
-![](../../../static/img/data_analysis/5_1_3.png)
+<p align="left">
+  <img src={'/img/data_analysis/5_1_3.png'} width="720px" />
+</p>
 
 4. 知识库类型
 
 此处选择文档。
 
-![](../../../static/img/data_analysis/5_1_4.png)
+<p align="left">
+  <img src={'/img/data_analysis/5_1_4.png'} width="720px" />
+</p>
 
 5. 上传
 
 此处上传提前准备好的`指标.txt`文档。
 
-![](../../../static/img/data_analysis/5_1_5.png)
+<p align="left">
+  <img src={'/img/data_analysis/5_1_5.png'} width="720px" />
+</p>
 
 6. 分片
 
 分片策略选择"separator"，分隔符设置为"###"。
 
-![](../../../static/img/data_analysis/5_1_6.png)
+<p align="left">
+  <img src={'/img/data_analysis/5_1_6.png'} width="720px" />
+</p>
 
 7. 成功创建知识库
 
-![](../../../static/img/data_analysis/5_1_7.png)
+<p align="left">
+  <img src={'/img/data_analysis/5_1_7.png'} width="720px" />
+</p>
 
 ### 4.2 创建数据库
 
 1. 选择数据库
 
-![](../../../static/img/data_analysis/5_2_1.png)
+<p align="left">
+  <img src={'/img/data_analysis/5_2_1.png'} width="720px" />
+</p>
 
 2. 添加数据源
 
-![](../../../static/img/data_analysis/5_2_2.png)
+<p align="left">
+  <img src={'/img/data_analysis/5_2_2.png'} width="720px" />
+</p>
 
 3. 配置数据源
 
 配置准备好的数据库连接信息。
 
-![](../../../static/img/data_analysis/5_2_3.png)
+<p align="left">
+  <img src={'/img/data_analysis/5_2_3.png'} width="720px" />
+</p>
 
 4. 添加成功
 
-![](../../../static/img/data_analysis/5_2_4.png)
+<p align="left">
+  <img src={'/img/data_analysis/5_2_4.png'} width="720px" />
+</p>
 
 
 
@@ -278,49 +302,65 @@ uv run dbgpt start webserver --config configs/dbgpt-local-glm.toml
 
 点击“创建应用”
 
-![](../../../static/img/data_analysis/5_3_1.png)
+<p align="left">
+  <img src={'/img/data_analysis/5_3_1.png'} width="720px" />
+</p>
 
 2. 基础配置
 
 选择“多智能体自动规划模式”，并输入应用名称和对应描述。
 
-![](../../../static/img/data_analysis/5_3_2.png)
+<p align="left">
+  <img src={'/img/data_analysis/5_3_2.png'} width="720px" />
+</p>
 
 3. 加入`MetricInfoRetriever`
 
 选取`MetricInfoRetriever`，并配置知识库资源。
 
-![](../../../static/img/data_analysis/5_3_3.png)
+<p align="left">
+  <img src={'/img/data_analysis/5_3_3.png'} width="720px" />
+</p>
 
 4. 加入`DataScientist`
 
 选取`DataScientist`，并配置数据库资源。
 
-![](../../../static/img/data_analysis/5_3_4.png)
+<p align="left">
+  <img src={'/img/data_analysis/5_3_4.png'} width="720px" />
+</p>
 
 5. 加入`AnomalyDetector`
 
 选取`AnomalyDetector`。
 
-![](../../../static/img/data_analysis/5_3_5.png)
+<p align="left">
+  <img src={'/img/data_analysis/5_3_5.png'} width="720px" />
+</p>
 
 6. 加入`VolatilityAnalyzer`
 
 选取`VolatilityAnalyzer`，并配置数据库资源。
 
-![](../../../static/img/data_analysis/5_3_6.png)
+<p align="left">
+  <img src={'/img/data_analysis/5_3_6.png'} width="720px" />
+</p>
 
 7. 加入`ReportGenerator`
 
 选取`ReportGenerator`。
 
-![](../../../static/img/data_analysis/5_3_7.png)
+<p align="left">
+  <img src={'/img/data_analysis/5_3_7.png'} width="720px" />
+</p>
 
 8. 保存
 
 点击“保存”。
 
-![](../../../static/img/data_analysis/5_3_8.png)
+<p align="left">
+  <img src={'/img/data_analysis/5_3_8.png'} width="720px" />
+</p>
 
 ### 4.4 使用
 
@@ -328,20 +368,28 @@ uv run dbgpt start webserver --config configs/dbgpt-local-glm.toml
 
 点击“开始对话”。
 
-![](../../../static/img/data_analysis/5_4_1.png)
+<p align="left">
+  <img src={'/img/data_analysis/5_4_1.png'} width="720px" />
+</p>
 
 2. 提问
 
 在输入框中输入问题，如“请帮我分析订单数量2012年 年环比增长情况”，点击发送。
 
-![](../../../static/img/data_analysis/5_4_2.png)
+<p align="left">
+  <img src={'/img/data_analysis/5_4_2.png'} width="720px" />
+</p>
 
 3. 回答
 
-![](../../../static/img/data_analysis/5_4_3.png)
+<p align="left">
+  <img src={'/img/data_analysis/5_4_3.png'} width="720px" />
+</p>
 
 4. 报告生成
 
 最终生成分析报告。
 
-![](../../../static/img/data_analysis/5_4_4.png)
+<p align="left">
+  <img src={'/img/data_analysis/5_4_4.png'} width="720px" />
+</p>

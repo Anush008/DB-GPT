@@ -9,12 +9,11 @@ In DB-GPT, a skill is a reusable capability package that gives an agent a struct
 Instead of relying only on free-form reasoning, a skill provides a stable execution pattern for a specific kind of work.
 
 <img
-  src="https://github.com/user-attachments/assets/39f39c36-a014-4a2e-8e14-b3af3f1d2f1c"
+  src="/img/skill/skill_list.png"
   alt="DB-GPT skills overview"
   className="showcase-hero-image"
 />
 
-> The originally shared image source is no longer reachable. This page now uses a working DB-GPT skills screenshot from the current project README. If you want the exact screenshot from your attachment, send me a usable file path or re-upload it and I will swap it to a local asset.
 
 ## Skill definition
 

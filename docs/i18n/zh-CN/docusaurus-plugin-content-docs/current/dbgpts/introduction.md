@@ -9,12 +9,10 @@
 相比只依赖自由推理，skill 为特定类型的工作提供了更稳定、更可重复的执行模式。
 
 <img
-  src="https://github.com/user-attachments/assets/39f39c36-a014-4a2e-8e14-b3af3f1d2f1c"
+  src="/img/skill/skill_list_zh.png"
   alt="DB-GPT 技能总览"
   className="showcase-hero-image"
 />
-
-> 原始分享的图片地址已经失效。当前页面改为使用项目 README 中可正常访问的 DB-GPT skills 截图。如果你希望替换成你之前附件里的原始图片，请提供可用文件路径或重新上传，我可以改成仓库本地资源。
 
 ## Skill 的定义
 

@@ -31,6 +31,8 @@ The agent can:
 3. generate charts and metrics
 4. use `html_interpreter` to render the final report
 
+![Financial Report Analysis Skill Example](/img/skill/use_financial_report_analysis_skill.png)
+
 ### CSV / Excel analysis
 
 The agent can:
@@ -39,6 +41,8 @@ The agent can:
 2. inspect the uploaded file
 3. use Python analysis to calculate metrics and visualize results
 4. render the output as a report if needed
+
+![CSV Data Analysis Skill Example](/img/skill/use_csv_data_skill.png)
 
 ## Good practices
 
