@@ -55,6 +55,10 @@
     "message": "数据源",
     "description": "The label for category Datasources in sidebar docsSidebar"
   },
+  "sidebar.docsSidebar.category.Application": {
+    "message": "应用管理",
+    "description": "The label for category Application in sidebar docsSidebar"
+  },
   "sidebar.docsSidebar.category.App Guides": {
     "message": "应用指南",
     "description": "The label for category App Guides in sidebar docsSidebar"
@@ -307,8 +311,12 @@
     "message": "GraphRAG",
     "description": "The label for the doc item GraphRAG in sidebar docsSidebar, linking to the doc application/graph_rag"
   },
+  "sidebar.docsSidebar.doc.App Manage": {
+    "message": "应用管理",
+    "description": "The label for the doc item App Manage in sidebar docsSidebar, linking to the doc application/apps/app_manage"
+  },
   "sidebar.docsSidebar.doc.Chat Knowledge Base": {
-    "message": "Chat Knowledge Base",
+    "message": "知识库对话",
     "description": "The label for the doc item Chat Knowledge Base in sidebar docsSidebar, linking to the doc application/apps/chat_knowledge"
   },
   "sidebar.docsSidebar.doc.Advanced RAG": {
@@ -370,5 +378,53 @@
   "sidebar.docsSidebar.doc.Use Cases": {
     "message": "使用案例",
     "description": "The label for the doc item Use Cases in sidebar docsSidebar, linking to the doc use_cases"
+  },
+  "sidebar.sidebarApplication.category.App Guides": {
+    "message": "应用指南",
+    "description": "The label for category App Guides in sidebar sidebarApplication"
+  },
+  "sidebar.sidebarApplication.category.Functional Components": {
+    "message": "功能组件",
+    "description": "The label for category Functional Components in sidebar sidebarApplication"
+  },
+  "sidebar.sidebarApplication.doc.App Manage": {
+    "message": "应用管理",
+    "description": "The label for the doc item App Manage in sidebar sidebarApplication, linking to the doc application/apps/app_manage"
+  },
+  "sidebar.sidebarApplication.doc.Chat Knowledge Base": {
+    "message": "知识库对话",
+    "description": "The label for the doc item Chat Knowledge Base in sidebar sidebarApplication, linking to the doc application/apps/chat_knowledge"
+  },
+  "sidebar.sidebarApplication.doc.Chat Data": {
+    "message": "Chat Data",
+    "description": "The label for the doc item Chat Data in sidebar sidebarApplication, linking to the doc application/apps/chat_data"
+  },
+  "sidebar.sidebarApplication.doc.Chat DB": {
+    "message": "Chat DB",
+    "description": "The label for the doc item Chat DB in sidebar sidebarApplication, linking to the doc application/apps/chat_db"
+  },
+  "sidebar.sidebarApplication.doc.Chat Excel": {
+    "message": "Chat Excel",
+    "description": "The label for the doc item Chat Excel in sidebar sidebarApplication, linking to the doc application/apps/chat_excel"
+  },
+  "sidebar.sidebarApplication.doc.Chat Dashboard": {
+    "message": "Chat Dashboard",
+    "description": "The label for the doc item Chat Dashboard in sidebar sidebarApplication, linking to the doc application/apps/chat_dashboard"
+  },
+  "sidebar.sidebarApplication.doc.Prompts": {
+    "message": "提示词",
+    "description": "The label for the doc item Prompts in sidebar sidebarApplication, linking to the doc application/prompts"
+  },
+  "sidebar.sidebarApplication.doc.LLMs": {
+    "message": "模型管理",
+    "description": "The label for the doc item LLMs in sidebar sidebarApplication, linking to the doc application/llms"
+  },
+  "sidebar.sidebarApplication.doc.Use Data App With AWEL": {
+    "message": "使用 AWEL 构建数据应用",
+    "description": "The label for the doc item Use Data App With AWEL in sidebar sidebarApplication, linking to the doc application/awel"
+  },
+  "sidebar.sidebarApplication.doc.Benchmark": {
+    "message": "基准测试",
+    "description": "The label for the doc item Benchmark in sidebar sidebarApplication, linking to the doc modules/benchmark"
   }
 }

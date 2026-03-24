@@ -154,6 +154,8 @@ const sidebars = {
             {
               type: "category",
               label: "Datasource Integrations",
+              collapsed: true,
+              collapsible: true,
               items: [
                 { type: "doc", id: "installation/integrations/mysql_install" },
                 { type: "doc", id: "installation/integrations/sqlite_install" },
@@ -406,6 +408,7 @@ const sidebars = {
           type: "category",
           label: "Datasource Integrations",
           collapsed: true,
+          collapsible: true,
           items: [
             { type: "doc", id: "installation/integrations/clickhouse_install" },
             { type: "doc", id: "installation/integrations/postgres_install" },
@@ -556,8 +559,8 @@ const sidebars = {
     {
       type: "category",
       label: "Datasource Integrations",
-      collapsed: false,
-      collapsible: false,
+      collapsed: true,
+      collapsible: true,
       items: [
         { type: "doc", id: "installation/integrations/mysql_install" },
         { type: "doc", id: "installation/integrations/sqlite_install" },
@@ -574,17 +577,34 @@ const sidebars = {
         { type: "doc", id: "installation/integrations/vertica_install" },
       ],
     },
+  ],
+
+  sidebarApplication: [
     {
       type: "category",
       label: "App Guides",
       collapsed: false,
-      collapsible: false,
+      collapsible: true,
       items: [
+        { type: "doc", id: "application/apps/app_manage", label: "App Manage" },
         { type: "doc", id: "application/apps/chat_data", label: "Chat Data" },
         { type: "doc", id: "application/apps/chat_db", label: "Chat DB" },
         { type: "doc", id: "application/apps/chat_excel", label: "Chat Excel" },
+        { type: "doc", id: "application/apps/chat_knowledge", label: "Chat Knowledge Base" },
         { type: "doc", id: "application/apps/chat_dashboard", label: "Chat Dashboard" },
         { type: "doc", id: "application/apps/chat_financial_report" },
+      ],
+    },
+    {
+      type: "category",
+      label: "Functional Components",
+      collapsed: false,
+      collapsible: true,
+      items: [
+        { type: "doc", id: "application/prompts", label: "Prompts" },
+        { type: "doc", id: "application/llms", label: "LLMs" },
+        { type: "doc", id: "application/awel", label: "Use Data App With AWEL" },
+        { type: "doc", id: "modules/benchmark", label: "Benchmark" },
       ],
     },
   ],
@@ -777,6 +797,75 @@ const sidebars = {
     },
   ],
 
+  sidebarDevelopmentGuide: [
+    {
+      type: "category",
+      label: "Agents",
+      collapsed: true,
+      items: [
+        { type: "doc", id: "agents/introduction/introduction", label: "Data Driven Multi-Agents" },
+        { type: "doc", id: "agents/introduction/tools_use", label: "Tool Use" },
+        { type: "doc", id: "agents/introduction/planning", label: "Planning" },
+        { type: "doc", id: "agents/introduction/conversation", label: "Conversation" },
+        { type: "doc", id: "agents/introduction/custom_agents", label: "Custom Agents" },
+        {
+          type: "category",
+          label: "Agent Modules",
+          collapsed: true,
+          items: [
+            {
+              type: "category",
+              label: "Profile",
+              collapsed: true,
+              items: [
+                { type: "doc", id: "agents/modules/profile/profile" },
+                { type: "doc", id: "agents/modules/profile/profile_creation" },
+                { type: "doc", id: "agents/modules/profile/profile_to_prompt" },
+                { type: "doc", id: "agents/modules/profile/profile_dynamic" },
+              ],
+            },
+            {
+              type: "category",
+              label: "Memory",
+              collapsed: true,
+              items: [
+                { type: "doc", id: "agents/modules/memory/memory" },
+                { type: "doc", id: "agents/modules/memory/sensory_memory" },
+                { type: "doc", id: "agents/modules/memory/short_term_memory" },
+                { type: "doc", id: "agents/modules/memory/long_term_memory" },
+                { type: "doc", id: "agents/modules/memory/hybrid_memory" },
+              ],
+            },
+            {
+              type: "category",
+              label: "Plan",
+              collapsed: true,
+              items: [{ type: "doc", id: "agents/modules/plan/plan" }],
+            },
+            {
+              type: "category",
+              label: "Action",
+              collapsed: true,
+              items: [{ type: "doc", id: "agents/modules/action/action" }],
+            },
+            {
+              type: "category",
+              label: "Resource",
+              collapsed: true,
+              items: [
+                { type: "doc", id: "agents/modules/resource/resource" },
+                { type: "doc", id: "agents/modules/resource/tools" },
+                { type: "doc", id: "agents/modules/resource/database" },
+                { type: "doc", id: "agents/modules/resource/knowledge" },
+                { type: "doc", id: "agents/modules/resource/pack" },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+
   sidebarReference: [
     {
       type: "category",
@@ -819,7 +908,6 @@ const sidebars = {
     },
     { type: "doc", id: "modules/visual", label: "Visual" },
     { type: "doc", id: "modules/eval", label: "Evaluation" },
-    { type: "doc", id: "modules/benchmark", label: "Benchmark" },
   ],
 
   sidebarHelp: [
@@ -892,6 +980,13 @@ module.exports = {
     },
     {
       type: "category",
+      label: "Application",
+      collapsed: true,
+      collapsible: true,
+      items: sidebars.sidebarApplication,
+    },
+    {
+      type: "category",
       label: "Sandbox",
       collapsed: true,
       collapsible: true,
@@ -931,6 +1026,13 @@ module.exports = {
       collapsed: true,
       collapsible: true,
       items: sidebars.sidebarReference,
+    },
+    {
+      type: "category",
+      label: "Development Guide",
+      collapsed: true,
+      collapsible: true,
+      items: sidebars.sidebarDevelopmentGuide,
     },
     {
       type: "category",
