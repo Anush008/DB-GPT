@@ -49,6 +49,7 @@ EOF
       cat <<'EOF'
 base
 proxy_openai
+proxy_tongyi
 rag
 storage_chromadb
 dbgpts
@@ -67,6 +68,7 @@ EOF
       cat <<'EOF'
 base
 proxy_openai
+proxy_zhipuai
 rag
 storage_chromadb
 dbgpts
