@@ -29,7 +29,7 @@ pip install dbgpt-app
 :::info 默认包含内容
 默认安装会包含 **核心框架**（CLI、FastAPI、SQLAlchemy、Agent）、**OpenAI 兼容 LLM 支持**（也适用于 Kimi、Qwen、MiniMax、Z.AI）、**DashScope / Tongyi** 支持、**RAG 文档解析** 和 **ChromaDB** 向量存储。
 
-如果你需要更多 provider 或数据源，可参考 [可选模块](#7-可选模块)。
+如果你需要更多 provider 或数据源，可参考 [可选模块](#8-可选模块)。
 :::
 
 安装完成后，终端中就可以直接使用 `dbgpt` 命令。
@@ -46,7 +46,7 @@ dbgpt start
 2. 输入 API Key（或改用环境变量）
 3. 确认模型名称和 API Base URL
 
-完成后，系统会把 TOML 配置写入 `~/.dbgpt/configs/<profile>.toml`，并自动启动 webserver。然后打开浏览器访问 `http://localhost:5670`。
+完成后，系统会把 TOML 配置写入 `~/.dbgpt/configs/<profile>.toml`，并自动启动 webserver。
 
 ### 启动后的样子
 
@@ -66,9 +66,13 @@ dbgpt start
    +- - - - - - - - - - - - - - - - - - - - - - - -+
 ```
 
+## 3. 打开 Web UI
+
+然后打开 [http://localhost:5670](http://localhost:5670)。
+
 ---
 
-## 3. 命令参考
+## 4. 命令参考
 
 ### 总览
 
@@ -234,7 +238,7 @@ dbgpt profile delete minimax --yes  # 跳过确认
 
 ---
 
-## 4. 支持的 Providers
+## 5. 支持的 Providers
 
 配置向导和 `--profile` 参数支持以下 provider：
 
@@ -253,7 +257,7 @@ dbgpt profile delete minimax --yes  # 跳过确认
 
 ---
 
-## 5. 目录结构
+## 6. 目录结构
 
 首次运行后，DB-GPT 会在用户目录下创建如下结构：
 
@@ -286,7 +290,7 @@ dbgpt profile delete minimax --yes  # 跳过确认
 
 ---
 
-## 6. 常见工作流
+## 7. 常见工作流
 
 ### 首次安装
 
@@ -329,7 +333,7 @@ dbgpt setup --profile custom
 
 ---
 
-## 7. 可选模块
+## 8. 可选模块
 
 默认 `pip install dbgpt-app` 会包含核心框架。你也可以通过 extras 为 LLM provider、vector store、data source 等增加能力。
 
@@ -391,7 +395,7 @@ pip install dbgpt-app
 
 ---
 
-## 8. 故障排查
+## 9. 故障排查
 
 ### 端口已被占用
 

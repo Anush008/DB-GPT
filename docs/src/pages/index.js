@@ -15,14 +15,14 @@ const featureGroups = [
       },
       {
         title: 'Getting Started',
-        description: 'Set up DB-GPT quickly with our step-by-step installation guide.',
-        link: '/docs/getting-started',
+        description: 'Get DB-GPT running in minutes with the one-line installer.',
+        link: '/docs/installation',
         icon: '🚀',
       },
       {
-        title: 'Quickstart',
-        description: 'Get DB-GPT running in minutes with the one-line installer.',
-        link: '/docs/quickstart',
+        title: 'Show Cases',
+        description: 'Explore real-world use cases and examples powered by DB-GPT.',
+        link: '/docs/use_cases',
         icon: '⚡',
       },
     ],
@@ -33,20 +33,20 @@ const featureGroups = [
       {
         title: 'Source Code',
         description: 'Install from source with full control over your deployment.',
-        link: '/docs/installation/sourcecode',
+        link: '/docs/getting-started/deploy/source-code',
         icon: '💻',
       },
       {
-        title: 'Docker',
+        title: 'CLI Quick Start',
+        description: 'Get started quickly with the DB-GPT CLI.',
+        link: '/docs/getting-started/cli-quickstart',
+        icon: '🔧',
+      },
+      {
+        title: 'Docker Deployment',
         description: 'Deploy with Docker for quick and isolated setup.',
         link: '/docs/installation/docker',
         icon: '🐳',
-      },
-      {
-        title: 'Docker Compose',
-        description: 'Multi-container deployment with Docker Compose.',
-        link: '/docs/installation/docker_compose',
-        icon: '🔧',
       },
     ],
   },
@@ -56,20 +56,55 @@ const featureGroups = [
       {
         title: 'Agents',
         description: 'Build autonomous AI agents for complex data tasks.',
-        link: '/docs/agents',
+        link: '/docs/getting-started/concepts/agents',
         icon: '🤖',
       },
       {
         title: 'AWEL',
         description: 'Agentic Workflow Expression Language for orchestration.',
-        link: '/docs/awel',
+        link: '/docs/getting-started/concepts/awel',
         icon: '🔄',
       },
       {
         title: 'RAG',
         description: 'Retrieval-Augmented Generation for knowledge-enhanced AI.',
-        link: '/docs/rag',
+        link: '/docs/getting-started/concepts/rag',
         icon: '🧠',
+      },
+      {
+        title: 'SMMF',
+        description: 'Service-oriented Multi-model Management Framework.',
+        link: '/docs/getting-started/concepts/smmf',
+        icon: '🔌',
+      },
+    ],
+  },
+  {
+    title: 'Core Components',
+    items: [
+      {
+        title: 'Skills',
+        description: 'Reusable skill packages for domain-specific tasks.',
+        link: '/docs/dbgpts/introduction',
+        icon: '🧩',
+      },
+      {
+        title: 'DataSources',
+        description: 'Connect to databases, warehouses, and data platforms.',
+        link: '/docs/modules/connections',
+        icon: '🔗',
+      },
+      {
+        title: 'Sandbox',
+        description: 'Secure sandboxed environments for code execution.',
+        link: '/docs/sandbox/',
+        icon: '📦',
+      },
+      {
+        title: 'Knowledge',
+        description: 'Build and manage knowledge bases for RAG.',
+        link: '/docs/modules/rag',
+        icon: '📚',
       },
     ],
   },
@@ -79,7 +114,7 @@ const featureGroups = [
       {
         title: 'Chat with Data',
         description: 'Natural language queries to your databases.',
-        link: '/docs/application/app_usage',
+        link: '/docs/application/apps/chat_data',
         icon: '💬',
       },
       {
@@ -91,7 +126,7 @@ const featureGroups = [
       {
         title: 'AWEL Flows',
         description: 'Build and run agentic workflows visually.',
-        link: '/docs/application/awel_flow_usage',
+        link: '/docs/application/awel',
         icon: '🎯',
       },
     ],
@@ -153,7 +188,6 @@ export default function Home() {
         <div className="homepage-hero">
           <div className="homepage-hero-content">
             <img src={logoSrc} alt="DB-GPT Logo" className="homepage-hero-logo" />
-            <h1 className="homepage-hero-title">DB-GPT</h1>
             <p className="homepage-hero-tagline">
               Open-Source Agentic AI Data Assistant
             </p>
@@ -162,7 +196,7 @@ export default function Home() {
               and turn analysis into reports, insights, and action.
             </p>
             <div className="homepage-hero-buttons">
-              <Link to="/docs/quickstart" className="homepage-button homepage-button-primary">
+              <Link to="/docs/installation" className="homepage-button homepage-button-primary">
                 Get Started
               </Link>
               <Link to="/docs/overview" className="homepage-button homepage-button-secondary">

@@ -27,6 +27,22 @@
     "message": "源码安装",
     "description": "The label for the doc item Source Install in sidebar docsSidebar, linking to the doc getting-started/deploy/source-code"
   },
+  "sidebar.docsSidebar.category.Docker Deployment": {
+    "message": "Docker 部署",
+    "description": "The label for category Docker Deployment in sidebar docsSidebar"
+  },
+  "sidebar.docsSidebar.doc.Docker": {
+    "message": "Docker",
+    "description": "The label for the doc item Docker in sidebar docsSidebar, linking to the doc installation/docker"
+  },
+  "sidebar.docsSidebar.doc.Docker Compose": {
+    "message": "Docker Compose",
+    "description": "The label for the doc item Docker Compose in sidebar docsSidebar, linking to the doc installation/docker_compose"
+  },
+  "sidebar.docsSidebar.doc.Docker Build Guide": {
+    "message": "Docker 镜像构建",
+    "description": "The label for the doc item Docker Build Guide in sidebar docsSidebar, linking to the doc installation/docker-build-guide"
+  },
   "sidebar.docsSidebar.category.Model Service Deployment": {
     "message": "模型服务部署",
     "description": "The label for category Model Service Deployment in sidebar docsSidebar"
@@ -426,5 +442,13 @@
   "sidebar.sidebarApplication.doc.Benchmark": {
     "message": "基准测试",
     "description": "The label for the doc item Benchmark in sidebar sidebarApplication, linking to the doc modules/benchmark"
+  },
+  "sidebar.docsSidebar.category.Development Guide": {
+    "message": "开发指南",
+    "description": "The label for category Development Guide in sidebar docsSidebar"
+  },
+  "sidebar.docsSidebar.doc.Use Custom Skills": {
+    "message": "使用自定义技能",
+    "description": "The label for the doc item Use Custom Skills in sidebar docsSidebar, linking to the doc dbgpts/how-to-use-custom-skill"
   }
 }

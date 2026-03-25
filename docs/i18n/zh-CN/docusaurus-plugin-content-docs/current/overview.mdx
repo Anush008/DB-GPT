@@ -4,6 +4,8 @@ title: DB-GPT
 ---
 
 import CommandCopyCard from "@site/src/components/mdx/CommandCopyCard";
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
 
 # DB-GPT
 
@@ -11,70 +13,64 @@ import CommandCopyCard from "@site/src/components/mdx/CommandCopyCard";
   <img src={'../img/dbgpt_vision_zh.png'} width="860px" />
 </p>
 
-<p align="center">
+<div style={{textAlign: 'center'}}>
   <strong>一个开源的 AI 数据助手，能够连接你的数据、编写 SQL 和代码、在沙箱环境中运行技能，并将分析过程转化为报告、洞察与行动。</strong><br />
   DB-GPT 也是一个用于构建 AI Native 数据 Agent、工作流与应用的平台，支持 Agents、AWEL、RAG 和多模型能力。
-</p>
+</div>
 
-<p align="center">
+<div style={{textAlign: 'center'}}>
   <a href="https://github.com/eosphoros-ai/DB-GPT">GitHub</a> ·
   <a href="https://github.com/eosphoros-ai/DB-GPT/releases">Releases</a> ·
   <a href="https://github.com/orgs/eosphoros-ai/discussions">Community</a>
-</p>
-
-## 从这里开始
-
-<div className="overview-cards-grid">
-  <a href="./quickstart" className="overview-card">
-    <div className="overview-card-icon">🚀</div>
-    <div className="overview-card-content">
-      <h3 className="overview-card-title">快速开始</h3>
-      <p className="overview-card-description">通过一行安装命令在几分钟内启动 DB-GPT。</p>
-    </div>
-  </a>
-  <a href="./installation" className="overview-card">
-    <div className="overview-card-icon">📦</div>
-    <div className="overview-card-content">
-      <h3 className="overview-card-title">安装部署</h3>
-      <p className="overview-card-description">支持 Docker、源码部署或按你的环境进行手动配置。</p>
-    </div>
-  </a>
-  <a href="./use_cases" className="overview-card">
-    <div className="overview-card-icon">💡</div>
-    <div className="overview-card-content">
-      <h3 className="overview-card-title">案例展示</h3>
-      <p className="overview-card-description">查看 DB-GPT 在数据分析、Text2SQL、RAG、仪表盘和报告生成中的实际能力展示。</p>
-    </div>
-  </a>
 </div>
 
 ## 快速开始
 
-<div className="quickstart-steps">
-  <div className="quickstart-step">
-    <div className="quickstart-step-index">1</div>
-    <div className="quickstart-step-content">
-      <h3>安装 DB-GPT</h3>
-      <CommandCopyCard command={`curl -fsSL https://raw.githubusercontent.com/eosphoros-ai/DB-GPT/main/scripts/install/install.sh | bash`} />
-    </div>
-  </div>
-
-  <div className="quickstart-step">
-    <div className="quickstart-step-index">2</div>
-    <div className="quickstart-step-content">
-      <h3>使用 provider 配置安装</h3>
-      <CommandCopyCard command={`curl -fsSL https://raw.githubusercontent.com/eosphoros-ai/DB-GPT/main/scripts/install/install.sh \
-  | OPENAI_API_KEY=sk-xxx bash -s -- --profile openai`} />
-    </div>
-  </div>
-
-  <div className="quickstart-step">
-    <div className="quickstart-step-index">3</div>
-    <div className="quickstart-step-content">
-      <h3>启动 Web 服务</h3>
-      <CommandCopyCard command={`cd ~/.dbgpt/DB-GPT && uv run dbgpt start webserver --config ~/.dbgpt/configs/<profile>.toml`} />
-    </div>
-  </div>
+<div className="quickstart-container">
+  <Tabs className="quickstart-tabs" groupId="install-method">
+    <TabItem value="script" label="📜  Shell 快速开始" default>
+      <div className="quickstart-tab-inner">
+        <span className="quickstart-tab-desc">适用于 macOS 和 Linux 的一键安装脚本——自动下载、配置并完成 DB-GPT 环境搭建。</span>
+        <div className="quickstart-numbered-steps">
+          <div className="quickstart-ns">
+            <span className="quickstart-ns-num">1</span>
+            <div className="quickstart-ns-body">
+              <span className="quickstart-ns-label">安装 DB-GPT</span>
+              <CommandCopyCard command={`curl -fsSL https://raw.githubusercontent.com/eosphoros-ai/DB-GPT/main/scripts/install/install.sh | bash`} />
+            </div>
+          </div>
+          <div className="quickstart-ns">
+            <span className="quickstart-ns-num">2</span>
+            <div className="quickstart-ns-body">
+              <span className="quickstart-ns-label">启动服务</span>
+              <CommandCopyCard command={`cd ~/.dbgpt/DB-GPT && uv run dbgpt start webserver --profile <profile>`} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </TabItem>
+    <TabItem value="cli" label="⚡  PIP 快速开始">
+      <div className="quickstart-tab-inner">
+        <span className="quickstart-tab-desc">通过 pip 安装，几秒内即可启动——全平台最快的 DB-GPT 体验方式。</span>
+        <div className="quickstart-numbered-steps">
+          <div className="quickstart-ns">
+            <span className="quickstart-ns-num">1</span>
+            <div className="quickstart-ns-body">
+              <span className="quickstart-ns-label">安装包</span>
+              <CommandCopyCard command={`pip install dbgpt-app`} />
+            </div>
+          </div>
+          <div className="quickstart-ns">
+            <span className="quickstart-ns-num">2</span>
+            <div className="quickstart-ns-body">
+              <span className="quickstart-ns-label">启动 DB-GPT</span>
+              <CommandCopyCard command={`dbgpt start webserver`} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </TabItem>
+  </Tabs>
 </div>
 
 ## 什么是 DB-GPT？

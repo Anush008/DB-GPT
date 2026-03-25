@@ -4,6 +4,8 @@ title: DB-GPT
 ---
 
 import CommandCopyCard from "@site/src/components/mdx/CommandCopyCard";
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
 
 # DB-GPT
 
@@ -11,70 +13,64 @@ import CommandCopyCard from "@site/src/components/mdx/CommandCopyCard";
   <img src={'/img/dbgpt_vision.png'} width="860px" />
 </p>
 
-<p align="center">
+<div style={{textAlign: 'center'}}>
   <strong>An open-source AI data assistant that connects to your data, writes SQL and code, runs skills in sandboxed environments, and turns analysis into reports, insights, and action.</strong><br />
   DB-GPT is also a platform for building AI-native data agents, workflows, and applications with agents, AWEL, RAG, and multi-model support.
-</p>
+</div>
 
-<p align="center">
+<div style={{textAlign: 'center'}}>
   <a href="https://github.com/eosphoros-ai/DB-GPT">GitHub</a> ·
   <a href="https://github.com/eosphoros-ai/DB-GPT/releases">Releases</a> ·
   <a href="https://github.com/orgs/eosphoros-ai/discussions">Community</a>
-</p>
-
-## Start here
-
-<div className="overview-cards-grid">
-  <a href="./quickstart" className="overview-card">
-    <div className="overview-card-icon">🚀</div>
-    <div className="overview-card-content">
-      <h3 className="overview-card-title">Quick Start</h3>
-      <p className="overview-card-description">Get DB-GPT running in minutes with the one-line installer.</p>
-    </div>
-  </a>
-  <a href="./installation" className="overview-card">
-    <div className="overview-card-icon">📦</div>
-    <div className="overview-card-content">
-      <h3 className="overview-card-title">Installation</h3>
-      <p className="overview-card-description">Docker, source code, or manual setup for your environment.</p>
-    </div>
-  </a>
-  <a href="./use_cases" className="overview-card">
-    <div className="overview-card-icon">💡</div>
-    <div className="overview-card-content">
-      <h3 className="overview-card-title">Show Cases</h3>
-      <p className="overview-card-description">See DB-GPT in action across data analysis, Text2SQL, RAG, dashboards, and reports.</p>
-    </div>
-  </a>
 </div>
 
 ## Quick start
 
-<div className="quickstart-steps">
-  <div className="quickstart-step">
-    <div className="quickstart-step-index">1</div>
-    <div className="quickstart-step-content">
-      <h3>Install DB-GPT</h3>
-      <CommandCopyCard command={`curl -fsSL https://raw.githubusercontent.com/eosphoros-ai/DB-GPT/main/scripts/install/install.sh | bash`} />
-    </div>
-  </div>
-
-  <div className="quickstart-step">
-    <div className="quickstart-step-index">2</div>
-    <div className="quickstart-step-content">
-      <h3>Install with a provider profile</h3>
-      <CommandCopyCard command={`curl -fsSL https://raw.githubusercontent.com/eosphoros-ai/DB-GPT/main/scripts/install/install.sh \
-  | OPENAI_API_KEY=sk-xxx bash -s -- --profile openai`} />
-    </div>
-  </div>
-
-  <div className="quickstart-step">
-    <div className="quickstart-step-index">3</div>
-    <div className="quickstart-step-content">
-      <h3>Start the web server</h3>
-      <CommandCopyCard command={`cd ~/.dbgpt/DB-GPT && uv run dbgpt start webserver --config ~/.dbgpt/configs/<profile>.toml`} />
-    </div>
-  </div>
+<div className="quickstart-container">
+  <Tabs className="quickstart-tabs" groupId="install-method">
+    <TabItem value="script" label="📜  Shell Quick Start" default>
+      <div className="quickstart-tab-inner">
+        <span className="quickstart-tab-desc">One-line installer for macOS &amp; Linux — downloads, configures, and sets up DB-GPT automatically.</span>
+        <div className="quickstart-numbered-steps">
+          <div className="quickstart-ns">
+            <span className="quickstart-ns-num">1</span>
+            <div className="quickstart-ns-body">
+              <span className="quickstart-ns-label">Install DB-GPT</span>
+              <CommandCopyCard command={`curl -fsSL https://raw.githubusercontent.com/eosphoros-ai/DB-GPT/main/scripts/install/install.sh | bash`} />
+            </div>
+          </div>
+          <div className="quickstart-ns">
+            <span className="quickstart-ns-num">2</span>
+            <div className="quickstart-ns-body">
+              <span className="quickstart-ns-label">Start the server</span>
+              <CommandCopyCard command={`cd ~/.dbgpt/DB-GPT && uv run dbgpt start webserver --profile <profile>`} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </TabItem>
+    <TabItem value="cli" label="⚡  PIP Quick Start">
+      <div className="quickstart-tab-inner">
+        <span className="quickstart-tab-desc">Install with pip and start in seconds — the fastest way to try DB-GPT on any platform.</span>
+        <div className="quickstart-numbered-steps">
+          <div className="quickstart-ns">
+            <span className="quickstart-ns-num">1</span>
+            <div className="quickstart-ns-body">
+              <span className="quickstart-ns-label">Install the package</span>
+              <CommandCopyCard command={`pip install dbgpt-app`} />
+            </div>
+          </div>
+          <div className="quickstart-ns">
+            <span className="quickstart-ns-num">2</span>
+            <div className="quickstart-ns-body">
+              <span className="quickstart-ns-label">Start DB-GPT</span>
+              <CommandCopyCard command={`dbgpt start webserver`} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </TabItem>
+  </Tabs>
 </div>
 
 ## What is DB-GPT?

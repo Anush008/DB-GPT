@@ -474,7 +474,6 @@ const sidebars = {
       collapsed: true,
       collapsible: true,
       items: [
-        { type: "doc", id: "use_cases", label: "Use Cases" },
         {
           type: "category",
           label: "ChangeLog",
@@ -529,6 +528,17 @@ const sidebars = {
         { type: "doc", id: "installation/quick-install", label: "Quick Install" },
         { type: "doc", id: "getting-started/cli-quickstart", label: "CLI Install" },
         { type: "doc", id: "getting-started/deploy/source-code", label: "Source Install" },
+        {
+          type: "category",
+          label: "Docker Deployment",
+          collapsed: true,
+          collapsible: true,
+          items: [
+            { type: "doc", id: "installation/docker", label: "Docker" },
+            { type: "doc", id: "installation/docker_compose", label: "Docker Compose" },
+            { type: "doc", id: "installation/docker-build-guide", label: "Docker Build Guide" },
+          ],
+        },
       ],
     },
   ],
@@ -921,7 +931,6 @@ const sidebars = {
         { type: "doc", id: "faq/kbqa" },
       ],
     },
-    { type: "doc", id: "use_cases", label: "Use Cases" },
     {
       type: "category",
       label: "ChangeLog",
@@ -980,6 +989,13 @@ module.exports = {
     },
     {
       type: "category",
+      label: "Knowledge",
+      collapsed: true,
+      collapsible: true,
+      items: sidebars.sidebarKnowledge,
+    },
+    {
+      type: "category",
       label: "Application",
       collapsed: true,
       collapsible: true,
@@ -998,13 +1014,6 @@ module.exports = {
       collapsed: true,
       collapsible: true,
       items: sidebars.sidebarAwel,
-    },
-    {
-      type: "category",
-      label: "Knowledge",
-      collapsed: true,
-      collapsible: true,
-      items: sidebars.sidebarKnowledge,
     },
     {
       type: "category",

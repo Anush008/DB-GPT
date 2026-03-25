@@ -26,7 +26,7 @@ The default installation includes the **core framework** (CLI, FastAPI, SQLAlche
 **OpenAI-compatible LLM support** (also works with Kimi, Qwen, MiniMax, Z.AI),
 **DashScope / Tongyi** support, **RAG document parsing**, and **ChromaDB** vector store.
 
-Need additional providers or data sources? See [Optional Modules](#7-optional-modules).
+Need additional providers or data sources? See [Optional Modules](#8-optional-modules).
 :::
 
 After installation the `dbgpt` command is available in your terminal.
@@ -43,7 +43,7 @@ That's it! On first run DB-GPT will launch an **interactive setup wizard** that 
 2. Enter your API key (or use an environment variable)
 3. Confirm the model names and API base URL
 
-Once complete, a TOML configuration file is written to `~/.dbgpt/configs/<profile>.toml` and the web server starts automatically. Open your browser at **http://localhost:5670**.
+Once complete, a TOML configuration file is written to `~/.dbgpt/configs/<profile>.toml` and the web server starts automatically.
 
 ### What the startup looks like
 
@@ -63,9 +63,13 @@ Once complete, a TOML configuration file is written to `~/.dbgpt/configs/<profil
    +- - - - - - - - - - - - - - - - - - - - - - - -+
 ```
 
+## 3. Open the Web UI
+
+Then open [http://localhost:5670](http://localhost:5670).
+
 ---
 
-## 3. Command Reference
+## 4. Command Reference
 
 ### Overview
 
@@ -231,7 +235,7 @@ dbgpt profile delete minimax --yes  # skip confirmation
 
 ---
 
-## 4. Supported Providers
+## 5. Supported Providers
 
 The setup wizard and `--profile` flag support the following providers:
 
@@ -250,7 +254,7 @@ The **Custom** profile lets you connect to any OpenAI-compatible API endpoint. D
 
 ---
 
-## 5. Directory Structure
+## 6. Directory Structure
 
 After first run, DB-GPT creates the following structure under your home directory:
 
@@ -283,7 +287,7 @@ After first run, DB-GPT creates the following structure under your home director
 
 ---
 
-## 6. Common Workflows
+## 7. Common Workflows
 
 ### First-time setup
 
@@ -326,7 +330,7 @@ dbgpt setup --profile custom
 
 ---
 
-## 7. Optional Modules
+## 8. Optional Modules
 
 The core framework is included by default when you `pip install dbgpt-app`. Use extras to add LLM providers, vector stores, data sources, and more.
 
@@ -388,7 +392,7 @@ This gives you the CLI, FastAPI server, and agent framework — but you'll need 
 
 ---
 
-## 8. Troubleshooting
+## 9. Troubleshooting
 
 ### Port already in use
 

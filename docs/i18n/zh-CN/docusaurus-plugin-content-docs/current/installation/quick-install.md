@@ -83,7 +83,7 @@ import CommandCopyCard from "@site/src/components/mdx/CommandCopyCard";
 
 安装完成后，使用生成的 profile 配置启动 webserver：
 
-<CommandCopyCard command={`cd ~/.dbgpt/DB-GPT && uv run dbgpt start webserver --config ~/.dbgpt/configs/<profile>.toml`} />
+<CommandCopyCard command={`cd ~/.dbgpt/DB-GPT && uv run dbgpt start webserver --profile <profile>`} />
 
 然后打开 [http://localhost:5670](http://localhost:5670)。
 

@@ -19,27 +19,12 @@ DB-GPT offers three recommended installation paths. Pick the one that matches ho
 | <span style={{whiteSpace: 'nowrap'}}>[CLI Install](/docs/getting-started/cli-quickstart)</span> | Users who prefer installing from PyPI | One-click start and try a stable DB-GPT release without worrying about project structure or config details | One-line installer, interactive setup wizard, profile management |
 | <span style={{whiteSpace: 'nowrap'}}>[Source Install](/docs/getting-started/deploy/source-code)</span> | Developers and custom deployments | You need to modify source code, debug internals, or integrate DB-GPT into a custom deployment pipeline | Full repo checkout, editable configs, maximum flexibility |
 
-## Recommended path
-
-For most users, start with **Quick Install**. It gives you the fastest path from zero to a running DB-GPT web UI.
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/eosphoros-ai/DB-GPT/main/scripts/install/install.sh | bash
-```
-
-After installation, start the generated profile config:
-
-```bash
-cd ~/.dbgpt/DB-GPT && uv run dbgpt start webserver --config ~/.dbgpt/configs/<profile>.toml
-```
-
-Then open [http://localhost:5670](http://localhost:5670).
 
 ## When to choose each method
 
 ### Quick Install
 
-Choose this if you want the simplest install flow and do not need to manage the repository manually.
+For MacOS / Linux users — choose this if you want the fewest steps to install, quickly launch the latest DB-GPT from source with automated environment setup and dependency installation.
 
 ### CLI Install
 

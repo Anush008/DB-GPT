@@ -36,6 +36,6 @@ Integration Packages
 # Graph RAG Storage Providers
 
 | Provider | Supported | Install Packages |
-|----------|-----------|------------------|
-| TuGraph  | ✅         | --extra graph_rag|
-| Neo4j    | ❌         |                  |
+|----------|----------|------------------|
+| TuGraph  | ✅        | --extra graph_rag|
+| Neo4j    | ✅         |                  |

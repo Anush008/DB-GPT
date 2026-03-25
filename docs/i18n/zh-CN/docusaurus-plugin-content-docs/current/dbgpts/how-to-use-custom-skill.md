@@ -28,7 +28,7 @@ DB-GPT 支持三种方式使用自定义 skill：使用内置的 `skill-creator`
 
 1. 进入 DB-GPT 的 **Skills** 页面。
 
-![Skill 列表页](/img/skill/skil_list_zh.png)
+![Skill 列表页](/img/skill/skill_list_zh.png)
 
 2. 点击上传按钮，选择本地的 `.zip` 或 `.skill` 文件上传。
 

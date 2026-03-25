@@ -83,7 +83,7 @@ The installer script sets up the common runtime layout for you:
 
 After installation completes, start the webserver with the generated profile config:
 
-<CommandCopyCard command={`cd ~/.dbgpt/DB-GPT && uv run dbgpt start webserver --config ~/.dbgpt/configs/<profile>.toml`} />
+<CommandCopyCard command={`cd ~/.dbgpt/DB-GPT && uv run dbgpt start webserver --profile <profile>`} />
 
 Then open [http://localhost:5670](http://localhost:5670).
 
