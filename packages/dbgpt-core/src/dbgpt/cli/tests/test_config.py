@@ -86,29 +86,25 @@ class TestDbgptHomeEnvVar:
 
 
 class TestWorkspacePaths:
-    def test_render_toml_data_path_contains_workspace(self, isolated_dbgpt_home):
+    def test_render_toml_data_path_is_relative(self, isolated_dbgpt_home):
         from dbgpt.cli._config import _render_profile_toml
         from dbgpt.cli._profiles import get_profile
 
         spec = get_profile("openai")
         content = _render_profile_toml(spec, api_key="test-key")
-        assert "workspace/pilot/meta_data/dbgpt.db" in content
+        # Database and vector paths should be relative
+        assert 'path = "pilot/meta_data/dbgpt.db"' in content
+        assert 'persist_path = "pilot/data"' in content
+
+    def test_render_toml_data_path_not_absolute(self, isolated_dbgpt_home):
         from dbgpt.cli._config import _render_profile_toml
         from dbgpt.cli._profiles import get_profile
 
         spec = get_profile("openai")
         content = _render_profile_toml(spec, api_key="test-key")
-        assert "workspace/pilot/data" in content
-
-    def test_render_toml_uses_custom_home_in_data_path(self, isolated_dbgpt_home):
-        from dbgpt.cli._config import _render_profile_toml
-        from dbgpt.cli._profiles import get_profile
-
-        spec = get_profile("openai")
-        content = _render_profile_toml(spec, api_key="test-key")
-        # 路径中包含 isolated_dbgpt_home 的字符串
-        assert str(isolated_dbgpt_home) in content
-        assert "workspace/pilot/meta_data/dbgpt.db" in content
+        # Paths should NOT contain workspace prefix (old absolute pattern)
+        assert "workspace/pilot/meta_data" not in content
+        assert "workspace/pilot/data" not in content
 
 
 class TestExtendedSignature:
@@ -218,14 +214,14 @@ class TestExtendedSignature:
 
 
 class TestKimiEmbeddingEnvVar:
-    def test_kimi_embedding_uses_dashscope_env_var(self, isolated_dbgpt_home):
-        """Kimi profile should reference DASHSCOPE_API_KEY for embeddings."""
+    def test_kimi_embedding_uses_openai_env_var(self, isolated_dbgpt_home):
+        """Kimi profile should reference OPENAI_API_KEY for embeddings."""
         from dbgpt.cli._config import _render_profile_toml
         from dbgpt.cli._profiles import get_profile
 
         spec = get_profile("kimi")
         content = _render_profile_toml(spec, api_key=None)
-        assert "${env:DASHSCOPE_API_KEY:-sk-xxx}" in content
+        assert "${env:OPENAI_API_KEY:-sk-xxx}" in content
 
     def test_kimi_llm_uses_moonshot_env_var(self, isolated_dbgpt_home):
         """Kimi profile LLM section should still reference MOONSHOT_API_KEY."""
@@ -248,8 +244,8 @@ class TestKimiEmbeddingEnvVar:
         data = tomlkit.loads(content)
         assert data["models"]["embeddings"][0]["api_key"] == "ds-key"
 
-    def test_kimi_embedding_api_url_is_dashscope(self, isolated_dbgpt_home):
-        """Kimi embedding api_url should point to DashScope."""
+    def test_kimi_embedding_api_url_is_openai(self, isolated_dbgpt_home):
+        """Kimi embedding api_url should point to OpenAI."""
         import tomlkit
 
         from dbgpt.cli._config import _render_profile_toml
@@ -259,7 +255,7 @@ class TestKimiEmbeddingEnvVar:
         content = _render_profile_toml(spec, api_key=None)
         data = tomlkit.loads(content)
         assert data["models"]["embeddings"][0]["api_url"] == (
-            "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings"
+            "https://api.openai.com/v1/embeddings"
         )
 
     def test_openai_same_key_used_for_embeddings(self, isolated_dbgpt_home):

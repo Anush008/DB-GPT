@@ -88,29 +88,3 @@ confirm() {
   [[ "${answer}" =~ ^[Yy]$ ]]
 }
 
-# ── String helpers ────────────────────────────────────────────────────────────
-
-# Replace a placeholder token inside a file with a real value.
-# Usage: replace_token <file> <token> <value>
-# Example: replace_token config.toml "__OPENAI_API_KEY__" "sk-xxx"
-replace_token() {
-  local file="$1"
-  local token="$2"
-  local value="$3"
-
-  if [[ ! -f "${file}" ]]; then
-    die "replace_token: file not found: ${file}"
-  fi
-
-  # Use python3 for safe in-place replacement (avoids sed portability issues
-  # between macOS and Linux).  We pass values through environment variables to
-  # avoid shell-injection via triple-quote escapes.
-  _RT_FILE="${file}" _RT_TOKEN="${token}" _RT_VALUE="${value}" python3 -c "
-import os
-from pathlib import Path
-p = Path(os.environ['_RT_FILE'])
-text = p.read_text()
-text = text.replace(os.environ['_RT_TOKEN'], os.environ['_RT_VALUE'])
-p.write_text(text)
-"
-}

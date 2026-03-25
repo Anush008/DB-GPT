@@ -168,7 +168,7 @@ MINIMAX_API_KEY=sk-xxx \
 安装完成后，使用生成的 profile 配置启动服务：
 
 ```bash
-cd ~/.dbgpt/DB-GPT && uv run dbgpt start webserver --config ~/.dbgpt/configs/<profile>.toml
+cd ~/.dbgpt/DB-GPT && uv run dbgpt start webserver --profile <profile>
 ```
 
 然后打开 [http://localhost:5670](http://localhost:5670)。

@@ -1,6 +1,6 @@
 [project]
 name = "dbgpt-app"
-version = "0.8.0rc6"
+version = "0.8.0rc7"
 description = "Add your description here"
 authors = [
     { name = "csunny", email = "cfqcsunny@gmail.com" }
@@ -82,21 +82,5 @@ exclude = [
 "../../pilot/benchmark_meta_data/2025_07_27_public_500_standard_benchmark_question_list.xlsx" = "pilot_tpl/benchmark_meta_data/2025_07_27_public_500_standard_benchmark_question_list.xlsx"
 "../../pilot/examples/Walmart_Sales.db" = "pilot_tpl/examples/Walmart_Sales.db"
 
-[tool.hatch.build.targets.wheel.force-include]
-# Builtin skills
-"skills/csv-data-analysis" = "dbgpt_app/_builtin_skills/csv-data-analysis"
-"skills/skill-creator" = "dbgpt_app/_builtin_skills/skill-creator"
-"skills/financial-report-analyzer" = "dbgpt_app/_builtin_skills/financial-report-analyzer"
-"skills/walmart-sales-analyzer" = "dbgpt_app/_builtin_skills/walmart-sales-analyzer"
-"skills/agent-browser" = "dbgpt_app/_builtin_skills/agent-browser"
-# Builtin example files
-"examples/excel/Walmart_Sales.csv" = "dbgpt_app/_builtin_examples/excel/Walmart_Sales.csv"
-"examples/fin_report/pdf/2020-01-23__浙江海翔药业股份有限公司__002099__海翔药业__2019年__年度报告.pdf" = "dbgpt_app/_builtin_examples/fin_report/pdf/2020-01-23__浙江海翔药业股份有限公司__002099__海翔药业__2019年__年度报告.pdf"
-# Pilot workspace template files (provisioned to ~/.dbgpt/workspace/pilot/ on first startup)
-"pilot_tpl/meta_data/alembic.ini" = "dbgpt_app/pilot_template/meta_data/alembic.ini"
-"pilot_tpl/meta_data/alembic/README" = "dbgpt_app/pilot_template/meta_data/alembic/README"
-"pilot_tpl/meta_data/alembic/env.py" = "dbgpt_app/pilot_template/meta_data/alembic/env.py"
-"pilot_tpl/meta_data/alembic/script.py.mako" = "dbgpt_app/pilot_template/meta_data/alembic/script.py.mako"
-"pilot_tpl/benchmark_meta_data/2025_07_27_public_500_standard_benchmark_question_list.xlsx" = "dbgpt_app/pilot_template/benchmark_meta_data/2025_07_27_public_500_standard_benchmark_question_list.xlsx"
-"pilot_tpl/examples/Walmart_Sales.db" = "dbgpt_app/pilot_template/examples/Walmart_Sales.db"
+[tool.hatch.build.hooks.custom]
 

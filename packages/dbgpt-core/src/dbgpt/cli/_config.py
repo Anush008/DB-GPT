@@ -155,8 +155,8 @@ def _render_profile_toml(
     else:
         embedding_api_url = spec.embedding_api_url
 
-    data_dir = str(dbgpt_home() / "workspace" / "pilot" / "meta_data" / "dbgpt.db")
-    vector_dir = str(dbgpt_home() / "workspace" / "pilot" / "data")
+    data_dir = "pilot/meta_data/dbgpt.db"
+    vector_dir = "pilot/data"
 
     lines = [
         f"# DB-GPT configuration — profile: {spec.name}",

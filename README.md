@@ -177,7 +177,7 @@ MINIMAX_API_KEY=sk-xxx \
 After installation, start the server with the generated profile config:
 
 ```bash
-cd ~/.dbgpt/DB-GPT && uv run dbgpt start webserver --config ~/.dbgpt/configs/<profile>.toml
+cd ~/.dbgpt/DB-GPT && uv run dbgpt start webserver --profile <profile>
 ```
 
 Then open [http://localhost:5670](http://localhost:5670).

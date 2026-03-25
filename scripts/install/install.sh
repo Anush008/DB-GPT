@@ -12,7 +12,7 @@
 # ║    3. Install uv (if not already present)                                ║
 # ║    4. Clone (or update) the DB-GPT repository                           ║
 # ║    5. Run `uv sync` with the extras for the chosen profile              ║
-# ║    6. Generate a user config from template                               ║
+# ║    6. Generate config via dbgpt setup wizard                             ║
 # ║    7. Print next-steps (start command, URL)                              ║
 # ║                                                                          ║
 # ║  What this script does NOT do:                                           ║
@@ -56,20 +56,6 @@ _source_lib() {
 _source_lib "common.sh"
 _source_lib "profiles.sh"
 
-# ── Fetch template file ──────────────────────────────────────────────────────
-# Returns the local path to the template.  Downloads from GitHub when needed.
-_resolve_template() {
-  local name="$1"
-  if [[ -n "${SCRIPT_DIR}" && -f "${SCRIPT_DIR}/templates/${name}" ]]; then
-    echo "${SCRIPT_DIR}/templates/${name}"
-  else
-    local tmp
-    tmp="$(mktemp)"
-    curl -fsSL "${REMOTE_BASE}/templates/${name}" -o "${tmp}"
-    echo "${tmp}"
-  fi
-}
-
 # ── Default values ────────────────────────────────────────────────────────────
 PROFILE=""
 INSTALL_DIR="${DBGPT_INSTALL_DIR:-${HOME}/.dbgpt}"
@@ -79,6 +65,7 @@ USE_EXISTING_REPO="false"
 MIRROR=""
 YES="false"
 START_AFTER_INSTALL="false"
+USER_CONFIG=""
 
 # ── Usage ─────────────────────────────────────────────────────────────────────
 usage() {
@@ -89,7 +76,8 @@ Usage:
   install.sh [options]
 
 Options:
-  --profile <name>       Deployment profile (currently: openai, kimi, minimax)
+  --profile <name>       Deployment profile (openai, kimi, qwen, minimax, glm, custom, default)
+  --config <path>        Use existing TOML config (skip config generation)
   --install-dir <path>   Where to install (default: ~/.dbgpt)
   --version <git-ref>    Git tag or branch to check out (default: main)
   --repo-dir <path>      Use an existing local DB-GPT checkout
@@ -99,7 +87,11 @@ Options:
   -h, --help             Show this help
 
 Environment variables:
-  OPENAI_API_KEY         Automatically injected into OpenAI config
+  OPENAI_API_KEY         Automatically injected into OpenAI / custom / default / kimi(embedding) config
+  MOONSHOT_API_KEY       Automatically injected into Kimi config
+  DASHSCOPE_API_KEY      Automatically injected into Qwen config
+  MINIMAX_API_KEY        Automatically injected into MiniMax config
+  ZHIPUAI_API_KEY        Automatically injected into GLM config
   DBGPT_INSTALL_DIR      Override default install directory
   DBGPT_REPO_DIR         Reuse an existing local DB-GPT repo
   DBGPT_VERSION          Override default git ref
@@ -117,11 +109,20 @@ Examples:
   # With Kimi / Moonshot API key
   MOONSHOT_API_KEY=sk-xxx bash install.sh --profile kimi --yes
 
-  # With Minimax API key
+  # With Qwen / DashScope API key
+  DASHSCOPE_API_KEY=sk-xxx bash install.sh --profile qwen --yes
+
+  # With MiniMax API key
   MINIMAX_API_KEY=sk-xxx bash install.sh --profile minimax --yes
+
+  # With GLM / ZhipuAI API key
+  ZHIPUAI_API_KEY=sk-xxx bash install.sh --profile glm --yes
 
   # Reuse your current local repo (skip clone/update)
   OPENAI_API_KEY=sk-xxx bash install.sh --profile openai --repo-dir . --yes
+
+  # Power-user: provide your own config file (skip config generation)
+  bash install.sh --config /path/to/my.toml --profile openai --yes
 
   # China mirror
   bash install.sh --profile openai --mirror china
@@ -164,6 +165,11 @@ parse_args() {
       --start)
         START_AFTER_INSTALL="true"
         shift
+        ;;
+      --config)
+        USER_CONFIG="${2:-}"
+        [[ -z "${USER_CONFIG}" ]] && die "--config requires a value"
+        shift 2
         ;;
       -h|--help)
         usage
@@ -213,8 +219,14 @@ step_choose_profile() {
   printf '%b' "${COLOR_CYAN}Select a deployment profile:${COLOR_RESET}\n"
   printf '  1) openai     — OpenAI API proxy (recommended)\n'
   printf '  2) kimi       — Kimi 2.5 via Moonshot API\n'
-  printf '  3) minimax    — MiniMax OpenAI-compatible API\n'
+  printf '  3) qwen       — Qwen via DashScope API\n'
+  printf '  4) minimax    — MiniMax OpenAI-compatible API\n'
+  printf '  5) glm        — GLM-5 via ZhipuAI API\n'
+  printf '  6) custom     — Custom OpenAI-compatible provider\n'
+  printf '  7) default    — Default (OpenAI-compatible)\n'
   printf '  q) quit\n'
+  printf '\n'
+  printf '%b' "${COLOR_CYAN}Please select a profile by entering the corresponding number:${COLOR_RESET}\n"
   printf '\n'
 
   local choice
@@ -222,11 +234,15 @@ step_choose_profile() {
   choice="${choice:-1}"
 
   case "${choice}" in
-    1|openai) PROFILE="openai" ;;
-    2|kimi)   PROFILE="kimi" ;;
-    3|minimax) PROFILE="minimax" ;;
-    q|Q)      info "Installation cancelled."; exit 0 ;;
-    *)        die "Invalid choice: ${choice}" ;;
+    1|openai)   PROFILE="openai" ;;
+    2|kimi)     PROFILE="kimi" ;;
+    3|qwen)     PROFILE="qwen" ;;
+    4|minimax)  PROFILE="minimax" ;;
+    5|glm)      PROFILE="glm" ;;
+    6|custom)   PROFILE="custom" ;;
+    7|default)  PROFILE="default" ;;
+    q|Q)        info "Installation cancelled."; exit 0 ;;
+    *)          die "Invalid choice: ${choice}" ;;
   esac
 }
 
@@ -266,7 +282,7 @@ step_apply_mirror() {
 }
 
 step_prepare_dirs() {
-  mkdir -p "${INSTALL_DIR}/configs"
+  mkdir -p "${INSTALL_DIR}"
 }
 
 resolve_repo_dir() {
@@ -340,37 +356,46 @@ step_install_deps() {
   success "Dependencies installed."
 }
 
-step_generate_config() {
-  local template_name
-  template_name="$(profile_template "${PROFILE}")"
+step_check_api_key() {
+  local env_name
+  env_name="$(profile_api_key_env "${PROFILE}")"
 
-  local template_path
-  template_path="$(_resolve_template "${template_name}")"
-
-  local target_path="${INSTALL_DIR}/configs/${template_name}"
-
-  if [[ -f "${target_path}" ]]; then
-    if ! confirm "Config already exists: ${target_path}. Overwrite?"; then
-      info "Keeping existing config."
-      return
-    fi
+  # Primary API key check
+  if [[ -n "${env_name}" ]] && [[ -z "${!env_name:-}" ]]; then
+    warn "Environment variable ${env_name} is not set."
+    warn "The wizard will generate config with a placeholder."
+    warn "Set it before starting: export ${env_name}=sk-xxx"
   fi
 
-  cp "${template_path}" "${target_path}"
+  # Kimi special handling: also needs OPENAI_API_KEY for embeddings
+  if [[ "${PROFILE}" == "kimi" ]] && [[ -z "${OPENAI_API_KEY:-}" ]]; then
+    warn "Kimi profile also needs OPENAI_API_KEY for embeddings."
+    warn "Set it before starting: export OPENAI_API_KEY=sk-xxx"
+  fi
+}
 
-  # Inject API key from environment if available
-  local api_key_env api_key_token
+step_generate_config() {
+  info "Generating configuration via dbgpt setup..."
+
+  local setup_args=(dbgpt setup --profile "${PROFILE}" --yes)
+
+  # If user explicitly provided an API key via environment, pass it through
+  local api_key_env
   api_key_env="$(profile_api_key_env "${PROFILE}")"
-  api_key_token="$(profile_api_key_token "${PROFILE}")"
+  if [[ -n "${api_key_env}" && -n "${!api_key_env:-}" ]]; then
+    setup_args+=(--api-key "${!api_key_env}")
+  fi
 
-  if [[ -n "${api_key_env}" && -n "${api_key_token}" ]]; then
-    local api_key_value="${!api_key_env:-}"
-    if [[ -n "${api_key_value}" ]]; then
-      replace_token "${target_path}" "${api_key_token}" "${api_key_value}"
-      success "API key injected from \$${api_key_env}."
-    else
-      warn "\$${api_key_env} is not set. Please edit ${target_path} and fill in your API key before starting."
-    fi
+  (
+    cd "${REPO_DIR}"
+    run "Running dbgpt setup..." uv run "${setup_args[@]}"
+  )
+
+  local config_path="${HOME}/.dbgpt/configs/${PROFILE}.toml"
+  if [[ -f "${config_path}" ]]; then
+    success "Config written to ${config_path}"
+  else
+    die "Config generation failed — ${config_path} not found"
   fi
 }
 
@@ -389,9 +414,7 @@ step_validate() {
 
 step_print_summary() {
   local repo_dir="${REPO_DIR}"
-  local template_name
-  template_name="$(profile_template "${PROFILE}")"
-  local config_path="${INSTALL_DIR}/configs/${template_name}"
+  local config_path="${HOME}/.dbgpt/configs/${PROFILE}.toml"
 
   printf '%b' "
 ${COLOR_GREEN}════════════════════════════════════════════════════════════${COLOR_RESET}
@@ -404,11 +427,11 @@ ${COLOR_GREEN}══════════════════════
 
   ${COLOR_CYAN}Next steps:${COLOR_RESET}
 
-  1. Review / edit your config (set API key if not done):
+  1. Review / Edit your config (set Custom API key Or BaseURL if not done):
      ${COLOR_YELLOW}${config_path}${COLOR_RESET}
 
   2. Start DB-GPT:
-     ${COLOR_YELLOW}cd \"${repo_dir}\" && uv run dbgpt start webserver --config \"${config_path}\"${COLOR_RESET}
+     ${COLOR_YELLOW}cd \"${repo_dir}\" && uv run dbgpt start webserver --profile ${PROFILE}${COLOR_RESET}
 
   3. Open your browser:
      ${COLOR_YELLOW}http://localhost:5670${COLOR_RESET}
@@ -422,14 +445,14 @@ step_start_if_requested() {
   fi
 
   local repo_dir="${REPO_DIR}"
-  local template_name
-  template_name="$(profile_template "${PROFILE}")"
-  local config_path="${INSTALL_DIR}/configs/${template_name}"
-
   info "Starting DB-GPT server..."
   (
     cd "${repo_dir}"
-    exec uv run dbgpt start webserver --config "${config_path}"
+    if [[ -n "${USER_CONFIG:-}" ]]; then
+      exec uv run dbgpt start webserver --config "${USER_CONFIG}"
+    else
+      exec uv run dbgpt start webserver --profile "${PROFILE}"
+    fi
   )
 }
 
@@ -452,18 +475,39 @@ BANNER
   parse_args "$@"
   step_check_platform
   step_ensure_base_commands
-  step_choose_profile
-  validate_profile "${PROFILE}"
-  step_apply_mirror
-  step_prepare_dirs
-  resolve_repo_dir
-  step_ensure_uv
-  step_clone_or_update_repo
-  step_install_deps
-  step_generate_config
-  step_validate
-  step_print_summary
-  step_start_if_requested
+
+  if [[ -n "${USER_CONFIG:-}" ]]; then
+    [[ -f "${USER_CONFIG}" ]] || die "Config file not found: ${USER_CONFIG}"
+    info "Using user-provided config: ${USER_CONFIG}"
+    if [[ -z "${PROFILE}" ]]; then
+      PROFILE="openai"
+      info "No --profile specified with --config; defaulting to 'openai' for dependency extras."
+    fi
+    validate_profile "${PROFILE}"
+    step_apply_mirror
+    step_prepare_dirs
+    resolve_repo_dir
+    step_ensure_uv
+    step_clone_or_update_repo
+    step_install_deps
+    step_validate
+    step_print_summary
+    step_start_if_requested
+  else
+    step_choose_profile
+    validate_profile "${PROFILE}"
+    step_apply_mirror
+    step_prepare_dirs
+    resolve_repo_dir
+    step_ensure_uv
+    step_clone_or_update_repo
+    step_install_deps
+    step_check_api_key
+    step_generate_config
+    step_validate
+    step_print_summary
+    step_start_if_requested
+  fi
 }
 
 main "$@"

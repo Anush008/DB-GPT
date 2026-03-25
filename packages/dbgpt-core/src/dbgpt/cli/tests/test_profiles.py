@@ -112,26 +112,23 @@ class TestErrorHandling:
 
 
 class TestKimiEmbedding:
-    """Tests for Kimi embedding configuration using DashScope."""
+    """Tests for Kimi embedding configuration using OpenAI."""
 
-    def test_kimi_embedding_uses_tongyi_provider(self):
+    def test_kimi_embedding_uses_openai_provider(self):
         p = get_profile("kimi")
-        assert p.embedding_provider == "proxy/tongyi"
+        assert p.embedding_provider == "proxy/openai"
 
-    def test_kimi_embedding_model_is_text_embedding_v3(self):
+    def test_kimi_embedding_model_is_text_embedding_3_small(self):
         p = get_profile("kimi")
-        assert p.embedding_model == "text-embedding-v3"
+        assert p.embedding_model == "text-embedding-3-small"
 
-    def test_kimi_embedding_api_url_is_dashscope(self):
+    def test_kimi_embedding_api_url_is_openai(self):
         p = get_profile("kimi")
-        assert (
-            p.embedding_api_url
-            == "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings"
-        )
+        assert p.embedding_api_url == "https://api.openai.com/v1/embeddings"
 
     def test_kimi_has_separate_embedding_env_var(self):
         p = get_profile("kimi")
-        assert p.embedding_env_var == "DASHSCOPE_API_KEY"
+        assert p.embedding_env_var == "OPENAI_API_KEY"
         assert p.embedding_env_var != p.env_var
 
     def test_kimi_llm_still_uses_moonshot_env_var(self):
