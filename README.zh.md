@@ -180,6 +180,36 @@ cd ~/.dbgpt/DB-GPT && uv run dbgpt start webserver --profile <profile>
 > bash install.sh --profile openai
 > ```
 
+### 通过 PyPI 安装
+
+从 PyPI 安装 DB-GPT，一条命令即可启动，无需克隆源码仓库。
+
+> **前置条件：** Python **3.10+**，推荐使用 [uv](https://docs.astral.sh/uv/getting-started/installation/) 包管理器，也支持 pip。
+
+**1. 安装**
+
+```bash
+# 推荐使用 uv
+uv pip install dbgpt-app
+
+# 或使用 pip
+pip install dbgpt-app
+```
+
+默认安装包含核心框架（CLI、FastAPI、Agent）、OpenAI 兼容 LLM 支持、DashScope / 通义支持、RAG 文档解析和 ChromaDB 向量存储。
+
+**2. 启动**
+
+```bash
+dbgpt start
+```
+
+首次运行时，交互式向导会引导你选择 LLM 提供商并输入 API Key，配置完成后服务自动启动。
+
+**3. 打开 Web 界面**
+
+访问 [http://localhost:5670](http://localhost:5670) — 开始使用！🎉
+
 ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 ![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)
 ![macOS](https://img.shields.io/badge/mac%20os-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0)

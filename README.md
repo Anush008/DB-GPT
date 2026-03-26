@@ -189,6 +189,36 @@ Then open [http://localhost:5670](http://localhost:5670).
 > bash install.sh --profile openai
 > ```
 
+### Install via PyPI
+
+Install DB-GPT from PyPI and start it with a single command — no source checkout required.
+
+> **Prerequisites:** Python **3.10+** and [uv](https://docs.astral.sh/uv/getting-started/installation/) (recommended) or pip.
+
+**1. Install**
+
+```bash
+# Recommended: use uv
+uv pip install dbgpt-app
+
+# Or with pip
+pip install dbgpt-app
+```
+
+The default installation includes the core framework (CLI, FastAPI, Agent), OpenAI-compatible LLM support, DashScope / Tongyi support, RAG document parsing, and ChromaDB vector store.
+
+**2. Start**
+
+```bash
+dbgpt start
+```
+
+On first run, an interactive setup wizard will guide you through choosing an LLM provider and entering your API key. Once complete, the web server starts automatically.
+
+**3. Open the Web UI**
+
+Visit [http://localhost:5670](http://localhost:5670) — you're all set! 🎉
+
 ### Advanced Installation
 
 ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
