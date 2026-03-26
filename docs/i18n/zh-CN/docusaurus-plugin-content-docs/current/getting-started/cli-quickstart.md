@@ -26,6 +26,24 @@ uv pip install dbgpt-app
 pip install dbgpt-app
 ```
 
+:::tip 配置 PyPI 镜像源
+如果下载速度较慢，可在安装时指定镜像源加速：
+
+```bash
+uv pip install dbgpt-app --index-url https://pypi.tuna.tsinghua.edu.cn/simple  # uv
+
+pip install dbgpt-app -i https://pypi.tuna.tsinghua.edu.cn/simple              # pip
+```
+
+也可以通过环境变量，让当前终端会话中的**所有**安装命令自动使用镜像源：
+
+```bash
+export UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple   # uv
+
+export PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple  # pip
+```
+:::
+
 :::info 默认包含内容
 默认安装会包含 **核心框架**（CLI、FastAPI、SQLAlchemy、Agent）、**OpenAI 兼容 LLM 支持**（也适用于 Kimi、Qwen、MiniMax、Z.AI）、**DashScope / Tongyi** 支持、**RAG 文档解析** 和 **ChromaDB** 向量存储。
 

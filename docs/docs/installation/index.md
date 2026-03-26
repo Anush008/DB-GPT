@@ -26,7 +26,7 @@ DB-GPT offers three recommended installation paths. Pick the one that matches ho
 
 For MacOS / Linux users — choose this if you want the fewest steps to install, quickly launch the latest DB-GPT from source with automated environment setup and dependency installation.
 
-### CLI Install
+### CLI Install (Recommended)
 
 Choose this if you want to install DB-GPT directly from PyPI and use the `dbgpt` command to set up profiles interactively.
 

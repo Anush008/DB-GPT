@@ -480,7 +480,7 @@ const SharePage: NextPage = () => {
 
   useEffect(() => {
     if (!token) return;
-    const apiBase = process.env.API_BASE_URL ?? 'http://127.0.0.1:5670';
+    const apiBase = process.env.API_BASE_URL ?? '';
     setLoading(true);
     fetch(`${apiBase}/api/v1/chat/share/${token}`)
       .then(res => {

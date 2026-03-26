@@ -1249,6 +1249,41 @@ a.overview-card:hover {
   border-color: rgba(111, 191, 168, 0.20);
 }
 
+/* Quickstart tip (e.g. China mirror hint) */
+.quickstart-tip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  margin-top: 0.65rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 8px;
+  background: rgba(37, 194, 160, 0.05);
+  border: 1px dashed rgba(37, 194, 160, 0.22);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.quickstart-tip-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.quickstart-tip-text {
+  color: var(--ifm-font-color-secondary);
+  flex-shrink: 0;
+}
+
+.quickstart-tip .command-copy-card {
+  width: 100%;
+  margin: 0.2rem 0 0;
+}
+
+[data-theme='dark'] .quickstart-tip {
+  background: rgba(111, 191, 168, 0.05);
+  border-color: rgba(111, 191, 168, 0.18);
+}
+
 /* ─── End Quick Start Tabs layout ─── */
 
 .showcase-grid {

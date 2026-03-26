@@ -21,6 +21,24 @@ uv pip install dbgpt-app
 pip install dbgpt-app
 ```
 
+:::tip Using a PyPI Mirror
+For faster downloads, specify a mirror when installing:
+
+```bash
+uv pip install dbgpt-app --index-url https://pypi.tuna.tsinghua.edu.cn/simple  # uv
+
+pip install dbgpt-app -i https://pypi.tuna.tsinghua.edu.cn/simple              # pip
+```
+
+Alternatively, set an environment variable to apply the mirror to **all** installs in the current shell session:
+
+```bash
+export UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple   # uv
+
+export PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple  # pip
+```
+:::
+
 :::info What's included
 The default installation includes the **core framework** (CLI, FastAPI, SQLAlchemy, Agent),
 **OpenAI-compatible LLM support** (also works with Kimi, Qwen, MiniMax, Z.AI),

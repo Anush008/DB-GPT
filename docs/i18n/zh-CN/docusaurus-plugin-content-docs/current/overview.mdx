@@ -58,6 +58,11 @@ import TabItem from "@theme/TabItem";
             <div className="quickstart-ns-body">
               <span className="quickstart-ns-label">安装包</span>
               <CommandCopyCard command={`pip install dbgpt-app`} />
+              <div className="quickstart-tip">
+                <span className="quickstart-tip-icon">🌏</span>
+                <span className="quickstart-tip-text">中国用户可使用国内镜像源加速下载：</span>
+                <CommandCopyCard command={`pip install dbgpt-app -i https://pypi.tuna.tsinghua.edu.cn/simple`} />
+              </div>
             </div>
           </div>
           <div className="quickstart-ns">
