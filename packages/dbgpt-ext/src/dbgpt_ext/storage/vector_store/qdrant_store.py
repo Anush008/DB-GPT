@@ -45,7 +45,7 @@ def _chunk_id_to_uuid(chunk_id: str) -> str:
             _("Host"),
             "host",
             str,
-            description=_("The host of Qdrant store."),
+            description=_("The host of the Qdrant instance."),
             optional=True,
             default="localhost",
         ),
@@ -53,7 +53,7 @@ def _chunk_id_to_uuid(chunk_id: str) -> str:
             _("Port"),
             "port",
             int,
-            description=_("The HTTP port of Qdrant store."),
+            description=_("The REST port of the Qdrant instance."),
             optional=True,
             default=6333,
         ),
@@ -78,10 +78,18 @@ def _chunk_id_to_uuid(chunk_id: str) -> str:
             "prefer_grpc",
             bool,
             description=_(
-                "Whether to prefer gRPC over HTTP for data plane operations."
+                "Whether to prefer gRPC for data plane operations."
             ),
             optional=True,
             default=False,
+        ),
+        Parameter.build_from(
+            _("gRPC Port"),
+            "grpc_port",
+            int,
+            description=_("The gRPC port of the Qdrant instance."),
+            optional=True,
+            default=6334,
         ),
     ],
 )
@@ -114,6 +122,10 @@ class QdrantVectorConfig(VectorStoreConfig):
         metadata={
             "help": _("Whether to prefer gRPC over HTTP for data plane operations.")
         },
+    )
+    grpc_port: int = field(
+        default_factory=lambda: int(os.getenv("QDRANT_GRPC_PORT", "6334")),
+        metadata={"help": _("The gRPC port of Qdrant store.")},
     )
 
     def create_store(self, **kwargs) -> "QdrantStore":
@@ -166,6 +178,7 @@ class QdrantStore(VectorStoreBase):
         self._client = QdrantClient(
             host=vector_store_config.host,
             port=vector_store_config.port,
+            grpc_port=vector_store_config.grpc_port,
             api_key=vector_store_config.api_key,
             https=vector_store_config.https,
             prefer_grpc=vector_store_config.prefer_grpc,
