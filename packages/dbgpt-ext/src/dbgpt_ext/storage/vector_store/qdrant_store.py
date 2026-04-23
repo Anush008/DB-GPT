@@ -77,9 +77,7 @@ def _chunk_id_to_uuid(chunk_id: str) -> str:
             _("Prefer gRPC"),
             "prefer_grpc",
             bool,
-            description=_(
-                "Whether to prefer gRPC for data plane operations."
-            ),
+            description=_("Whether to prefer gRPC for data plane operations."),
             optional=True,
             default=False,
         ),
